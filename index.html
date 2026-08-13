@@ -76,11 +76,9 @@
     <div id="appContainer" class="w-full h-full min-h-screen"></div>
 
     <script>
-        
         // ==========================================
-        // FIREBASE CONFIGURATION (UNTUK VS CODE NANTI)
+        // FIREBASE CONFIGURATION (Opsional untuk Real-Time)
         // ==========================================
-        // Ganti nilai-nilai di bawah ini dengan konfigurasi dari Firebase Console Anda
         const firebaseConfig = {
             apiKey: "AIzaSyAHCb-IGYuJbsZIiqDUmQEGC8H5mSPmR4A",
             authDomain: "absen-destiny.firebaseapp.com",
@@ -90,19 +88,15 @@
             messagingSenderId: "111136151948",
             appId: "1:111136151948:web:b0f8984bb6c8da22d95ea9"
         };
-
-        // Deteksi otomatis apakah Firebase sudah dikonfigurasi
         const isFirebaseConfigured = firebaseConfig.apiKey !== "ISI_API_KEY_ANDA_DISINI";
         let isFirebaseConnected = false;
-
+        
         if (isFirebaseConfigured) {
             try {
                 firebase.initializeApp(firebaseConfig);
                 isFirebaseConnected = true;
-                console.log("Firebase Terhubung! Sistem berjalan secara Real-Time.");
             } catch (err) {
                 console.error("Gagal menghubungkan Firebase:", err);
-                isFirebaseConnected = false;
             }
         }
 
@@ -122,7 +116,10 @@
                 tunjanganHadir: 50000,
                 dendaTelat: 20000,
                 adminUsername: 'admin',
-                adminPassword: 'admin123'
+                adminPassword: 'admin123',
+                audioMasuk: null,
+                audioPulang: null,
+                audioCuti: null
             }
         };
 
@@ -132,6 +129,126 @@
         let clockInterval = null;
         let deleteTarget = null;
         let isInitialLoad = true;
+        let lastCutiCount = 0; // Untuk mendeteksi pengajuan cuti baru secara real-time
+
+        // ==========================================
+        // AUDIO NOTIFICATION SYSTEM (Custom MP3/WAV & Fallback)
+        // ==========================================
+        function playSound(type) {
+            try {
+                let customAudio = null;
+                if (type === 'masuk') customAudio = state.pengaturan?.audioMasuk;
+                else if (type === 'pulang') customAudio = state.pengaturan?.audioPulang;
+                else if (type === 'notif_admin' || type === 'error') customAudio = state.pengaturan?.audioCuti;
+
+                // Jika ada file MP3/WAV kustom yang diunggah, putar file audio tersebut
+                if (customAudio) {
+                    const audio = new Audio(customAudio);
+                    const playPromise = audio.play();
+                    if (playPromise !== undefined) {
+                        playPromise.catch(e => {
+                            console.warn("Gagal memutar audio kustom, beralih ke nada sintetis bawaan:", e);
+                            playSynthSound(type);
+                        });
+                    }
+                    return;
+                }
+                
+                // Jika tidak ada file kustom, gunakan Web Audio API (Sintetis)
+                playSynthSound(type);
+            } catch(e) {
+                console.log("Audio API diblokir browser sebelum interaksi user.", e);
+            }
+        }
+
+        function playSynthSound(type) {
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContext) return;
+                const ctx = new AudioContext();
+
+                let now = ctx.currentTime;
+                let osc = ctx.createOscillator();
+                let gain = ctx.createGain();
+
+                if (type === 'masuk') {
+                    osc.type = 'triangle'; 
+                    osc.frequency.setValueAtTime(523.25, now);
+                    osc.frequency.setValueAtTime(659.25, now + 0.1);
+                    osc.frequency.setValueAtTime(783.99, now + 0.2);
+                    
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+                    
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.5);
+
+                } else if (type === 'pulang') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(783.99, now);
+                    osc.frequency.setValueAtTime(523.25, now + 0.15);
+                    
+                    gain.gain.setValueAtTime(0.25, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+                    
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.45);
+
+                } else if (type === 'notif_admin' || type === 'error') {
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(587.33, now);
+                    osc.frequency.setValueAtTime(880, now + 0.12);
+                    
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+                    
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.3);
+                }
+            } catch(e) {
+                console.log("Gagal memutar nada sintetis", e);
+            }
+        }
+
+        function handleAudioUpload(event, key) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Batasi ukuran file audio agar tidak membebani database (maksimal ~700KB)
+            if (file.size > 700 * 1024) {
+                showToast("File Terlalu Besar", "Harap pilih file audio MP3/WAV singkat berukuran di bawah 700 KB.", "warning");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                if(!state.pengaturan) state.pengaturan = {};
+                state.pengaturan[key] = e.target.result;
+                saveData();
+                showToast("Audio Disimpan", "File MP3/WAV notifikasi berhasil diperbarui!");
+                if (state.currentView === 'pengaturan') render();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function hapusAudioKustom(key) {
+            if(state.pengaturan && state.pengaturan[key]) {
+                delete state.pengaturan[key];
+                saveData();
+                showToast("Audio Dihapus", "Kembali menggunakan nada sintetis bawaan.");
+                if (state.currentView === 'pengaturan') render();
+            }
+        }
+
+        function tesSuara(type) {
+            playSound(type);
+        }
 
         function formatRupiah(angka) {
             return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
@@ -170,12 +287,10 @@
         }
 
         async function saveData() {
-            // Selalu simpan ke Local Storage sebagai Backup / Fallback
             localStorage.setItem('destinyAbsensiData', JSON.stringify(state));
             
             if (isFirebaseConnected) {
                 try {
-                    // Menyimpan data murni ke Firebase Realtime Database
                     const dataToSave = {
                         karyawan: state.karyawan,
                         jabatan: state.jabatan,
@@ -193,31 +308,35 @@
 
         function loadData() {
             if (isFirebaseConnected) {
-                // MENDENGARKAN PERUBAHAN SECARA REAL-TIME (WEB-SOCKET)
                 firebase.database().ref('hr_system_data').on('value', (snapshot) => {
                     const data = snapshot.val();
                     if (data) {
+                        const oldCutiLength = (state.cuti || []).length;
                         state = { ...state, ...data };
                         
-                        // Pastikan array tidak undefined jika kosong dari Firebase
                         if(!state.karyawan) state.karyawan = [];
                         if(!state.jabatan) state.jabatan = [];
                         if(!state.absensi) state.absensi = [];
                         if(!state.cuti) state.cuti = [];
                         
+                        // Cek apakah ada pengajuan cuti baru dari karyawan secara real-time
+                        if (!isInitialLoad && state.cuti.length > oldCutiLength && state.currentUserRole === 'admin') {
+                            playSound('notif_admin');
+                            showToast('Pengajuan Baru!', 'Ada pengajuan izin/cuti baru masuk.', 'warning');
+                        }
+
                         localStorage.setItem('destinyAbsensiData', JSON.stringify(state));
                         
-                        // Re-render UI secara otomatis setiap ada perubahan dari cloud
                         if(!isInitialLoad && state.currentUserRole) {
                             render(); 
                         }
                     } else {
-                        // Jika DB Cloud Kosong, coba ambil dari lokal
                         fallbackLocalLoad();
                     }
                     
                     if (isInitialLoad) {
                         isInitialLoad = false;
+                        lastCutiCount = (state.cuti || []).length;
                         render();
                     }
                 });
@@ -307,6 +426,9 @@
 
         function startScanner() {
             setTimeout(async () => {
+                // BUGFIX: Cegah kamera menyala jika user sudah keburu pindah halaman / Log out
+                if (state.currentView !== 'scanWajah') return; 
+
                 const readerElement = document.getElementById('reader');
                 if(!readerElement) return;
 
@@ -351,6 +473,7 @@
             const karyawan = state.karyawan.find(k => k.nik === nikScanned);
             
             if(!karyawan) {
+                playSound('error');
                 showToast('Akses Ditolak', 'QR Code tidak dikenali oleh sistem.', 'error');
                 setTimeout(() => { isProcessingQR = false; }, 3000);
                 return;
@@ -375,12 +498,15 @@
                     statusMasuk: status
                 });
                 saveData();
+                playSound('masuk'); // Panggil suara saat sukses scan jam masuk
                 showToast('Masuk Berhasil', `Selamat bekerja, ${karyawan.nama}! (${status})`);
             } else if (!absenHariIni.jamPulang) {
                 absenHariIni.jamPulang = timeString;
                 saveData();
+                playSound('pulang'); // Panggil suara saat sukses scan jam pulang
                 showToast('Pulang Berhasil', `Hati-hati di jalan, ${karyawan.nama}!`);
             } else {
+                playSound('error');
                 showToast('Informasi', `${karyawan.nama} sudah absen hari ini.`, 'warning');
             }
 
@@ -486,6 +612,7 @@
                     setView('dashboard');
                     showToast('Akses Diberikan', 'Selamat bekerja, Administrator.');
                 } else {
+                    playSound('error');
                     showToast('Akses Ditolak', 'Kredensial tidak valid', 'error');
                 }
             } else if (role === 'kiosk') {
@@ -697,7 +824,6 @@
                 return;
             }
 
-            // DB Indicator Badge
             const dbBadge = isFirebaseConnected 
                 ? '<span class="w-2 h-2 rounded-full bg-emerald-500 mr-2 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span> Firebase Cloud'
                 : '<span class="w-2 h-2 rounded-full bg-amber-500 mr-2"></span> Local Mode';
@@ -881,8 +1007,8 @@
                         <table class="min-w-full text-sm text-left">
                             <thead class="bg-slate-50 text-slate-500 uppercase text-xs border-b border-slate-200">
                                 <tr>
-                                    <th class="py-4 px-6 font-semibold">Identitas</th>
-                                    <th class="py-4 px-6 font-semibold">Jabatan</th>
+                                    <th class="py-4 px-6 font-semibold">Identitas & Kontak</th>
+                                    <th class="py-4 px-6 font-semibold">Posisi & Status</th>
                                     <th class="py-4 px-6 font-semibold">Lahir & Masuk</th>
                                     <th class="py-4 px-6 font-semibold">Gaji Pokok</th>
                                     <th class="py-4 px-6 font-semibold text-center">Tindakan</th>
@@ -908,16 +1034,27 @@
                                     <input type="text" id="fk_nama" required class="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition shadow-sm">
                                 </div>
                                 <div>
-                                    <label class="block text-xs font-bold uppercase text-slate-500 mb-2">Nomor Induk (Otomatis)</label>
+                                    <label class="block text-xs font-bold uppercase text-slate-500 mb-2">Nomor ID</label>
                                     <input type="text" id="fk_nik" required class="w-full bg-slate-100 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition text-slate-600 font-mono">
                                 </div>
                                 <div>
-                                    <label class="block text-xs font-bold uppercase text-slate-500 mb-2">Nomor KTP</label>
+                                    <label class="block text-xs font-bold uppercase text-slate-500 mb-2">NIK</label>
                                     <input type="text" id="fk_ktp" class="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition shadow-sm" placeholder="16 Digit">
                                 </div>
-                                <div class="sm:col-span-2">
+                                <div>
+                                    <label class="block text-xs font-bold uppercase text-slate-500 mb-2">No. WhatsApp</label>
+                                    <input type="tel" id="fk_wa" class="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition shadow-sm" placeholder="0812...">
+                                </div>
+                                <div class="sm:col-span-1">
                                     <label class="block text-xs font-bold uppercase text-slate-500 mb-2">Pilih Jabatan</label>
                                     <select id="fk_jabatan" required class="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition shadow-sm">
+                                    </select>
+                                </div>
+                                <div class="sm:col-span-1">
+                                    <label class="block text-xs font-bold uppercase text-slate-500 mb-2">Status Karyawan</label>
+                                    <select id="fk_status" required class="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition shadow-sm">
+                                        <option value="Tetap">Karyawan Tetap</option>
+                                        <option value="Kontrak">Karyawan Kontrak</option>
                                     </select>
                                 </div>
                                 <div>
@@ -963,9 +1100,11 @@
                         <div class="font-bold text-slate-800 text-base mb-1">${k.nama}</div>
                         <div class="text-xs text-slate-500 font-mono bg-slate-100 inline-block px-2 py-0.5 rounded border border-slate-200">ID: ${k.nik}</div>
                         <div class="text-xs text-slate-400 mt-1">KTP: ${k.noKtp || '-'}</div>
+                        <div class="text-xs text-slate-500 mt-1 flex items-center"><i class="fab fa-whatsapp text-emerald-500 mr-1 text-sm"></i> <a href="https://wa.me/${(k.noWa||'').replace(/\D/g,'')}" target="_blank" class="hover:text-emerald-600 hover:underline">${k.noWa || '-'}</a></div>
                     </td>
                     <td class="py-4 px-6">
-                        <span class="inline-block bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs px-2.5 py-1 rounded-md font-bold">${jab.nama}</span>
+                        <div class="mb-1"><span class="inline-block bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs px-2.5 py-1 rounded-md font-bold">${jab.nama}</span></div>
+                        <div><span class="inline-block bg-slate-100 text-slate-600 border border-slate-200 text-[10px] px-2 py-0.5 rounded uppercase tracking-wider font-semibold">${k.statusKerja || 'Tetap'}</span></div>
                     </td>
                     <td class="py-4 px-6 text-sm text-slate-600">
                         <div><i class="fas fa-birthday-cake text-slate-400 mr-2 w-4"></i>${formatDateID(k.tanggalLahir)}</div>
@@ -995,14 +1134,17 @@
                 document.getElementById('fk_nama').value = k.nama;
                 document.getElementById('fk_nik').value = k.nik;
                 document.getElementById('fk_ktp').value = k.noKtp || '';
-                document.getElementById('fk_tglLahir').value = k.tanggalLahir || '';
+                document.getElementById('fk_wa').value = k.noWa || '';
                 document.getElementById('fk_jabatan').value = k.jabatanId || '';
+                document.getElementById('fk_status').value = k.statusKerja || 'Tetap';
+                document.getElementById('fk_tglLahir').value = k.tanggalLahir || '';
                 document.getElementById('fk_tglMasuk').value = k.tanggalMasuk || '';
                 document.getElementById('fk_gaji').value = k.gajiPokok;
             } else {
                 document.getElementById('modalKaryawanTitle').innerText = 'Tambah Karyawan Baru';
                 document.getElementById('formKaryawan').reset();
                 document.getElementById('formKaryawanId').value = '';
+                document.getElementById('fk_status').value = 'Tetap';
                 
                 const ym = new Date().toISOString().slice(0,7).replace('-','');
                 const c = state.karyawan.length + 1;
@@ -1017,8 +1159,10 @@
                 nama: document.getElementById('fk_nama').value,
                 nik: document.getElementById('fk_nik').value,
                 noKtp: document.getElementById('fk_ktp').value,
+                noWa: document.getElementById('fk_wa').value,
                 tanggalLahir: document.getElementById('fk_tglLahir').value,
                 jabatanId: document.getElementById('fk_jabatan').value,
+                statusKerja: document.getElementById('fk_status').value,
                 tanggalMasuk: document.getElementById('fk_tglMasuk').value,
                 gajiPokok: parseFloat(document.getElementById('fk_gaji').value)
             };
@@ -1322,6 +1466,7 @@
             });
 
             saveData();
+            playSound('notif_admin'); // Bunyikan suara saat pengajuan sukses dikirim
             tutupModalPengajuanCuti();
             showToast('Terkirim', 'Pengajuan berhasil dikirim ke Admin.');
         }
@@ -1584,11 +1729,11 @@
         }
 
         function getPengaturanHTML() {
-            const p = state.pengaturan;
+            const p = state.pengaturan || {};
             return `
                 <div class="mb-8">
                     <h1 class="text-3xl font-bold text-slate-800 tracking-tight">Setelan Sistem</h1>
-                    <p class="text-slate-500 mt-1">Aturan, keamanan, dan cadangan data (*Backup & Restore*).</p>
+                    <p class="text-slate-500 mt-1">Aturan, keamanan, suara notifikasi MP3, dan cadangan data.</p>
                 </div>
                 
                 <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
@@ -1598,20 +1743,76 @@
                             <form class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div class="md:col-span-2">
                                     <label class="block text-xs font-bold uppercase text-slate-500 mb-2">Batas Jam Masuk (Toleransi)</label>
-                                    <input type="time" id="set_jam" value="${p.jamMasuk}" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                                    <input type="time" id="set_jam" value="${p.jamMasuk || '08:00'}" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
                                 </div>
                                 <div>
                                     <label class="block text-xs font-bold uppercase text-slate-500 mb-2">Bonus Hadir Harian (Rp)</label>
-                                    <input type="number" id="set_tunjangan" value="${p.tunjanganHadir}" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                                    <input type="number" id="set_tunjangan" value="${p.tunjanganHadir || 0}" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
                                 </div>
                                 <div>
                                     <label class="block text-xs font-bold uppercase text-slate-500 mb-2">Denda Keterlambatan (Rp)</label>
-                                    <input type="number" id="set_denda" value="${p.dendaTelat}" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                                    <input type="number" id="set_denda" value="${p.dendaTelat || 0}" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
                                 </div>
                                 <div class="md:col-span-2 pt-2">
                                     <button type="button" onclick="simpanPengaturan()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 px-8 rounded-xl shadow-lg transition text-sm">Update Aturan</button>
                                 </div>
                             </form>
+                        </div>
+
+                        <!-- PANEL KUSTOMISASI FILE AUDIO MP3 / WAV -->
+                        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
+                            <h2 class="text-lg font-bold text-slate-800 mb-2 flex items-center"><i class="fas fa-volume-up text-indigo-500 mr-3"></i>Kustomisasi Audio Notifikasi (MP3 / WAV)</h2>
+                            <p class="text-xs text-slate-500 mb-6">Unggah file audio singkat (.mp3 / .wav / .ogg) dari komputer Anda untuk menggantikan nada default.</p>
+                            
+                            <div class="space-y-6">
+                                <!-- Audio Scan Masuk -->
+                                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                    <div>
+                                        <h4 class="font-bold text-slate-800 text-sm flex items-center"><i class="fas fa-sign-in-alt text-emerald-500 mr-2"></i> Audio Scan Jam Masuk</h4>
+                                        <p class="text-xs text-slate-500 mt-1">Status: ${p.audioMasuk ? '<span class="text-emerald-600 font-bold">Audio Kustom Aktif</span>' : '<span class="text-slate-400">Nada Bawaan (Default)</span>'}</p>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <button onclick="tesSuara('masuk')" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-3 py-2 rounded-lg text-xs font-bold transition flex items-center"><i class="fas fa-play mr-1"></i> Tes</button>
+                                        <label class="bg-slate-800 hover:bg-slate-900 text-white px-3 py-2 rounded-lg text-xs font-bold transition cursor-pointer flex items-center">
+                                            <i class="fas fa-upload mr-1"></i> Upload MP3
+                                            <input type="file" accept="audio/*" onchange="handleAudioUpload(event, 'audioMasuk')" class="hidden">
+                                        </label>
+                                        ${p.audioMasuk ? `<button onclick="hapusAudioKustom('audioMasuk')" class="bg-red-100 hover:bg-red-200 text-red-600 p-2 rounded-lg text-xs transition" title="Reset ke Default"><i class="fas fa-trash"></i></button>` : ''}
+                                    </div>
+                                </div>
+
+                                <!-- Audio Scan Pulang -->
+                                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                    <div>
+                                        <h4 class="font-bold text-slate-800 text-sm flex items-center"><i class="fas fa-sign-out-alt text-blue-500 mr-2"></i> Audio Scan Jam Pulang</h4>
+                                        <p class="text-xs text-slate-500 mt-1">Status: ${p.audioPulang ? '<span class="text-blue-600 font-bold">Audio Kustom Aktif</span>' : '<span class="text-slate-400">Nada Bawaan (Default)</span>'}</p>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <button onclick="tesSuara('pulang')" class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-2 rounded-lg text-xs font-bold transition flex items-center"><i class="fas fa-play mr-1"></i> Tes</button>
+                                        <label class="bg-slate-800 hover:bg-slate-900 text-white px-3 py-2 rounded-lg text-xs font-bold transition cursor-pointer flex items-center">
+                                            <i class="fas fa-upload mr-1"></i> Upload MP3
+                                            <input type="file" accept="audio/*" onchange="handleAudioUpload(event, 'audioPulang')" class="hidden">
+                                        </label>
+                                        ${p.audioPulang ? `<button onclick="hapusAudioKustom('audioPulang')" class="bg-red-100 hover:bg-red-200 text-red-600 p-2 rounded-lg text-xs transition" title="Reset ke Default"><i class="fas fa-trash"></i></button>` : ''}
+                                    </div>
+                                </div>
+
+                                <!-- Audio Notifikasi Cuti -->
+                                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                    <div>
+                                        <h4 class="font-bold text-slate-800 text-sm flex items-center"><i class="fas fa-bell text-amber-500 mr-2"></i> Audio Pengajuan Cuti / Izin</h4>
+                                        <p class="text-xs text-slate-500 mt-1">Status: ${p.audioCuti ? '<span class="text-amber-600 font-bold">Audio Kustom Aktif</span>' : '<span class="text-slate-400">Nada Bawaan (Default)</span>'}</p>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <button onclick="tesSuara('notif_admin')" class="bg-amber-100 hover:bg-amber-200 text-amber-700 px-3 py-2 rounded-lg text-xs font-bold transition flex items-center"><i class="fas fa-play mr-1"></i> Tes</button>
+                                        <label class="bg-slate-800 hover:bg-slate-900 text-white px-3 py-2 rounded-lg text-xs font-bold transition cursor-pointer flex items-center">
+                                            <i class="fas fa-upload mr-1"></i> Upload MP3
+                                            <input type="file" accept="audio/*" onchange="handleAudioUpload(event, 'audioCuti')" class="hidden">
+                                        </label>
+                                        ${p.audioCuti ? `<button onclick="hapusAudioKustom('audioCuti')" class="bg-red-100 hover:bg-red-200 text-red-600 p-2 rounded-lg text-xs transition" title="Reset ke Default"><i class="fas fa-trash"></i></button>` : ''}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -1621,7 +1822,7 @@
                             <form class="space-y-5">
                                 <div>
                                     <label class="block text-xs font-bold uppercase text-slate-500 mb-2">Username Baru</label>
-                                    <input type="text" id="set_adminUser" value="${p.adminUsername}" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-amber-500 outline-none">
+                                    <input type="text" id="set_adminUser" value="${p.adminUsername || 'admin'}" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-amber-500 outline-none">
                                 </div>
                                 <div>
                                     <label class="block text-xs font-bold uppercase text-slate-500 mb-2">Ubah Password</label>
@@ -1706,7 +1907,6 @@
             reader.readAsText(file);
         }
 
-        // Jalankan aplikasi pertama kali
         window.onload = () => loadData();
     </script>
 </body>
