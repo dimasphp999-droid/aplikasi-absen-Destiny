@@ -10,6 +10,9 @@
     <!-- Script HTML5-QRCode untuk memindai QR secara Native -->
     <script src="https://unpkg.com/html5-qrcode"></script>
 
+    <!-- Script SheetJS untuk Ekspor Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
     <!-- FIREBASE SDK v8 (Compat) untuk kemudahan integrasi tanpa bundler -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -643,6 +646,23 @@
             if(menu) menu.classList.toggle('hidden');
         }
 
+        function toggleNotifDropdown(event) {
+            if (event) event.stopPropagation();
+            const drop = document.getElementById('notifDropdown');
+            if (drop) drop.classList.toggle('hidden');
+        }
+
+        // Menutup dropdown notifikasi jika user mengklik area lain di luar kotak
+        document.addEventListener('click', function(event) {
+            const drop = document.getElementById('notifDropdown');
+            const bell = document.getElementById('bellButton');
+            if (drop && !drop.classList.contains('hidden')) {
+                if (!drop.contains(event.target) && (!bell || !bell.contains(event.target))) {
+                    drop.classList.add('hidden');
+                }
+            }
+        });
+
         function startRealTimeClock() {
             if (clockInterval) clearInterval(clockInterval);
             
@@ -913,14 +933,62 @@
             const hadir = absenHariIni.length;
             const telat = absenHariIni.filter(a => a.statusMasuk === 'Terlambat').length;
             const cutiMenunggu = state.cuti.filter(c => c.status === 'Menunggu').length;
+            
+            const totalKaryawan = state.karyawan.length;
+            const belumHadir = totalKaryawan - hadir;
+            
+            // Hitung jumlah kategori notifikasi yang akan ditampilkan di badge merah
+            let notifCount = 2; // Notif Hadir & Belum Hadir selalu ada setiap hari
+            if (cutiMenunggu > 0) notifCount++; // Tambah 1 jika ada cuti pending
 
             return `
-                <div class="mb-8 flex justify-between items-end">
+                <div class="mb-8 flex justify-between items-start">
                     <div>
                         <h1 class="text-3xl font-bold text-slate-800 tracking-tight">Halo, Admin!</h1>
                         <p class="text-slate-500 mt-1">Berikut adalah ringkasan aktivitas presensi hari ini.</p>
                     </div>
-                    ${cutiMenunggu > 0 ? `<button onclick="setView('cuti')" class="bg-amber-100 text-amber-700 px-4 py-2 rounded-lg text-sm font-bold animate-pulse"><i class="fas fa-bell mr-2"></i>${cutiMenunggu} Cuti Pending</button>` : ''}
+                    
+                    <!-- BELL NOTIFICATION & DROPDOWN -->
+                    <div class="relative z-50">
+                        <button id="bellButton" onclick="toggleNotifDropdown(event)" class="relative p-3.5 bg-white rounded-xl shadow-sm border border-slate-200 hover:bg-slate-50 transition focus:outline-none flex items-center justify-center">
+                            <i class="fas fa-bell text-slate-600 text-xl"></i>
+                            ${cutiMenunggu > 0 ? `<span class="absolute top-2 right-2 flex h-3 w-3"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span></span>` : ''}
+                            <span class="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-full border-2 border-slate-50 shadow-sm">${notifCount}</span>
+                        </button>
+                        
+                        <div id="notifDropdown" class="hidden absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden transform transition-all origin-top-right">
+                            <div class="bg-slate-800 p-4 flex justify-between items-center">
+                                <h3 class="font-bold text-white text-sm">Notifikasi Hari Ini</h3>
+                                <span class="bg-slate-700 text-slate-300 text-[10px] font-bold px-2 py-1 rounded-full">${formatDateID(dateToday)}</span>
+                            </div>
+                            <div class="max-h-80 overflow-y-auto">
+                                ${cutiMenunggu > 0 ? `
+                                <div onclick="setView('cuti')" class="p-4 border-b border-slate-50 hover:bg-amber-50 cursor-pointer flex gap-3 transition">
+                                    <div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-500 shrink-0"><i class="fas fa-envelope-open-text"></i></div>
+                                    <div>
+                                        <p class="text-sm font-bold text-slate-800">Pengajuan Cuti / Izin</p>
+                                        <p class="text-xs text-slate-500 mt-0.5">Terdapat <b>${cutiMenunggu}</b> pengajuan yang menunggu verifikasi Anda.</p>
+                                    </div>
+                                </div>` : ''}
+                                
+                                <div onclick="setView('absensi')" class="p-4 border-b border-slate-50 hover:bg-emerald-50 cursor-pointer flex gap-3 transition">
+                                    <div class="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-500 shrink-0"><i class="fas fa-user-check"></i></div>
+                                    <div>
+                                        <p class="text-sm font-bold text-slate-800">Karyawan Hadir</p>
+                                        <p class="text-xs text-slate-500 mt-0.5"><b>${hadir}</b> dari ${totalKaryawan} karyawan sudah scan masuk hari ini.</p>
+                                    </div>
+                                </div>
+                                
+                                <div onclick="setView('karyawan')" class="p-4 hover:bg-red-50 cursor-pointer flex gap-3 transition">
+                                    <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-500 shrink-0"><i class="fas fa-user-times"></i></div>
+                                    <div>
+                                        <p class="text-sm font-bold text-slate-800">Belum Hadir</p>
+                                        <p class="text-xs text-slate-500 mt-0.5"><b>${belumHadir}</b> karyawan belum melakukan scan absensi.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
@@ -1393,9 +1461,18 @@
                                 <p class="text-sm text-slate-600 leading-relaxed" id="dc_alasan">-</p>
                             </div>
                         </div>
-                        <div id="dc_action_buttons" class="px-6 py-5 border-t border-slate-100 flex justify-end gap-3 bg-white hidden">
-                            <button id="btnTolakCuti" class="flex-1 bg-red-100 hover:bg-red-200 text-red-700 font-bold py-3 rounded-xl transition">Tolak</button>
-                            <button id="btnSetujuCuti" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-emerald-500/30">Setujui</button>
+                        <div id="dc_action_buttons" class="px-6 py-5 border-t border-slate-100 flex-col gap-3 bg-white hidden">
+                            <button id="btnForwardWA" class="w-full bg-slate-50 hover:bg-emerald-50 text-emerald-600 border border-slate-200 font-bold py-3 rounded-xl transition flex justify-center items-center mb-1">
+                                <i class="fab fa-whatsapp mr-2 text-xl"></i> Minta ACC Atasan via WA
+                            </button>
+                            <div class="flex gap-3 w-full">
+                                <button id="btnTolakCuti" class="flex-1 bg-red-100 hover:bg-red-200 text-red-700 font-bold py-3 rounded-xl transition flex flex-col items-center justify-center leading-tight">
+                                    <span>Tolak</span><span class="text-[10px] font-normal opacity-80">& Notif Karyawan</span>
+                                </button>
+                                <button id="btnSetujuCuti" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-emerald-500/30 flex flex-col items-center justify-center leading-tight">
+                                    <span>Setujui</span><span class="text-[10px] font-normal opacity-90">& Notif Karyawan</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1456,7 +1533,7 @@
             if(!state.cuti) state.cuti = [];
             state.cuti.push({
                 id: Date.now(),
-                karyawanId: parseInt(karyawanId),
+                karyawanId: parseInt(karyawanId, 10), // Memastikan ID diubah menjadi angka dengan aman
                 tanggalPengajuan: new Date().toISOString(),
                 jenis: jenis,
                 mulai: mulai,
@@ -1477,7 +1554,8 @@
             tbody.innerHTML = '';
             
             if(!state.cuti) state.cuti = [];
-            const sortedCuti = [...state.cuti].sort((a, b) => b.id - a.id);
+            // Optimasi pengurutan (Sorting) dari data paling baru berdasarkan waktu (bukan hanya ID)
+            const sortedCuti = [...state.cuti].sort((a, b) => new Date(b.tanggalPengajuan) - new Date(a.tanggalPengajuan));
 
             if(sortedCuti.length === 0){
                 tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-slate-400">Belum ada pengajuan izin/cuti.</td></tr>';
@@ -1522,15 +1600,19 @@
             document.getElementById('dc_alasan').innerText = c.alasan;
 
             const btnContainer = document.getElementById('dc_action_buttons');
+            const btnForward = document.getElementById('btnForwardWA');
             const btnSetuju = document.getElementById('btnSetujuCuti');
             const btnTolak = document.getElementById('btnTolakCuti');
 
             if(c.status === 'Menunggu') {
                 btnContainer.classList.remove('hidden');
+                btnContainer.classList.add('flex');
+                btnForward.onclick = () => forwardWAKepsek(id);
                 btnSetuju.onclick = () => updateStatusCuti(id, 'Disetujui');
                 btnTolak.onclick = () => updateStatusCuti(id, 'Ditolak');
             } else {
                 btnContainer.classList.add('hidden');
+                btnContainer.classList.remove('flex');
             }
 
             const modal = document.getElementById('modalDetailCuti');
@@ -1555,12 +1637,56 @@
         function updateStatusCuti(id, statusBaru) {
             const idx = state.cuti.findIndex(x => x.id === id);
             if(idx !== -1) {
-                state.cuti[idx].status = statusBaru;
+                const c = state.cuti[idx];
+                c.status = statusBaru;
                 saveData();
                 showToast('Berhasil', `Pengajuan telah ${statusBaru}`);
                 tutupModalDetailCuti();
                 renderCutiTable();
+
+                // Notifikasi WA ke Karyawan
+                const k = state.karyawan.find(x => x.id == c.karyawanId);
+                if (k && k.noWa) {
+                    const targetWA = formatWANumber(k.noWa);
+                    const pesan = `Halo *${k.nama}*,%0A%0APengajuan *${c.jenis}* Anda untuk tanggal ${formatDateID(c.mulai)} s.d ${formatDateID(c.selesai)} telah *${statusBaru.toUpperCase()}*.%0A%0ATerima kasih.`;
+                    
+                    // Jeda sedikit agar modal tertutup & toast muncul terlebih dahulu
+                    setTimeout(() => {
+                        window.open(`https://wa.me/${targetWA}?text=${pesan}`, '_blank');
+                    }, 500);
+                } else {
+                    setTimeout(() => {
+                        showToast('Info', 'Karyawan terkait tidak memiliki No. WhatsApp.', 'warning');
+                    }, 800);
+                }
             }
+        }
+
+        // FUNGSI HELPER WHATSAPP
+        function formatWANumber(nomor) {
+            if (!nomor) return '';
+            let cleaned = nomor.replace(/\D/g, ''); // Hapus karakter selain angka
+            if (cleaned.startsWith('0')) {
+                return '62' + cleaned.substring(1); // Ubah 08 jadi 628
+            }
+            return cleaned;
+        }
+
+        function forwardWAKepsek(id) {
+            const c = state.cuti.find(x => x.id === id);
+            if(!c) return;
+            const k = state.karyawan.find(x => x.id == c.karyawanId);
+            const nama = k ? k.nama : 'Karyawan';
+            
+            const noWaKepsek = state.pengaturan?.waKepalaSekolah;
+            if(!noWaKepsek) {
+                return showToast('Peringatan', 'Nomor WA Atasan / Kepala Sekolah belum diatur di menu Pengaturan!', 'warning');
+            }
+
+            const targetWA = formatWANumber(noWaKepsek);
+            const pesan = `Halo Bapak/Ibu,%0A%0ATerdapat pengajuan *${c.jenis}* baru yang membutuhkan ACC Anda:%0A%0A*Nama:* ${nama}%0A*Tanggal:* ${formatDateID(c.mulai)} s.d ${formatDateID(c.selesai)}%0A*Alasan:* ${c.alasan}%0A%0AMohon konfirmasinya apakah pengajuan ini disetujui. Terima kasih.`;
+            
+            window.open(`https://wa.me/${targetWA}?text=${pesan}`, '_blank');
         }
 
         function getGajiHTML() {
@@ -1595,9 +1721,14 @@
                             ${monthOptions}
                         </select>
                     </div>
-                    <button onclick="hitungGaji()" class="w-full sm:w-auto bg-slate-800 hover:bg-slate-900 text-white font-bold px-8 py-3.5 rounded-xl shadow-lg transition flex items-center justify-center">
-                        <i class="fas fa-calculator mr-2"></i> Kalkulasi
-                    </button>
+                    <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                        <button onclick="hitungGaji()" class="flex-1 sm:flex-none bg-slate-800 hover:bg-slate-900 text-white font-bold px-8 py-3.5 rounded-xl shadow-lg transition flex items-center justify-center">
+                            <i class="fas fa-calculator mr-2"></i> Kalkulasi
+                        </button>
+                        <button id="btnExportExcel" onclick="eksporGajiExcel()" style="display: none;" class="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-3.5 rounded-xl shadow-lg transition flex items-center justify-center">
+                            <i class="fas fa-file-excel mr-2"></i> Ekspor Excel
+                        </button>
+                    </div>
                 </div>
 
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden" id="gajiResultContainer" style="display:none;">
@@ -1623,7 +1754,10 @@
             const valBulan = document.getElementById('bulanGaji').value;
             const container = document.getElementById('gajiResultContainer');
             const tbody = document.getElementById('tabelGajiBody');
+            const btnExport = document.getElementById('btnExportExcel');
+            
             container.style.display = 'block';
+            if(btnExport) btnExport.style.display = 'flex';
             tbody.innerHTML = '';
 
             state.karyawan.forEach(k => {
@@ -1646,6 +1780,62 @@
                 `;
                 tbody.appendChild(tr);
             });
+        }
+
+        function eksporGajiExcel() {
+            const valBulan = document.getElementById('bulanGaji').value;
+            if(!valBulan) return showToast('Error', 'Pilih bulan terlebih dahulu', 'error');
+
+            const excelData = [];
+            
+            // Generate ulang data dalam format JSON murni untuk dimasukkan ke Excel
+            state.karyawan.forEach(k => {
+                const ab = state.absensi.filter(a => a.karyawanId === k.id && a.tanggal.startsWith(valBulan));
+                const jmlHadir = ab.length;
+                const jmlTelat = ab.filter(a => a.statusMasuk === 'Terlambat').length;
+                
+                const tunjangan = jmlHadir * state.pengaturan.tunjanganHadir;
+                const denda = jmlTelat * state.pengaturan.dendaTelat;
+                let total = k.gajiPokok + tunjangan - denda; 
+                if (total < 0) total = 0;
+                
+                excelData.push({
+                    "NIK": k.nik,
+                    "Nama Karyawan": k.nama,
+                    "Bulan": valBulan,
+                    "Total Hadir (Hari)": jmlHadir,
+                    "Total Telat (Kali)": jmlTelat,
+                    "Gaji Pokok": k.gajiPokok,
+                    "Total Tunjangan": tunjangan,
+                    "Total Potongan (Denda)": denda,
+                    "Total Take Home Pay": total
+                });
+            });
+
+            if(excelData.length === 0) {
+                return showToast('Info', 'Tidak ada data karyawan untuk diekspor', 'warning');
+            }
+
+            try {
+                // Mengkonversi JSON array ke lembar kerja Excel (Worksheet)
+                const worksheet = XLSX.utils.json_to_sheet(excelData);
+                const workbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(workbook, worksheet, "Laporan_Gaji");
+                
+                // Merapikan lebar setiap kolom agar mudah dibaca di Excel
+                const wscols = [
+                    {wch: 20}, {wch: 25}, {wch: 10}, {wch: 18}, 
+                    {wch: 18}, {wch: 15}, {wch: 18}, {wch: 22}, {wch: 22}
+                ];
+                worksheet['!cols'] = wscols;
+
+                // Mengunduh File
+                XLSX.writeFile(workbook, `Laporan_Gaji_${valBulan}.xlsx`);
+                showToast('Sukses', 'File Excel berhasil diunduh!');
+            } catch(e) {
+                console.error(e);
+                showToast('Error', 'Gagal mengekspor file Excel', 'error');
+            }
         }
 
         function getLaporanHTML() {
@@ -1744,6 +1934,10 @@
                                 <div class="md:col-span-2">
                                     <label class="block text-xs font-bold uppercase text-slate-500 mb-2">Batas Jam Masuk (Toleransi)</label>
                                     <input type="time" id="set_jam" value="${p.jamMasuk || '08:00'}" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                                </div>
+                                <div class="md:col-span-2 border-t border-slate-100 pt-4 mt-2">
+                                    <label class="block text-xs font-bold uppercase text-slate-500 mb-2">No. WA Atasan / Kepala Sekolah</label>
+                                    <input type="tel" id="set_waKepsek" value="${p.waKepalaSekolah || ''}" placeholder="Contoh: 08123456789 (Untuk ACC Cuti)" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
                                 </div>
                                 <div>
                                     <label class="block text-xs font-bold uppercase text-slate-500 mb-2">Bonus Hadir Harian (Rp)</label>
@@ -1862,7 +2056,9 @@
         }
 
         function simpanPengaturan() {
+            if (!state.pengaturan) state.pengaturan = {};
             state.pengaturan.jamMasuk = document.getElementById('set_jam').value;
+            state.pengaturan.waKepalaSekolah = document.getElementById('set_waKepsek').value;
             state.pengaturan.tunjanganHadir = parseFloat(document.getElementById('set_tunjangan').value) || 0;
             state.pengaturan.dendaTelat = parseFloat(document.getElementById('set_denda').value) || 0;
             saveData(); showToast('Tersimpan', 'Aturan berhasil diperbarui.');
