@@ -132,7 +132,7 @@
         let clockInterval = null;
         let deleteTarget = null;
         let isInitialLoad = true;
-        let lastCutiCount = 0; // Untuk mendeteksi pengajuan cuti baru secara real-time
+        let lastCutiCount = 0;
 
         // ==========================================
         // AUDIO NOTIFICATION SYSTEM (Custom MP3/WAV & Fallback)
@@ -144,7 +144,6 @@
                 else if (type === 'pulang') customAudio = state.pengaturan?.audioPulang;
                 else if (type === 'notif_admin' || type === 'error') customAudio = state.pengaturan?.audioCuti;
 
-                // Jika ada file MP3/WAV kustom yang diunggah, putar file audio tersebut
                 if (customAudio) {
                     const audio = new Audio(customAudio);
                     const playPromise = audio.play();
@@ -156,8 +155,6 @@
                     }
                     return;
                 }
-                
-                // Jika tidak ada file kustom, gunakan Web Audio API (Sintetis)
                 playSynthSound(type);
             } catch(e) {
                 console.log("Audio API diblokir browser sebelum interaksi user.", e);
@@ -223,7 +220,6 @@
             const file = event.target.files[0];
             if (!file) return;
 
-            // Batasi ukuran file audio agar tidak membebani database (maksimal ~700KB)
             if (file.size > 700 * 1024) {
                 showToast("File Terlalu Besar", "Harap pilih file audio MP3/WAV singkat berukuran di bawah 700 KB.", "warning");
                 return;
@@ -322,7 +318,6 @@
                         if(!state.absensi) state.absensi = [];
                         if(!state.cuti) state.cuti = [];
                         
-                        // Cek apakah ada pengajuan cuti baru dari karyawan secara real-time
                         if (!isInitialLoad && state.cuti.length > oldCutiLength && state.currentUserRole === 'admin') {
                             playSound('notif_admin');
                             showToast('Pengajuan Baru!', 'Ada pengajuan izin/cuti baru masuk.', 'warning');
@@ -392,22 +387,22 @@
                     { id: 115, nik: 'KRY-202601-015', noKtp: '320101015196015', nama: 'Oki Darmawan', tanggalLahir: '1998-08-17', jabatanId: 6, tanggalMasuk: '2026-01-15', gajiPokok: 5000000, noWa: '0811001015' }
                 ];
 
+                const tmr = new Date();
+                const dstr = `${tmr.getFullYear()}-${String(tmr.getMonth() + 1).padStart(2, '0')}-${String(tmr.getDate()).padStart(2, '0')}`;
+
                 state.absensi = [
-                    { id: 201, karyawanId: 101, tanggal: '2026-08-10', jamMasuk: '07:45', jamPulang: '17:00', statusMasuk: 'Tepat Waktu' },
-                    { id: 202, karyawanId: 102, tanggal: '2026-08-10', jamMasuk: '07:50', jamPulang: '17:05', statusMasuk: 'Tepat Waktu' },
-                    { id: 203, karyawanId: 104, tanggal: '2026-08-10', jamMasuk: '08:15', jamPulang: '17:10', statusMasuk: 'Terlambat' },
-                    { id: 204, karyawanId: 106, tanggal: '2026-08-10', jamMasuk: '07:55', jamPulang: '17:00', statusMasuk: 'Tepat Waktu' },
-                    { id: 205, karyawanId: 108, tanggal: '2026-08-10', jamMasuk: '07:58', jamPulang: '17:30', statusMasuk: 'Tepat Waktu' },
-                    { id: 211, karyawanId: 101, tanggal: '2026-08-12', jamMasuk: '07:30', jamPulang: null, statusMasuk: 'Tepat Waktu' },
-                    { id: 212, karyawanId: 103, tanggal: '2026-08-12', jamMasuk: '07:45', jamPulang: null, statusMasuk: 'Tepat Waktu' },
-                    { id: 213, karyawanId: 106, tanggal: '2026-08-12', jamMasuk: '08:10', jamPulang: null, statusMasuk: 'Terlambat' }
+                    { id: 201, karyawanId: 101, tanggal: dstr, jamMasuk: '07:45', jamPulang: '17:00', statusMasuk: 'Tepat Waktu' },
+                    { id: 202, karyawanId: 102, tanggal: dstr, jamMasuk: '07:50', jamPulang: '17:05', statusMasuk: 'Tepat Waktu' },
+                    { id: 203, karyawanId: 104, tanggal: dstr, jamMasuk: '08:15', jamPulang: '17:10', statusMasuk: 'Terlambat' },
+                    { id: 204, karyawanId: 106, tanggal: dstr, jamMasuk: '07:55', jamPulang: '17:00', statusMasuk: 'Tepat Waktu' },
+                    { id: 205, karyawanId: 108, tanggal: dstr, jamMasuk: '07:58', jamPulang: null, statusMasuk: 'Tepat Waktu' }
                 ];
 
                 state.cuti = [
                     { id: 301, karyawanId: 112, tanggalPengajuan: '2026-08-01T08:00:00.000Z', jenis: 'Cuti', mulai: '2026-08-15', selesai: '2026-08-18', alasan: 'Acara keluarga pernikahan di luar kota.', status: 'Disetujui' },
                     { id: 302, karyawanId: 114, tanggalPengajuan: '2026-08-05T09:30:00.000Z', jenis: 'Sakit', mulai: '2026-08-06', selesai: '2026-08-07', alasan: 'Demam tinggi (surat dokter sudah dititipkan)', status: 'Disetujui' },
                     { id: 303, karyawanId: 108, tanggalPengajuan: '2026-08-10T14:15:00.000Z', jenis: 'Izin', mulai: '2026-08-14', selesai: '2026-08-14', alasan: 'Mengurus administrasi perpanjangan KTP/SIM', status: 'Ditolak' },
-                    { id: 304, karyawanId: 105, tanggalPengajuan: '2026-08-11T10:00:00.000Z', jenis: 'Cuti', mulai: '2026-08-20', selesai: '2026-08-22', alasan: 'Cuti tahunan untuk liburan keluarga.', status: 'Menunggu' }
+                    { id: 304, karyawanId: 105, tanggalPengajuan: new Date().toISOString(), jenis: 'Cuti', mulai: '2026-08-20', selesai: '2026-08-22', alasan: 'Cuti tahunan untuk liburan keluarga.', status: 'Menunggu' }
                 ];
 
                 saveData();
@@ -429,7 +424,7 @@
 
         function startScanner() {
             setTimeout(async () => {
-                // BUGFIX: Cegah kamera menyala jika user sudah keburu pindah halaman / Log out
+                // BUGFIX: Cegah kamera menyala jika user sudah keburu pindah halaman
                 if (state.currentView !== 'scanWajah') return; 
 
                 const readerElement = document.getElementById('reader');
@@ -501,12 +496,12 @@
                     statusMasuk: status
                 });
                 saveData();
-                playSound('masuk'); // Panggil suara saat sukses scan jam masuk
+                playSound('masuk'); 
                 showToast('Masuk Berhasil', `Selamat bekerja, ${karyawan.nama}! (${status})`);
             } else if (!absenHariIni.jamPulang) {
                 absenHariIni.jamPulang = timeString;
                 saveData();
-                playSound('pulang'); // Panggil suara saat sukses scan jam pulang
+                playSound('pulang'); 
                 showToast('Pulang Berhasil', `Hati-hati di jalan, ${karyawan.nama}!`);
             } else {
                 playSound('error');
@@ -562,6 +557,10 @@
                 state.jabatan = state.jabatan.filter(x => x.id !== id);
                 showToast('Sukses', 'Jabatan dihapus');
                 if(state.currentView === 'jabatan') renderJabatanTable();
+            } else if (type === 'absensi') {
+                state.absensi = state.absensi.filter(x => x.id !== id);
+                showToast('Sukses', 'Data riwayat absensi berhasil dihapus');
+                if(state.currentView === 'absensi') renderAbsensiTable();
             }
             
             saveData();
@@ -652,7 +651,6 @@
             if (drop) drop.classList.toggle('hidden');
         }
 
-        // Menutup dropdown notifikasi jika user mengklik area lain di luar kotak
         document.addEventListener('click', function(event) {
             const drop = document.getElementById('notifDropdown');
             const bell = document.getElementById('bellButton');
@@ -937,8 +935,8 @@
             const totalKaryawan = state.karyawan.length;
             const belumHadir = totalKaryawan - hadir;
             
-            // Hitung jumlah notifikasi aktif (hanya yang butuh tindakan / belum terbaca)
-            let notifCount = cutiMenunggu; // Hanya menghitung pengajuan cuti/izin yang masih pending
+            // Hitung jumlah notifikasi aktif
+            let notifCount = cutiMenunggu; 
 
             return `
                 <div class="mb-8 flex justify-between items-start">
@@ -950,8 +948,8 @@
                     <!-- BELL NOTIFICATION & DROPDOWN -->
                     <div class="relative z-50">
                         <button id="bellButton" onclick="toggleNotifDropdown(event)" class="relative p-3.5 bg-white rounded-xl shadow-sm border border-slate-200 hover:bg-slate-50 transition focus:outline-none flex items-center justify-center">
-                            <i class="fas fa-bell text-slate-600 text-xl"></i>
-                            ${cutiMenunggu > 0 ? `<span class="absolute top-2 right-2 flex h-3 w-3"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span></span>` : ''}
+                            <i class="fas fa-bell ${notifCount > 0 ? 'text-amber-500' : 'text-slate-600'} text-xl"></i>
+                            ${notifCount > 0 ? `<span class="absolute top-2 right-2 flex h-3 w-3"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span></span>` : ''}
                             ${notifCount > 0 ? `<span class="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-full border-2 border-slate-50 shadow-sm">${notifCount}</span>` : ''}
                         </button>
                         
@@ -1239,7 +1237,7 @@
             }
 
             if (id) {
-                const index = state.karyawan.findIndex(k => k.id == id);
+                const index = state.karyawan.findIndex(k => k.id == parseInt(id, 10));
                 if (index !== -1) state.karyawan[index] = { ...state.karyawan[index], ...data };
                 showToast('Tersimpan', 'Pembaruan data karyawan berhasil disimpan.');
             } else {
@@ -1341,7 +1339,7 @@
             if(!nama) return showToast('Error', 'Nama jabatan wajib diisi', 'error');
 
             if (id) {
-                const idx = state.jabatan.findIndex(j => j.id == id);
+                const idx = state.jabatan.findIndex(j => j.id == parseInt(id, 10));
                 state.jabatan[idx] = { ...state.jabatan[idx], nama };
             } else {
                 state.jabatan.push({ id: Date.now(), nama });
@@ -1365,6 +1363,7 @@
                                     <th class="py-4 px-6 font-semibold">Masuk</th>
                                     <th class="py-4 px-6 font-semibold">Pulang</th>
                                     <th class="py-4 px-6 font-semibold">Verifikasi Status</th>
+                                    <th class="py-4 px-6 font-semibold text-center">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody id="tabelAbsensiBody" class="divide-y divide-slate-100">
@@ -1383,7 +1382,7 @@
             const sortedAbsensi = [...state.absensi].sort((a, b) => b.id - a.id);
 
             if(sortedAbsensi.length === 0){
-                tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-slate-400">Database absensi masih kosong.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-slate-400">Database absensi masih kosong.</td></tr>';
                 return;
             }
 
@@ -1400,6 +1399,9 @@
                     <td class="py-4 px-6 font-mono text-slate-500">${a.jamMasuk}</td>
                     <td class="py-4 px-6 font-mono text-slate-500">${a.jamPulang || '<span class="bg-slate-100 px-2 py-0.5 rounded text-xs font-sans border border-slate-200">Belum Pulang</span>'}</td>
                     <td class="py-4 px-6"><span class="px-3 py-1 rounded-full text-xs font-bold ${badgeClass}">${a.statusMasuk}</span></td>
+                    <td class="py-4 px-6 text-center">
+                        <button onclick="confirmDelete('absensi', ${a.id})" class="text-red-500 bg-red-50 hover:bg-red-500 hover:text-white p-2 rounded-lg transition shadow-sm" title="Hapus Data"><i class="fas fa-trash"></i></button>
+                    </td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -1532,7 +1534,7 @@
             if(!state.cuti) state.cuti = [];
             state.cuti.push({
                 id: Date.now(),
-                karyawanId: parseInt(karyawanId, 10), // Memastikan ID diubah menjadi angka dengan aman
+                karyawanId: parseInt(karyawanId, 10),
                 tanggalPengajuan: new Date().toISOString(),
                 jenis: jenis,
                 mulai: mulai,
@@ -1542,7 +1544,7 @@
             });
 
             saveData();
-            playSound('notif_admin'); // Bunyikan suara saat pengajuan sukses dikirim
+            playSound('notif_admin');
             tutupModalPengajuanCuti();
             showToast('Terkirim', 'Pengajuan berhasil dikirim ke Admin.');
         }
@@ -1553,8 +1555,13 @@
             tbody.innerHTML = '';
             
             if(!state.cuti) state.cuti = [];
-            // Optimasi pengurutan (Sorting) dari data paling baru berdasarkan waktu (bukan hanya ID)
-            const sortedCuti = [...state.cuti].sort((a, b) => new Date(b.tanggalPengajuan) - new Date(a.tanggalPengajuan));
+            
+            // PATCH: Proteksi sorting fallback untuk mencegah error jika data lama tidak punya 'tanggalPengajuan'
+            const sortedCuti = [...state.cuti].sort((a, b) => {
+                const timeA = a.tanggalPengajuan ? new Date(a.tanggalPengajuan).getTime() : a.id;
+                const timeB = b.tanggalPengajuan ? new Date(b.tanggalPengajuan).getTime() : b.id;
+                return timeB - timeA;
+            });
 
             if(sortedCuti.length === 0){
                 tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-slate-400">Belum ada pengajuan izin/cuti.</td></tr>';
@@ -1573,7 +1580,7 @@
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-slate-50 transition";
                 tr.innerHTML = `
-                    <td class="py-4 px-6 text-slate-500 font-medium">${formatDateID(c.tanggalPengajuan)}</td>
+                    <td class="py-4 px-6 text-slate-500 font-medium">${c.tanggalPengajuan ? formatDateID(c.tanggalPengajuan) : '-'}</td>
                     <td class="py-4 px-6 font-bold text-slate-800">${nama}</td>
                     <td class="py-4 px-6 font-semibold text-slate-600">${c.jenis}</td>
                     <td class="py-4 px-6 text-sm text-slate-600">${formatDateID(c.mulai)} s.d ${formatDateID(c.selesai)}</td>
@@ -1640,7 +1647,6 @@
                 const k = state.karyawan.find(x => x.id == c.karyawanId);
                 let urlWA = null;
 
-                // Menyiapkan tautan WhatsApp terlebih dahulu
                 if (k && k.noWa) {
                     const targetWA = formatWANumber(k.noWa);
                     const pesan = `Halo *${k.nama}*,%0A%0APengajuan *${c.jenis}* Anda untuk tanggal ${formatDateID(c.mulai)} s.d ${formatDateID(c.selesai)} telah *${statusBaru.toUpperCase()}*.%0A%0ATerima kasih.`;
@@ -1651,9 +1657,10 @@
                 saveData();
                 showToast('Berhasil', `Pengajuan telah ${statusBaru}`);
                 tutupModalDetailCuti();
-                renderCutiTable();
+                
+                // Merender ulang Dashboard & Cuti agar lonceng otomatis bersih tanpa direfresh
+                render();
 
-                // Trigger window.open langsung tanpa delay (menghindari pencekalan popup browser)
                 if (urlWA) {
                     window.open(urlWA, '_blank');
                 } else {
@@ -1662,12 +1669,11 @@
             }
         }
 
-        // FUNGSI HELPER WHATSAPP
         function formatWANumber(nomor) {
             if (!nomor) return '';
-            let cleaned = nomor.replace(/\D/g, ''); // Hapus karakter selain angka
+            let cleaned = nomor.replace(/\D/g, ''); 
             if (cleaned.startsWith('0')) {
-                return '62' + cleaned.substring(1); // Ubah 08 jadi 628
+                return '62' + cleaned.substring(1);
             }
             return cleaned;
         }
@@ -1788,7 +1794,6 @@
 
             const excelData = [];
             
-            // Generate ulang data dalam format JSON murni untuk dimasukkan ke Excel
             state.karyawan.forEach(k => {
                 const ab = state.absensi.filter(a => a.karyawanId === k.id && a.tanggal.startsWith(valBulan));
                 const jmlHadir = ab.length;
@@ -1817,19 +1822,16 @@
             }
 
             try {
-                // Mengkonversi JSON array ke lembar kerja Excel (Worksheet)
                 const worksheet = XLSX.utils.json_to_sheet(excelData);
                 const workbook = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(workbook, worksheet, "Laporan_Gaji");
                 
-                // Merapikan lebar setiap kolom agar mudah dibaca di Excel
                 const wscols = [
                     {wch: 20}, {wch: 25}, {wch: 10}, {wch: 18}, 
                     {wch: 18}, {wch: 15}, {wch: 18}, {wch: 22}, {wch: 22}
                 ];
                 worksheet['!cols'] = wscols;
 
-                // Mengunduh File
                 XLSX.writeFile(workbook, `Laporan_Gaji_${valBulan}.xlsx`);
                 showToast('Sukses', 'File Excel berhasil diunduh!');
             } catch(e) {
