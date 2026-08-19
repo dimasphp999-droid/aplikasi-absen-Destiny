@@ -97,7 +97,7 @@
     <div id="appContainer" class="w-full h-full min-h-screen"></div>
 
     <script>
-       const firebaseConfig = {
+        const firebaseConfig = {
             apiKey: "AIzaSyAHCb-IGYuJbsZIiqDUmQEGC8H5mSPmR4A",
             authDomain: "absen-destiny.firebaseapp.com",
             databaseURL: "https://absen-destiny-default-rtdb.asia-southeast1.firebasedatabase.app",
@@ -1200,7 +1200,56 @@
                     <button onclick="window.simpanPengaturanUmum()" class="mt-4 bg-emerald-600 text-white font-bold py-3 px-6 rounded-xl">Simpan</button>
                 </div>
                 
-                <div class="bg-slate-900 rounded-2xl border p-8 text-white"><h2 class="font-bold mb-4">Database</h2><div class="flex gap-4"><button onclick="window.downloadJSON()" class="bg-white/20 px-6 py-3 rounded-xl"><i class="fas fa-download"></i> Backup JSON</button><button onclick="window.muatDemo()" class="bg-indigo-500 px-6 py-3 rounded-xl"><i class="fas fa-magic"></i> Muat 15 Data Sempel</button></div></div>
+                <div class="bg-white rounded-2xl border p-8 mb-8">
+                    <h2 class="font-bold mb-4 flex items-center"><i class="fas fa-volume-up text-indigo-500 mr-2"></i>Audio Notifikasi (MP3/WAV)</h2>
+                    <div class="space-y-4">
+                        <div class="bg-slate-50 p-4 rounded-xl border flex flex-wrap justify-between items-center gap-4">
+                            <div><h4 class="font-bold text-sm">Audio Scan Masuk</h4><p class="text-xs text-slate-500">${p.audioMasuk ? '<span class="text-emerald-600 font-bold">Kustom Aktif</span>' : 'Default'}</p></div>
+                            <div class="flex gap-2">
+                                <button onclick="window.tesSuara('masuk')" class="bg-emerald-100 text-emerald-700 px-3 py-2 rounded-lg text-xs font-bold"><i class="fas fa-play"></i> Tes</button>
+                                <label class="bg-slate-800 text-white px-3 py-2 rounded-lg text-xs font-bold cursor-pointer"><i class="fas fa-upload"></i> Upload<input type="file" accept="audio/*" onchange="window.handleAudioUpload(event, 'audioMasuk')" class="hidden"></label>
+                                ${p.audioMasuk ? `<button onclick="window.hapusAudioKustom('audioMasuk')" class="bg-red-100 text-red-600 px-3 py-2 rounded-lg text-xs"><i class="fas fa-trash"></i></button>` : ''}
+                            </div>
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded-xl border flex flex-wrap justify-between items-center gap-4">
+                            <div><h4 class="font-bold text-sm">Audio Scan Pulang</h4><p class="text-xs text-slate-500">${p.audioPulang ? '<span class="text-blue-600 font-bold">Kustom Aktif</span>' : 'Default'}</p></div>
+                            <div class="flex gap-2">
+                                <button onclick="window.tesSuara('pulang')" class="bg-blue-100 text-blue-700 px-3 py-2 rounded-lg text-xs font-bold"><i class="fas fa-play"></i> Tes</button>
+                                <label class="bg-slate-800 text-white px-3 py-2 rounded-lg text-xs font-bold cursor-pointer"><i class="fas fa-upload"></i> Upload<input type="file" accept="audio/*" onchange="window.handleAudioUpload(event, 'audioPulang')" class="hidden"></label>
+                                ${p.audioPulang ? `<button onclick="window.hapusAudioKustom('audioPulang')" class="bg-red-100 text-red-600 px-3 py-2 rounded-lg text-xs"><i class="fas fa-trash"></i></button>` : ''}
+                            </div>
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded-xl border flex flex-wrap justify-between items-center gap-4">
+                            <div><h4 class="font-bold text-sm">Audio Cuti / Error</h4><p class="text-xs text-slate-500">${p.audioCuti ? '<span class="text-amber-600 font-bold">Kustom Aktif</span>' : 'Default'}</p></div>
+                            <div class="flex gap-2">
+                                <button onclick="window.tesSuara('notif_admin')" class="bg-amber-100 text-amber-700 px-3 py-2 rounded-lg text-xs font-bold"><i class="fas fa-play"></i> Tes</button>
+                                <label class="bg-slate-800 text-white px-3 py-2 rounded-lg text-xs font-bold cursor-pointer"><i class="fas fa-upload"></i> Upload<input type="file" accept="audio/*" onchange="window.handleAudioUpload(event, 'audioCuti')" class="hidden"></label>
+                                ${p.audioCuti ? `<button onclick="window.hapusAudioKustom('audioCuti')" class="bg-red-100 text-red-600 px-3 py-2 rounded-lg text-xs"><i class="fas fa-trash"></i></button>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
+                    <div class="bg-white rounded-2xl border p-8">
+                        <h2 class="font-bold mb-4 flex items-center"><i class="fas fa-lock text-amber-500 mr-2"></i>Akses Administrator</h2>
+                        <div class="space-y-4">
+                            <div><label class="block text-xs font-bold mb-2">Username Admin</label><input type="text" id="s_user" value="${p.adminUsername || 'admin'}" class="w-full border p-3 rounded-xl outline-none"></div>
+                            <div><label class="block text-xs font-bold mb-2">Password Baru (Kosongkan jika tidak diubah)</label><input type="password" id="s_pass" class="w-full border p-3 rounded-xl outline-none"></div>
+                            <button onclick="window.simpanKredensial()" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-xl shadow">Update Kredensial</button>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-slate-900 rounded-2xl border p-8 text-white">
+                        <h2 class="font-bold mb-4 flex items-center"><i class="fas fa-database text-blue-400 mr-2"></i>Pusat Data & Restore</h2>
+                        <div class="space-y-4">
+                            <button onclick="window.downloadJSON()" class="w-full bg-white/20 hover:bg-white/30 border border-white/20 py-3 rounded-xl flex justify-center items-center transition"><i class="fas fa-download mr-2"></i> Download JSON Backup</button>
+                            <label class="w-full bg-emerald-600 hover:bg-emerald-700 py-3 rounded-xl flex justify-center items-center cursor-pointer transition shadow-lg"><i class="fas fa-upload mr-2"></i> Restore File JSON <input type="file" accept=".json" onchange="window.restoreBackupJSON(event)" class="hidden"></label>
+                            <hr class="border-slate-700 my-4 border-dashed">
+                            <button onclick="window.muatDemo()" class="w-full bg-indigo-500 hover:bg-indigo-600 py-3 rounded-xl flex justify-center items-center transition shadow-lg"><i class="fas fa-magic mr-2"></i> Muat 15 Data Sempel</button>
+                        </div>
+                    </div>
+                </div>
                 
                 <!-- MODAL SHIFT -->
                 <div id="m_shift" class="fixed inset-0 bg-black/60 hidden z-[100] flex justify-center items-center p-4"><div class="bg-white rounded-3xl w-full max-w-sm p-6"><h3 class="font-bold text-lg mb-4">Shift</h3><input type="hidden" id="ms_id"><label class="block text-xs font-bold mb-1 mt-3">Nama</label><input type="text" id="ms_nm" class="w-full border rounded p-2"><label class="block text-xs font-bold mb-1 mt-3">Masuk</label><input type="time" id="ms_ms" class="w-full border rounded p-2"><label class="block text-xs font-bold mb-1 mt-3">Pulang</label><input type="time" id="ms_pl" class="w-full border rounded p-2"><div class="mt-4 flex gap-2"><button onclick="document.getElementById('m_shift').classList.add('hidden')" class="px-4 py-2 bg-slate-100 rounded">Batal</button><button onclick="window.simpanShift()" class="px-4 py-2 bg-indigo-600 text-white rounded">Simpan</button></div></div></div>
@@ -1250,6 +1299,36 @@
                 state.absensi = [{id: 2, karyawanId: 1, tanggal: new Date().toISOString().slice(0,10), jamMasuk: '07:45', statusMasuk: 'Tepat Waktu'}];
                 saveData(); render(); showToast('Demo Dimuat', 'Selesai');
             }
+        };
+
+        window.simpanKredensial = function() {
+            const u = document.getElementById('s_user').value;
+            const p = document.getElementById('s_pass').value;
+            if(!u) return showToast('Gagal', 'Username wajib diisi!', 'error');
+            state.pengaturan.adminUsername = u;
+            if(p) state.pengaturan.adminPassword = p;
+            saveData(); showToast('Sukses', 'Kredensial login admin diperbarui.');
+            document.getElementById('s_pass').value = '';
+        };
+
+        window.restoreBackupJSON = function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if (parsed && parsed.karyawan) {
+                        state = parsed;
+                        await saveData();
+                        showToast('Berhasil', 'Database dipulihkan!');
+                        render();
+                    }
+                } catch (err) {
+                    showToast('Error', 'File JSON tidak valid.', 'error');
+                }
+            };
+            reader.readAsText(file);
         };
 
         window.onload = () => loadData();
