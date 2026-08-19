@@ -97,7 +97,7 @@
     <div id="appContainer" class="w-full h-full min-h-screen"></div>
 
     <script>
-        const firebaseConfig = {
+       const firebaseConfig = {
             apiKey: "AIzaSyAHCb-IGYuJbsZIiqDUmQEGC8H5mSPmR4A",
             authDomain: "absen-destiny.firebaseapp.com",
             databaseURL: "https://absen-destiny-default-rtdb.asia-southeast1.firebasedatabase.app",
@@ -106,7 +106,7 @@
             messagingSenderId: "111136151948",
             appId: "1:111136151948:web:b0f8984bb6c8da22d95ea9"
         };
-        const isFirebaseConfigured = firebaseConfig.apiKey !== "ISI_API_KEY_ANDA_DISINI";
+        const isFirebaseConfigured = firebaseConfig.apiKey !== "AIzaSyAHCb-IGYuJbsZIiqDUmQEGC8H5mSPmR4A";
         let isFirebaseConnected = false;
         
         if (isFirebaseConfigured) {
@@ -159,6 +159,8 @@
                 if (type === 'masuk') customAudio = state.pengaturan?.audioMasuk;
                 else if (type === 'pulang') customAudio = state.pengaturan?.audioPulang;
                 else if (type === 'notif_admin' || type === 'error') customAudio = state.pengaturan?.audioCuti;
+                else if (type === 'imk_keluar') customAudio = state.pengaturan?.audioImkKeluar;
+                else if (type === 'imk_kembali') customAudio = state.pengaturan?.audioImkKembali;
 
                 if (customAudio) {
                     const audio = new Audio(customAudio);
@@ -181,14 +183,14 @@
                 let osc = ctx.createOscillator();
                 let gain = ctx.createGain();
 
-                if (type === 'masuk') {
+                if (type === 'masuk' || type === 'imk_keluar') {
                     osc.type = 'triangle'; 
                     osc.frequency.setValueAtTime(523.25, now);
                     osc.frequency.setValueAtTime(659.25, now + 0.1);
                     osc.frequency.setValueAtTime(783.99, now + 0.2);
                     gain.gain.setValueAtTime(0.2, now);
                     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
-                } else if (type === 'pulang') {
+                } else if (type === 'pulang' || type === 'imk_kembali') {
                     osc.type = 'sine';
                     osc.frequency.setValueAtTime(783.99, now);
                     osc.frequency.setValueAtTime(523.25, now + 0.15);
@@ -363,7 +365,7 @@
                         durasi: '-'
                     });
                     saveData();
-                    playSound('masuk');
+                    playSound('imk_keluar');
                     showToast('IMK: Izin Keluar', `${karyawan.nama} tercatat KELUAR kantor pukul ${timeString}`);
                 } else {
                     // Catat Kembali ke Kantor
@@ -379,7 +381,7 @@
                     imkHariIni.durasi = `${durJam > 0 ? durJam + ' jam ' : ''}${durMenit} menit`;
 
                     saveData();
-                    playSound('pulang');
+                    playSound('imk_kembali');
                     showToast('IMK: Kembali', `${karyawan.nama} KEMBALI ke kantor. Durasi di luar: ${imkHariIni.durasi}`);
                 }
 
@@ -1208,7 +1210,47 @@
                     <div class="space-y-4">
                         <div class="bg-slate-50 p-4 rounded-xl border flex justify-between items-center">
                             <div><h4 class="font-bold text-sm">Audio Masuk</h4><p class="text-xs text-slate-500">${p.audioMasuk ? 'Aktif' : 'Default'}</p></div>
-                            <div class="flex gap-2"><button onclick="window.tesSuara('masuk')" class="bg-emerald-100 text-emerald-700 px-3 py-2 rounded-lg text-xs font-bold">Tes</button><label class="bg-slate-800 text-white px-3 py-2 rounded-lg text-xs font-bold cursor-pointer">Upload<input type="file" accept="audio/*" onchange="window.handleAudioUpload(event, 'audioMasuk')" class="hidden"></label></div>
+                            <div class="flex gap-2">
+                                <button onclick="window.tesSuara('masuk')" class="bg-emerald-100 text-emerald-700 px-3 py-2 rounded-lg text-xs font-bold">Tes</button>
+                                <label class="bg-slate-800 text-white px-3 py-2 rounded-lg text-xs font-bold cursor-pointer">Upload<input type="file" accept="audio/*" onchange="window.handleAudioUpload(event, 'audioMasuk')" class="hidden"></label>
+                                ${p.audioMasuk ? `<button onclick="window.hapusAudioKustom('audioMasuk')" class="bg-red-100 text-red-600 px-3 py-2 rounded-lg text-xs" title="Hapus Suara"><i class="fas fa-trash"></i></button>` : ''}
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-50 p-4 rounded-xl border flex justify-between items-center">
+                            <div><h4 class="font-bold text-sm">Audio Pulang</h4><p class="text-xs text-slate-500">${p.audioPulang ? 'Aktif' : 'Default'}</p></div>
+                            <div class="flex gap-2">
+                                <button onclick="window.tesSuara('pulang')" class="bg-blue-100 text-blue-700 px-3 py-2 rounded-lg text-xs font-bold">Tes</button>
+                                <label class="bg-slate-800 text-white px-3 py-2 rounded-lg text-xs font-bold cursor-pointer">Upload<input type="file" accept="audio/*" onchange="window.handleAudioUpload(event, 'audioPulang')" class="hidden"></label>
+                                ${p.audioPulang ? `<button onclick="window.hapusAudioKustom('audioPulang')" class="bg-red-100 text-red-600 px-3 py-2 rounded-lg text-xs" title="Hapus Suara"><i class="fas fa-trash"></i></button>` : ''}
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-50 p-4 rounded-xl border flex justify-between items-center">
+                            <div><h4 class="font-bold text-sm">Audio IMK (Keluar)</h4><p class="text-xs text-slate-500">${p.audioImkKeluar ? 'Aktif' : 'Default'}</p></div>
+                            <div class="flex gap-2">
+                                <button onclick="window.tesSuara('imk_keluar')" class="bg-amber-100 text-amber-700 px-3 py-2 rounded-lg text-xs font-bold">Tes</button>
+                                <label class="bg-slate-800 text-white px-3 py-2 rounded-lg text-xs font-bold cursor-pointer">Upload<input type="file" accept="audio/*" onchange="window.handleAudioUpload(event, 'audioImkKeluar')" class="hidden"></label>
+                                ${p.audioImkKeluar ? `<button onclick="window.hapusAudioKustom('audioImkKeluar')" class="bg-red-100 text-red-600 px-3 py-2 rounded-lg text-xs" title="Hapus Suara"><i class="fas fa-trash"></i></button>` : ''}
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-50 p-4 rounded-xl border flex justify-between items-center">
+                            <div><h4 class="font-bold text-sm">Audio IMK (Kembali)</h4><p class="text-xs text-slate-500">${p.audioImkKembali ? 'Aktif' : 'Default'}</p></div>
+                            <div class="flex gap-2">
+                                <button onclick="window.tesSuara('imk_kembali')" class="bg-indigo-100 text-indigo-700 px-3 py-2 rounded-lg text-xs font-bold">Tes</button>
+                                <label class="bg-slate-800 text-white px-3 py-2 rounded-lg text-xs font-bold cursor-pointer">Upload<input type="file" accept="audio/*" onchange="window.handleAudioUpload(event, 'audioImkKembali')" class="hidden"></label>
+                                ${p.audioImkKembali ? `<button onclick="window.hapusAudioKustom('audioImkKembali')" class="bg-red-100 text-red-600 px-3 py-2 rounded-lg text-xs" title="Hapus Suara"><i class="fas fa-trash"></i></button>` : ''}
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-50 p-4 rounded-xl border flex justify-between items-center">
+                            <div><h4 class="font-bold text-sm">Audio Cuti / Error</h4><p class="text-xs text-slate-500">${p.audioCuti ? 'Aktif' : 'Default'}</p></div>
+                            <div class="flex gap-2">
+                                <button onclick="window.tesSuara('error')" class="bg-rose-100 text-rose-700 px-3 py-2 rounded-lg text-xs font-bold">Tes</button>
+                                <label class="bg-slate-800 text-white px-3 py-2 rounded-lg text-xs font-bold cursor-pointer">Upload<input type="file" accept="audio/*" onchange="window.handleAudioUpload(event, 'audioCuti')" class="hidden"></label>
+                                ${p.audioCuti ? `<button onclick="window.hapusAudioKustom('audioCuti')" class="bg-red-100 text-red-600 px-3 py-2 rounded-lg text-xs" title="Hapus Suara"><i class="fas fa-trash"></i></button>` : ''}
+                            </div>
                         </div>
                     </div>
                 </div>
