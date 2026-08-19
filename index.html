@@ -75,6 +75,30 @@
         </div>
     </div>
 
+    <!-- MODAL HAPUS TANGGAL -->
+    <div id="modalHapusTanggal" class="fixed inset-0 bg-slate-900 bg-opacity-60 hidden z-[150] flex justify-center items-center p-4 backdrop-blur-sm transition-opacity duration-300 opacity-0">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-8 transform scale-95 transition-all duration-300" id="modalHapusTanggalContent">
+            <div class="flex justify-between items-center mb-5">
+                <h3 class="text-xl font-bold text-slate-800">Hapus via Tanggal</h3>
+                <button onclick="tutupModalHapusTanggal()" class="text-slate-400 hover:text-red-500 transition"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            <p class="text-sm text-slate-500 mb-5">Pilih rentang tanggal untuk menghapus data riwayat absensi secara massal.</p>
+            <div class="space-y-4 mb-6">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Dari Tanggal</label>
+                    <input type="date" id="del_startDate" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-red-500 outline-none transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Sampai Tanggal</label>
+                    <input type="date" id="del_endDate" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-red-500 outline-none transition">
+                </div>
+            </div>
+            <button onclick="prosesHapusTanggal()" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3.5 rounded-xl transition shadow-lg shadow-red-500/30 flex items-center justify-center">
+                <i class="fas fa-trash mr-2"></i>Hapus Data Terpilih
+            </button>
+        </div>
+    </div>
+
     <!-- MAIN APP CONTAINER -->
     <div id="appContainer" class="w-full h-full min-h-screen"></div>
 
@@ -82,7 +106,7 @@
         // ==========================================
         // FIREBASE CONFIGURATION (Opsional untuk Real-Time)
         // ==========================================
-        const firebaseConfig = {
+       const firebaseConfig = {
             apiKey: "AIzaSyAHCb-IGYuJbsZIiqDUmQEGC8H5mSPmR4A",
             authDomain: "absen-destiny.firebaseapp.com",
             databaseURL: "https://absen-destiny-default-rtdb.asia-southeast1.firebasedatabase.app",
@@ -424,7 +448,6 @@
 
         function startScanner() {
             setTimeout(async () => {
-                // BUGFIX: Cegah kamera menyala jika user sudah keburu pindah halaman
                 if (state.currentView !== 'scanWajah') return; 
 
                 const readerElement = document.getElementById('reader');
@@ -511,22 +534,28 @@
             setTimeout(() => { isProcessingQR = false; }, 3000);
         }
 
-        function confirmDelete(type, id) {
+        // Deklarasi fungsi secara global agar bisa dijangkau oleh onclick atribut HTML
+        window.confirmDelete = function(type, id) {
             deleteTarget = { type, id };
             const modal = document.getElementById('globalDeleteModal');
             const content = document.getElementById('globalDeleteModalContent');
             const msg = document.getElementById('deleteModalMessage');
             
-            msg.innerText = `Apakah Anda yakin ingin menghapus data ${type} ini?`;
+            if (type === 'semua_absensi') {
+                msg.innerText = "Apakah Anda yakin ingin MENGOSONGKAN SELURUH riwayat absensi? Tindakan ini permanen.";
+            } else {
+                msg.innerText = `Apakah Anda yakin ingin menghapus data ${type} ini?`;
+            }
+            
             modal.classList.remove('hidden');
             setTimeout(() => {
                 modal.classList.add('opacity-100');
                 content.classList.remove('scale-95');
                 content.classList.add('scale-100');
             }, 10);
-        }
+        };
 
-        function closeDeleteModal() {
+        window.closeDeleteModal = function() {
             const modal = document.getElementById('globalDeleteModal');
             const content = document.getElementById('globalDeleteModalContent');
             
@@ -538,7 +567,7 @@
                 modal.classList.add('hidden');
                 deleteTarget = null;
             }, 300);
-        }
+        };
 
         document.getElementById('btnConfirmDelete')?.addEventListener('click', () => {
             if(!deleteTarget) return;
@@ -551,7 +580,7 @@
             } else if (type === 'jabatan') {
                 if (state.karyawan.some(k => k.jabatanId == id)) {
                     showToast('Gagal', 'Jabatan ini masih digunakan oleh karyawan aktif', 'error');
-                    closeDeleteModal();
+                    window.closeDeleteModal();
                     return;
                 }
                 state.jabatan = state.jabatan.filter(x => x.id !== id);
@@ -561,13 +590,17 @@
                 state.absensi = state.absensi.filter(x => x.id !== id);
                 showToast('Sukses', 'Data riwayat absensi berhasil dihapus');
                 if(state.currentView === 'absensi') renderAbsensiTable();
+            } else if (type === 'semua_absensi') {
+                state.absensi = [];
+                showToast('Sukses', 'Seluruh riwayat absensi berhasil dikosongkan');
+                if(state.currentView === 'absensi') renderAbsensiTable();
             }
             
             saveData();
-            closeDeleteModal();
+            window.closeDeleteModal();
         });
 
-        function tampilkanQR(nik, nama) {
+        window.tampilkanQR = function(nik, nama) {
             const modal = document.getElementById('modalQR');
             const content = document.getElementById('modalQRContent');
             
@@ -580,9 +613,9 @@
                 content.classList.remove('scale-95');
                 content.classList.add('scale-100');
             }, 10);
-        }
+        };
 
-        function tutupQR() {
+        window.tutupQR = function() {
             const modal = document.getElementById('modalQR');
             const content = document.getElementById('modalQRContent');
             
@@ -591,7 +624,62 @@
             content.classList.add('scale-95');
             
             setTimeout(() => { modal.classList.add('hidden'); }, 300);
-        }
+        };
+
+        window.bukaModalHapusTanggal = function() {
+            const modal = document.getElementById('modalHapusTanggal');
+            const content = document.getElementById('modalHapusTanggalContent');
+            document.getElementById('del_startDate').value = '';
+            document.getElementById('del_endDate').value = '';
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.add('opacity-100');
+                content.classList.remove('scale-95');
+                content.classList.add('scale-100');
+            }, 10);
+        };
+
+        window.tutupModalHapusTanggal = function() {
+            const modal = document.getElementById('modalHapusTanggal');
+            const content = document.getElementById('modalHapusTanggalContent');
+            modal.classList.remove('opacity-100');
+            content.classList.remove('scale-100');
+            content.classList.add('scale-95');
+            setTimeout(() => { modal.classList.add('hidden'); }, 300);
+        };
+
+        window.prosesHapusTanggal = function() {
+            const start = document.getElementById('del_startDate').value;
+            const end = document.getElementById('del_endDate').value;
+            
+            if(!start || !end) {
+                return showToast('Error', 'Harap isi kedua tanggal!', 'error');
+            }
+            if(start > end) {
+                return showToast('Error', 'Tanggal mulai tidak boleh lebih besar dari selesai.', 'error');
+            }
+
+            if(!confirm(`Yakin ingin menghapus absensi dari ${formatDateID(start)} hingga ${formatDateID(end)}? Tindakan ini tidak bisa dibatalkan.`)) return;
+
+            const initialLength = state.absensi.length;
+            
+            // Filter: Menyimpan data absensi yang tanggalnya DI LUAR rentang yang dihapus
+            state.absensi = state.absensi.filter(a => {
+                return a.tanggal < start || a.tanggal > end;
+            });
+            
+            const deletedCount = initialLength - state.absensi.length;
+
+            if(deletedCount > 0) {
+                saveData();
+                if(state.currentView === 'absensi') renderAbsensiTable();
+                showToast('Sukses', `${deletedCount} data absensi berhasil dihapus.`);
+            } else {
+                showToast('Info', 'Tidak ada data absensi yang ditemukan pada rentang tersebut.', 'warning');
+            }
+            
+            window.tutupModalHapusTanggal();
+        };
 
         function setView(view) {
             stopScanner();
@@ -935,7 +1023,6 @@
             const totalKaryawan = state.karyawan.length;
             const belumHadir = totalKaryawan - hadir;
             
-            // Hitung jumlah notifikasi aktif
             let notifCount = cutiMenunggu; 
 
             return `
@@ -945,7 +1032,6 @@
                         <p class="text-slate-500 mt-1">Berikut adalah ringkasan aktivitas presensi hari ini.</p>
                     </div>
                     
-                    <!-- BELL NOTIFICATION & DROPDOWN -->
                     <div class="relative z-50">
                         <button id="bellButton" onclick="toggleNotifDropdown(event)" class="relative p-3.5 bg-white rounded-xl shadow-sm border border-slate-200 hover:bg-slate-50 transition focus:outline-none flex items-center justify-center">
                             <i class="fas fa-bell ${notifCount > 0 ? 'text-amber-500' : 'text-slate-600'} text-xl"></i>
@@ -1177,9 +1263,9 @@
                     </td>
                     <td class="py-4 px-6 font-bold text-slate-700">${formatRupiah(k.gajiPokok)}</td>
                     <td class="py-4 px-6 text-center space-x-1 whitespace-nowrap">
-                        <button onclick="tampilkanQR('${k.nik}', '${k.nama}')" class="text-emerald-600 hover:text-white bg-emerald-50 hover:bg-emerald-600 p-2 rounded-lg transition shadow-sm" title="Lihat QR"><i class="fas fa-qrcode"></i></button>
+                        <button onclick="window.tampilkanQR('${k.nik}', '${k.nama}')" class="text-emerald-600 hover:text-white bg-emerald-50 hover:bg-emerald-600 p-2 rounded-lg transition shadow-sm" title="Lihat QR"><i class="fas fa-qrcode"></i></button>
                         <button onclick="bukaModalKaryawan(${k.id})" class="text-blue-600 hover:text-white bg-blue-50 hover:bg-blue-500 p-2 rounded-lg transition shadow-sm" title="Edit"><i class="fas fa-edit"></i></button>
-                        <button onclick="confirmDelete('karyawan', ${k.id})" class="text-red-600 hover:text-white bg-red-50 hover:bg-red-500 p-2 rounded-lg transition shadow-sm" title="Hapus"><i class="fas fa-trash"></i></button>
+                        <button onclick="window.confirmDelete('karyawan', ${k.id})" class="text-red-600 hover:text-white bg-red-50 hover:bg-red-500 p-2 rounded-lg transition shadow-sm" title="Hapus"><i class="fas fa-trash"></i></button>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -1311,7 +1397,7 @@
                     <td class="py-4 px-6 text-center"><span class="bg-slate-100 text-slate-700 px-3 py-1 rounded-full text-xs font-bold border border-slate-200">${jml} Orang</span></td>
                     <td class="py-4 px-6 text-center space-x-1">
                         <button onclick="bukaModalJabatan(${j.id})" class="text-indigo-500 bg-indigo-50 hover:bg-indigo-500 hover:text-white p-2 rounded-lg transition"><i class="fas fa-edit"></i></button>
-                        <button onclick="confirmDelete('jabatan', ${j.id})" class="text-red-500 bg-red-50 hover:bg-red-500 hover:text-white p-2 rounded-lg transition"><i class="fas fa-trash"></i></button>
+                        <button onclick="window.confirmDelete('jabatan', ${j.id})" class="text-red-500 bg-red-50 hover:bg-red-500 hover:text-white p-2 rounded-lg transition"><i class="fas fa-trash"></i></button>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -1349,9 +1435,19 @@
 
         function getAbsensiHTML() {
             return `
-                <div class="mb-8">
-                    <h1 class="text-3xl font-bold text-slate-800 tracking-tight">Riwayat Absensi</h1>
-                    <p class="text-slate-500 mt-1">Data mentah rekam jejak kehadiran harian (*Real-Time*).</p>
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+                    <div>
+                        <h1 class="text-3xl font-bold text-slate-800 tracking-tight">Riwayat Absensi</h1>
+                        <p class="text-slate-500 mt-1">Data mentah rekam jejak kehadiran harian (*Real-Time*).</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2 w-full sm:w-auto">
+                        <button onclick="window.bukaModalHapusTanggal()" class="flex-1 sm:flex-none bg-amber-500 hover:bg-amber-600 text-white font-semibold px-4 py-3 rounded-xl shadow-lg shadow-amber-500/20 transition text-sm flex justify-center items-center">
+                            <i class="fas fa-calendar-times mr-2"></i>Hapus via Tanggal
+                        </button>
+                        <button onclick="window.confirmDelete('semua_absensi', 'all')" class="flex-1 sm:flex-none bg-red-500 hover:bg-red-600 text-white font-semibold px-4 py-3 rounded-xl shadow-lg shadow-red-500/20 transition text-sm flex justify-center items-center">
+                            <i class="fas fa-trash-alt mr-2"></i>Kosongkan
+                        </button>
+                    </div>
                 </div>
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                     <div class="overflow-x-auto">
@@ -1400,7 +1496,7 @@
                     <td class="py-4 px-6 font-mono text-slate-500">${a.jamPulang || '<span class="bg-slate-100 px-2 py-0.5 rounded text-xs font-sans border border-slate-200">Belum Pulang</span>'}</td>
                     <td class="py-4 px-6"><span class="px-3 py-1 rounded-full text-xs font-bold ${badgeClass}">${a.statusMasuk}</span></td>
                     <td class="py-4 px-6 text-center">
-                        <button onclick="confirmDelete('absensi', ${a.id})" class="text-red-500 bg-red-50 hover:bg-red-500 hover:text-white p-2 rounded-lg transition shadow-sm" title="Hapus Data"><i class="fas fa-trash"></i></button>
+                        <button onclick="window.confirmDelete('absensi', ${a.id})" class="text-red-500 bg-red-50 hover:bg-red-500 hover:text-white p-2 rounded-lg transition shadow-sm" title="Hapus Data"><i class="fas fa-trash"></i></button>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -1556,7 +1652,6 @@
             
             if(!state.cuti) state.cuti = [];
             
-            // PATCH: Proteksi sorting fallback untuk mencegah error jika data lama tidak punya 'tanggalPengajuan'
             const sortedCuti = [...state.cuti].sort((a, b) => {
                 const timeA = a.tanggalPengajuan ? new Date(a.tanggalPengajuan).getTime() : a.id;
                 const timeB = b.tanggalPengajuan ? new Date(b.tanggalPengajuan).getTime() : b.id;
@@ -1657,8 +1752,6 @@
                 saveData();
                 showToast('Berhasil', `Pengajuan telah ${statusBaru}`);
                 tutupModalDetailCuti();
-                
-                // Merender ulang Dashboard & Cuti agar lonceng otomatis bersih tanpa direfresh
                 render();
 
                 if (urlWA) {
@@ -2105,6 +2198,7 @@
             reader.readAsText(file);
         }
 
+        // Initialize application
         window.onload = () => loadData();
     </script>
 </body>
