@@ -95,7 +95,7 @@
 
     <script>
         // ==========================================
-        // FIREBASE CONFIGURATION (Opsional untuk Real-Time)
+        // FIREBASE CONFIGURATION
         // ==========================================
         const firebaseConfig = {
             apiKey: "AIzaSyAHCb-IGYuJbsZIiqDUmQEGC8H5mSPmR4A",
@@ -107,11 +107,66 @@
             appId: "1:111136151948:web:b0f8984bb6c8da22d95ea9"
         };
         
-        // KARENA API KEY SUDAH ASLI, SAKLAR LANGSUNG DINYALAKAN (TRUE)
+        // SAKLAR OTOMATIS: Karena API Key sudah ada, langsung jalankan True
         const isFirebaseConfigured = true;
         let isFirebaseConnected = false;
         
         if (isFirebaseConfigured) {
+            try {
+                firebase.initializeApp(firebaseConfig);
+                isFirebaseConnected = true;
+                console.log("Firebase berhasil diinisialisasi.");
+            } catch (err) {
+                console.error("Gagal menghubungkan Firebase:", err);
+            }
+        }
+
+        // ==========================================
+        // STATE & GLOBAL VARIABEL (Sangat Penting)
+        // ==========================================
+        let state = {
+            currentView: 'login',
+            currentUserRole: null,
+            karyawan: [],
+            jabatan: [
+                { id: 1, nama: 'Manager HRD' },
+                { id: 2, nama: 'Staff Administrasi' }
+            ],
+            absensi: [],
+            imk: [],
+            cuti: [],
+            pengaturan: {
+                jamMasuk: '08:00',
+                tunjanganHadir: 50000,
+                dendaTelat: 20000,
+                adminUsername: 'admin',
+                adminPassword: 'admin123',
+                audioMasuk: null,
+                audioPulang: null,
+                audioCuti: null,
+                audioImkKeluar: null,
+                audioImkKembali: null,
+                shifts: [
+                    { id: 'shift_1', nama: 'Shift Standar (Pagi)', jamMasuk: '08:00', jamPulang: '17:00' }
+                ],
+                liburNasional: []
+            }
+        };
+
+        let html5QrCode = null;
+        let cameraFacingMode = "environment";
+        let isProcessingQR = false;
+        let clockInterval = null;
+        let deleteTarget = null;
+        let isInitialLoad = true;
+        let kioskModeType = 'absen';
+        let activeHapusMode = 'absensi';
+
+        // ==========================================
+        // SISTEM AUDIO (MP3 Kustom / Bawaan)
+        // ==========================================
+        function playSound(type) {
+            if (!state.pengaturan) state.pengaturan = {};
             try {
                 let customAudio = null;
                 if (type === 'masuk') customAudio = state.pengaturan?.audioMasuk;
@@ -123,11 +178,15 @@
                 if (customAudio) {
                     const audio = new Audio(customAudio);
                     const playPromise = audio.play();
-                    if (playPromise !== undefined) { playPromise.catch(e => { playSynthSound(type); }); }
+                    if (playPromise !== undefined) { 
+                        playPromise.catch(e => { playSynthSound(type); }); 
+                    }
                     return;
                 }
                 playSynthSound(type);
-            } catch(e) {}
+            } catch(e) {
+                playSynthSound(type);
+            }
         }
 
         function playSynthSound(type) {
