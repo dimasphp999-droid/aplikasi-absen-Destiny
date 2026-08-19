@@ -80,7 +80,7 @@
         <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-8 transform scale-95 transition-all duration-300" id="modalHapusTanggalContent">
             <div class="flex justify-between items-center mb-5">
                 <h3 class="text-xl font-bold text-slate-800">Hapus via Tanggal</h3>
-                <button onclick="tutupModalHapusTanggal()" class="text-slate-400 hover:text-red-500 transition"><i class="fas fa-times text-xl"></i></button>
+                <button onclick="window.tutupModalHapusTanggal()" class="text-slate-400 hover:text-red-500 transition"><i class="fas fa-times text-xl"></i></button>
             </div>
             <p class="text-sm text-slate-500 mb-5">Pilih rentang tanggal untuk menghapus data riwayat absensi secara massal.</p>
             <div class="space-y-4 mb-6">
@@ -93,7 +93,7 @@
                     <input type="date" id="del_endDate" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-red-500 outline-none transition">
                 </div>
             </div>
-            <button onclick="prosesHapusTanggal()" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3.5 rounded-xl transition shadow-lg shadow-red-500/30 flex items-center justify-center">
+            <button onclick="window.prosesHapusTanggal()" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3.5 rounded-xl transition shadow-lg shadow-red-500/30 flex items-center justify-center">
                 <i class="fas fa-trash mr-2"></i>Hapus Data Terpilih
             </button>
         </div>
@@ -615,7 +615,7 @@
             }, 10);
         };
 
-        window.tutupQR = function() {
+        function tutupQR() {
             const modal = document.getElementById('modalQR');
             const content = document.getElementById('modalQRContent');
             
@@ -624,7 +624,7 @@
             content.classList.add('scale-95');
             
             setTimeout(() => { modal.classList.add('hidden'); }, 300);
-        };
+        }
 
         window.bukaModalHapusTanggal = function() {
             const modal = document.getElementById('modalHapusTanggal');
@@ -1444,8 +1444,8 @@
                         <button onclick="window.bukaModalHapusTanggal()" class="flex-1 sm:flex-none bg-amber-500 hover:bg-amber-600 text-white font-semibold px-4 py-3 rounded-xl shadow-lg shadow-amber-500/20 transition text-sm flex justify-center items-center">
                             <i class="fas fa-calendar-times mr-2"></i>Hapus via Tanggal
                         </button>
-                        <button onclick="window.confirmDelete('semua_absensi', 'all')" class="flex-1 sm:flex-none bg-red-500 hover:bg-red-600 text-white font-semibold px-4 py-3 rounded-xl shadow-lg shadow-red-500/20 transition text-sm flex justify-center items-center">
-                            <i class="fas fa-trash-alt mr-2"></i>Kosongkan
+                        <button onclick="confirmDelete('semua_absensi', 'all')" class="flex-1 sm:flex-none bg-red-500 hover:bg-red-600 text-white font-semibold px-4 py-3 rounded-xl shadow-lg shadow-red-500/20 transition text-sm flex justify-center items-center">
+                            <i class="fas fa-trash-alt mr-2"></i>Kosongkan Riwayat
                         </button>
                     </div>
                 </div>
