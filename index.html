@@ -4,16 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Destiny Institute - Sistem HR (Real-Time Ready)</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    
-    <!-- Script HTML5-QRCode untuk memindai QR secara Native -->
-    <script src="https://ug.com/html5-qrcode"></script>
-
-    <!-- Script SheetJS untuk Ekspor Excel -->
+    <!-- HTML5-QRCode Scanner -->
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <!-- SheetJS Excel Export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
-    <!-- FIREBASE SDK v8 (Compat) -->
+    <!-- Firebase SDK v8 (Opsional) -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     
@@ -43,26 +42,24 @@
     <!-- GLOBAL DELETE MODAL -->
     <div id="globalDeleteModal" class="fixed inset-0 bg-slate-900 bg-opacity-60 hidden z-[250] flex justify-center items-center p-4 backdrop-blur-sm transition-opacity duration-300 opacity-0">
         <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm text-center p-8 transform scale-95 transition-all duration-300" id="globalDeleteModalContent">
-            <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-5">
-                <i class="fas fa-trash-alt text-2xl text-red-500"></i>
-            </div>
+            <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-5"><i class="fas fa-trash-alt text-2xl text-red-500"></i></div>
             <h3 class="text-xl font-bold text-slate-800 mb-2">Konfirmasi Hapus</h3>
             <p class="text-sm text-slate-500 mb-8" id="deleteModalMessage">Apakah Anda yakin ingin menghapus data ini?</p>
             <div class="flex gap-3">
-                <button onclick="closeDeleteModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-3 rounded-xl transition">Batal</button>
+                <button onclick="window.closeDeleteModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-3 rounded-xl transition">Batal</button>
                 <button id="btnConfirmDelete" class="flex-1 bg-red-500 hover:bg-red-600 text-white font-semibold py-3 rounded-xl transition shadow-lg shadow-red-500/30">Ya, Hapus</button>
             </div>
         </div>
     </div>
 
-    <!-- MODAL HAPUS TANGGAL ABSENSI -->
+    <!-- MODAL HAPUS TANGGAL -->
     <div id="modalHapusTanggal" class="fixed inset-0 bg-slate-900 bg-opacity-60 hidden z-[250] flex justify-center items-center p-4 backdrop-blur-sm transition-opacity duration-300 opacity-0">
         <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-8 transform scale-95 transition-all duration-300" id="modalHapusTanggalContent">
             <div class="flex justify-between items-center mb-5">
                 <h3 class="text-xl font-bold text-slate-800" id="modalHapusTanggalTitle">Hapus via Tanggal</h3>
-                <button onclick="tutupModalHapusTanggal()" class="text-slate-400 hover:text-red-500 transition"><i class="fas fa-times text-xl"></i></button>
+                <button onclick="window.tutupModalHapusTanggal()" class="text-slate-400 hover:text-red-500 transition"><i class="fas fa-times text-xl"></i></button>
             </div>
-            <p class="text-sm text-slate-500 mb-5">Pilih rentang tanggal untuk menghapus data riwayat secara massal.</p>
+            <p class="text-sm text-slate-500 mb-5">Semua data riwayat pada rentang tanggal ini akan dihapus permanen.</p>
             <div class="space-y-4 mb-6">
                 <div>
                     <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Dari Tanggal</label>
@@ -73,7 +70,7 @@
                     <input type="date" id="del_endDate" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-red-500 outline-none transition">
                 </div>
             </div>
-            <button onclick="prosesHapusTanggal()" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3.5 rounded-xl transition shadow-lg shadow-red-500/30 flex items-center justify-center">
+            <button onclick="window.prosesHapusTanggal()" class="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3.5 rounded-xl transition shadow-lg shadow-red-500/30 flex items-center justify-center">
                 <i class="fas fa-trash mr-2"></i>Hapus Data Terpilih
             </button>
         </div>
@@ -82,14 +79,14 @@
     <!-- GLOBAL QR PREVIEW MODAL -->
     <div id="modalQR" class="fixed inset-0 bg-slate-900 bg-opacity-70 hidden z-[250] flex justify-center items-center p-4 backdrop-blur-sm transition-opacity opacity-0">
         <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm text-center p-8 relative transform scale-95 transition-all" id="modalQRContent">
-            <button onclick="tutupQR()" class="absolute top-5 right-5 text-slate-400 hover:text-red-500 transition"><i class="fas fa-times text-xl"></i></button>
+            <button onclick="window.tutupQR()" class="absolute top-5 right-5 text-slate-400 hover:text-red-500 transition"><i class="fas fa-times text-xl"></i></button>
             <h3 class="font-bold text-slate-800 text-xl mb-1">ID Card (QR Code)</h3>
             <p class="text-sm font-medium text-emerald-600 mb-6" id="qrKaryawanNama">-</p>
             <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 inline-block mb-6 shadow-inner">
                 <img id="qrImage" src="" alt="QR Code" class="w-48 h-48 mx-auto mix-blend-multiply">
             </div>
-            <p class="text-xs text-slate-400 mb-6 leading-relaxed">Simpan QR Code ini untuk absensi kedatangan dan IMK (Izin Keluar Masuk).</p>
-            <button onclick="tutupQR()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-semibold py-3 rounded-xl transition shadow-lg">Tutup Layar</button>
+            <p class="text-xs text-slate-400 mb-6 leading-relaxed">Simpan QR Code ini untuk diserahkan ke Karyawan sebagai alat absensi.</p>
+            <button onclick="window.tutupQR()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-semibold py-3 rounded-xl transition shadow-lg">Tutup Layar</button>
         </div>
     </div>
 
@@ -97,6 +94,9 @@
     <div id="appContainer" class="w-full h-full min-h-screen"></div>
 
     <script>
+        // ==========================================
+        // FIREBASE CONFIGURATION (Opsional untuk Real-Time)
+        // ==========================================
         const firebaseConfig = {
             apiKey: "AIzaSyAHCb-IGYuJbsZIiqDUmQEGC8H5mSPmR4A",
             authDomain: "absen-destiny.firebaseapp.com",
@@ -106,57 +106,12 @@
             messagingSenderId: "111136151948",
             appId: "1:111136151948:web:b0f8984bb6c8da22d95ea9"
         };
-        const isFirebaseConfigured = firebaseConfig.apiKey !== "AIzaSyAHCb-IGYuJbsZIiqDUmQEGC8H5mSPmR4A";
+        
+        // KARENA API KEY SUDAH ASLI, SAKLAR LANGSUNG DINYALAKAN (TRUE)
+        const isFirebaseConfigured = true;
         let isFirebaseConnected = false;
         
         if (isFirebaseConfigured) {
-            try {
-                firebase.initializeApp(firebaseConfig);
-                isFirebaseConnected = true;
-            } catch (err) {
-                console.error("Gagal menghubungkan Firebase:", err);
-            }
-        }
-
-        let state = {
-            currentView: 'login',
-            currentUserRole: null,
-            karyawan: [],
-            jabatan: [
-                { id: 1, nama: 'Manager' },
-                { id: 2, nama: 'Staff' }
-            ],
-            absensi: [],
-            imk: [], 
-            cuti: [],
-            pengaturan: {
-                tunjanganHadir: 50000,
-                dendaTelat: 20000,
-                adminUsername: 'admin',
-                adminPassword: 'admin123',
-                waKepalaSekolah: '',
-                audioMasuk: null,
-                audioPulang: null,
-                audioCuti: null,
-                audioImkKeluar: null,
-                audioImkKembali: null,
-                shifts: [
-                    { id: 'shift_1', nama: 'Shift Standar (Pagi)', jamMasuk: '08:00', jamPulang: '17:00' }
-                ],
-                liburNasional: []
-            }
-        };
-
-        let html5QrCode = null;
-        let cameraFacingMode = "environment";
-        let isProcessingQR = false;
-        let clockInterval = null;
-        let deleteTarget = null;
-        let isInitialLoad = true;
-        let kioskModeType = 'absen'; 
-        let activeHapusMode = 'absensi'; // 'absensi' atau 'imk'
-
-        function playSound(type) {
             try {
                 let customAudio = null;
                 if (type === 'masuk') customAudio = state.pengaturan?.audioMasuk;
@@ -168,9 +123,7 @@
                 if (customAudio) {
                     const audio = new Audio(customAudio);
                     const playPromise = audio.play();
-                    if (playPromise !== undefined) {
-                        playPromise.catch(e => { playSynthSound(type); });
-                    }
+                    if (playPromise !== undefined) { playPromise.catch(e => { playSynthSound(type); }); }
                     return;
                 }
                 playSynthSound(type);
@@ -179,159 +132,87 @@
 
         function playSynthSound(type) {
             try {
-                const AudioContext = window.AudioContext || window.webkitAudioContext;
-                if (!AudioContext) return;
-                const ctx = new AudioContext();
-                let now = ctx.currentTime;
-                let osc = ctx.createOscillator();
-                let gain = ctx.createGain();
+                const AudioContext = window.AudioContext || window.webkitAudioContext; if (!AudioContext) return;
+                const ctx = new AudioContext(); let now = ctx.currentTime; let osc = ctx.createOscillator(); let gain = ctx.createGain();
 
                 if (type === 'masuk' || type === 'imk_keluar') {
-                    osc.type = 'triangle'; 
-                    osc.frequency.setValueAtTime(523.25, now);
-                    osc.frequency.setValueAtTime(659.25, now + 0.1);
-                    osc.frequency.setValueAtTime(783.99, now + 0.2);
-                    gain.gain.setValueAtTime(0.2, now);
-                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+                    osc.type = 'triangle'; osc.frequency.setValueAtTime(523.25, now); osc.frequency.setValueAtTime(659.25, now + 0.1); osc.frequency.setValueAtTime(783.99, now + 0.2);
+                    gain.gain.setValueAtTime(0.2, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
                 } else if (type === 'pulang' || type === 'imk_kembali') {
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(783.99, now);
-                    osc.frequency.setValueAtTime(523.25, now + 0.15);
-                    gain.gain.setValueAtTime(0.25, now);
-                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+                    osc.type = 'sine'; osc.frequency.setValueAtTime(783.99, now); osc.frequency.setValueAtTime(523.25, now + 0.15);
+                    gain.gain.setValueAtTime(0.25, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
                 } else {
-                    osc.type = 'square';
-                    osc.frequency.setValueAtTime(587.33, now);
-                    osc.frequency.setValueAtTime(880, now + 0.12);
-                    gain.gain.setValueAtTime(0.1, now);
-                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+                    osc.type = 'square'; osc.frequency.setValueAtTime(587.33, now); osc.frequency.setValueAtTime(880, now + 0.12);
+                    gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
                 }
                 
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                osc.start(now);
-                osc.stop(now + 0.5);
+                osc.connect(gain); gain.connect(ctx.destination); osc.start(now); osc.stop(now + 0.5);
             } catch(e) {}
         }
 
         window.handleAudioUpload = function(event, key) {
-            const file = event.target.files[0];
-            if (!file) return;
+            const file = event.target.files[0]; if (!file) return;
             if (file.size > 700 * 1024) return showToast("File Terlalu Besar", "Harap pilih file di bawah 700 KB.", "warning");
             const reader = new FileReader();
             reader.onload = function(e) {
-                if(!state.pengaturan) state.pengaturan = {};
-                state.pengaturan[key] = e.target.result;
-                saveData();
-                showToast("Audio Disimpan", "File notifikasi berhasil diperbarui!");
-                if (state.currentView === 'pengaturan') render();
+                if(!state.pengaturan) state.pengaturan = {}; state.pengaturan[key] = e.target.result; saveData();
+                showToast("Audio Disimpan", "File notifikasi berhasil diperbarui!"); if (state.currentView === 'pengaturan') window.render();
             };
             reader.readAsDataURL(file);
         };
 
         window.hapusAudioKustom = function(key) {
             if(state.pengaturan && state.pengaturan[key]) {
-                delete state.pengaturan[key];
-                saveData();
-                showToast("Dihapus", "Kembali menggunakan nada bawaan.");
-                if (state.currentView === 'pengaturan') render();
+                delete state.pengaturan[key]; saveData(); showToast("Dihapus", "Kembali menggunakan nada bawaan."); if (state.currentView === 'pengaturan') window.render();
             }
         };
 
         window.tesSuara = function(type) { playSound(type); };
 
-        function formatRupiah(angka) {
-            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
-        }
-
+        function formatRupiah(angka) { return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka); }
         function formatDateID(dateString) {
-            if (!dateString) return '-';
-            const options = { year: 'numeric', month: 'long', day: 'numeric' };
-            return new Date(dateString).toLocaleDateString('id-ID', options);
+            if (!dateString) return '-'; const options = { year: 'numeric', month: 'long', day: 'numeric' }; return new Date(dateString).toLocaleDateString('id-ID', options);
         }
-
         function formatWANumber(nomor) {
-            if (!nomor) return '';
-            let cleaned = nomor.replace(/\D/g, ''); 
-            if (cleaned.startsWith('0')) return '62' + cleaned.substring(1);
-            return cleaned;
+            if (!nomor) return ''; let cleaned = nomor.replace(/\D/g, ''); if (cleaned.startsWith('0')) return '62' + cleaned.substring(1); return cleaned;
         }
 
         function showToast(title, message, type = 'success') {
-            const toast = document.getElementById('toast');
-            const toastContent = document.getElementById('toastContent');
-            const toastIcon = document.getElementById('toastIcon');
-            
-            document.getElementById('toastTitle').innerText = title;
-            document.getElementById('toastMessage').innerText = message;
-
-            toastContent.className = 'bg-white border-l-4 p-4 rounded-xl shadow-2xl flex items-center space-x-3 pointer-events-auto';
-            toastIcon.className = 'fas text-2xl';
-
+            const toast = document.getElementById('toast'); const toastContent = document.getElementById('toastContent'); const toastIcon = document.getElementById('toastIcon');
+            document.getElementById('toastTitle').innerText = title; document.getElementById('toastMessage').innerText = message;
+            toastContent.className = 'bg-white border-l-4 p-4 rounded-xl shadow-2xl flex items-center space-x-3 pointer-events-auto'; toastIcon.className = 'fas text-2xl';
             if (type === 'success') { toastContent.classList.add('border-emerald-500'); toastIcon.classList.add('fa-check-circle', 'text-emerald-500'); } 
             else if (type === 'error') { toastContent.classList.add('border-red-500'); toastIcon.classList.add('fa-exclamation-circle', 'text-red-500'); } 
             else if (type === 'warning') { toastContent.classList.add('border-amber-500'); toastIcon.classList.add('fa-exclamation-triangle', 'text-amber-500'); }
-
-            toast.classList.remove('translate-x-full');
-            setTimeout(() => { toast.classList.add('translate-x-full'); }, 3500);
+            toast.classList.remove('translate-x-full'); setTimeout(() => { toast.classList.add('translate-x-full'); }, 3500);
         }
 
         function pastikanDataMigrasi() {
             if (!state.pengaturan) state.pengaturan = {};
-            if (!state.pengaturan.shifts || state.pengaturan.shifts.length === 0) {
-                state.pengaturan.shifts = [
-                    { id: 'shift_1', nama: 'Shift Standar (Pagi)', jamMasuk: '08:00', jamPulang: '17:00' }
-                ];
-            }
+            if (!state.pengaturan.shifts || state.pengaturan.shifts.length === 0) state.pengaturan.shifts = [ { id: 'shift_1', nama: 'Shift Standar (Pagi)', jamMasuk: '08:00', jamPulang: '17:00' } ];
             if (!state.pengaturan.liburNasional) state.pengaturan.liburNasional = [];
             if (!state.imk) state.imk = [];
         }
 
         async function saveData() {
-            pastikanDataMigrasi();
-            localStorage.setItem('destinyAbsensiData', JSON.stringify(state));
-            if (isFirebaseConnected) {
-                try {
-                    await firebase.database().ref('hr_system_data').set({
-                        karyawan: state.karyawan,
-                        jabatan: state.jabatan,
-                        absensi: state.absensi,
-                        imk: state.imk,
-                        cuti: state.cuti,
-                        pengaturan: state.pengaturan
-                    });
-                } catch (err) {}
-            }
+            pastikanDataMigrasi(); localStorage.setItem('destinyAbsensiData', JSON.stringify(state));
+            if (isFirebaseConnected) { try { await firebase.database().ref('hr_system_data').set(state); } catch (err) {} }
         }
 
         function loadData() {
             if (isFirebaseConnected) {
                 firebase.database().ref('hr_system_data').on('value', (snapshot) => {
                     const data = snapshot.val();
-                    if (data) {
-                        state = { ...state, ...data };
-                        pastikanDataMigrasi();
-                        localStorage.setItem('destinyAbsensiData', JSON.stringify(state));
-                        if(!isInitialLoad && state.currentUserRole) render(); 
-                    } else fallbackLocalLoad();
-                    
-                    if (isInitialLoad) {
-                        isInitialLoad = false;
-                        render();
-                    }
+                    if (data) { state = { ...state, ...data }; pastikanDataMigrasi(); localStorage.setItem('destinyAbsensiData', JSON.stringify(state)); if(!isInitialLoad && state.currentUserRole) window.render(); } 
+                    else fallbackLocalLoad();
+                    if (isInitialLoad) { isInitialLoad = false; window.render(); }
                 });
-            } else {
-                fallbackLocalLoad();
-                render();
-            }
+            } else { fallbackLocalLoad(); window.render(); }
         }
 
         function fallbackLocalLoad() {
             const saved = localStorage.getItem('destinyAbsensiData');
-            if (saved) {
-                state = { ...state, ...JSON.parse(saved) };
-                pastikanDataMigrasi();
-            }
+            if (saved) { state = { ...state, ...JSON.parse(saved) }; pastikanDataMigrasi(); }
         }
 
         window.prosesKehadiran = function(nikScanned, metode = 'QR', lat = null, lng = null) {
@@ -339,220 +220,116 @@
             if (metode === 'QR' || metode === 'GPS') isProcessingQR = true;
 
             const karyawan = state.karyawan.find(k => k.nik === nikScanned);
-            
             if(!karyawan) {
-                playSound('error');
-                showToast('Akses Ditolak', 'Data tidak dikenali oleh sistem.', 'error');
+                playSound('error'); showToast('Akses Ditolak', 'Data tidak dikenali oleh sistem.', 'error');
                 if (metode === 'QR' || metode === 'GPS') setTimeout(() => { isProcessingQR = false; }, 3000);
                 return;
             }
 
-            const now = new Date();
-            const timeString = now.toTimeString().substring(0, 5); 
+            const now = new Date(); const timeString = now.toTimeString().substring(0, 5); 
             const dateString = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-            if (kioskModeType === 'imk') {
+            if (kioskModeType === 'imk' && state.currentView === 'scanWajah') {
                 if(!state.imk) state.imk = [];
                 let imkHariIni = state.imk.find(i => i.karyawanId === karyawan.id && i.tanggal === dateString && !i.jamKembali);
 
                 if (!imkHariIni) {
-                    state.imk.push({
-                        id: Date.now(),
-                        karyawanId: karyawan.id,
-                        tanggal: dateString,
-                        jamKeluar: timeString,
-                        jamKembali: null,
-                        durasi: '-'
-                    });
-                    saveData();
-                    playSound('imk_keluar');
-                    showToast('IMK: Izin Keluar', `${karyawan.nama} tercatat KELUAR kantor pukul ${timeString}`);
+                    state.imk.push({ id: Date.now(), karyawanId: karyawan.id, tanggal: dateString, jamKeluar: timeString, jamKembali: null, durasi: '-' });
+                    saveData(); playSound('imk_keluar'); showToast('IMK: Izin Keluar', `${karyawan.nama} tercatat KELUAR kantor pukul ${timeString}`);
                 } else {
                     imkHariIni.jamKembali = timeString;
-                    const [hK, mK] = imkHariIni.jamKeluar.split(':').map(Number);
-                    const [hB, mB] = timeString.split(':').map(Number);
-                    let diffMins = (hB * 60 + mB) - (hK * 60 + mK);
-                    if(diffMins < 0) diffMins = 0;
-                    const durJam = Math.floor(diffMins / 60);
-                    const durMenit = diffMins % 60;
-                    imkHariIni.durasi = `${durJam > 0 ? durJam + ' jam ' : ''}${durMenit} menit`;
-
-                    saveData();
-                    playSound('imk_kembali');
-                    showToast('IMK: Kembali', `${karyawan.nama} KEMBALI ke kantor. Durasi di luar: ${imkHariIni.durasi}`);
+                    const [hK, mK] = imkHariIni.jamKeluar.split(':').map(Number); const [hB, mB] = timeString.split(':').map(Number);
+                    let diffMins = (hB * 60 + mB) - (hK * 60 + mK); if(diffMins < 0) diffMins = 0;
+                    imkHariIni.durasi = `${Math.floor(diffMins / 60) > 0 ? Math.floor(diffMins / 60) + ' jam ' : ''}${diffMins % 60} menit`;
+                    saveData(); playSound('imk_kembali'); showToast('IMK: Kembali', `${karyawan.nama} KEMBALI ke kantor. Durasi di luar: ${imkHariIni.durasi}`);
                 }
-
-                if (metode === 'QR') setTimeout(() => { isProcessingQR = false; }, 3000);
-                return;
-            }
-
-            let absenHariIni = state.absensi.find(a => a.karyawanId === karyawan.id && a.tanggal === dateString);
-            const isLibur = state.pengaturan.liburNasional?.find(l => l.tanggal === dateString);
-            const shiftKaryawan = state.pengaturan.shifts?.find(s => s.id === karyawan.shiftId) || state.pengaturan.shifts[0];
-
-            if (!absenHariIni) {
-                let status = isLibur ? 'Hadir (Libur)' : (timeString > (shiftKaryawan?.jamMasuk || '08:00') ? 'Terlambat' : 'Tepat Waktu');
-                
-                state.absensi.push({
-                    id: Date.now(),
-                    karyawanId: karyawan.id,
-                    tanggal: dateString,
-                    jamMasuk: timeString,
-                    jamPulang: null,
-                    statusMasuk: status,
-                    metode: metode,
-                    lat: lat,
-                    lng: lng
-                });
-                saveData();
-                playSound('masuk'); 
-                showToast('Masuk Berhasil', `Selamat bekerja, ${karyawan.nama}! (${status})`);
-            } else if (!absenHariIni.jamPulang) {
-                absenHariIni.jamPulang = timeString;
-                absenHariIni.metodePulang = metode;
-                saveData();
-                playSound('pulang'); 
-                showToast('Pulang Berhasil', `Hati-hati di jalan, ${karyawan.nama}!`);
             } else {
-                playSound('error');
-                showToast('Informasi', `${karyawan.nama} sudah merampungkan absen hari ini.`, 'warning');
+                let absenHariIni = state.absensi.find(a => a.karyawanId === karyawan.id && a.tanggal === dateString);
+                const isLibur = state.pengaturan.liburNasional?.find(l => l.tanggal === dateString);
+                const shiftKaryawan = state.pengaturan.shifts?.find(s => s.id === karyawan.shiftId) || state.pengaturan.shifts[0];
+
+                if (!absenHariIni) {
+                    let status = isLibur ? 'Hadir (Libur)' : (timeString > (shiftKaryawan?.jamMasuk || '08:00') ? 'Terlambat' : 'Tepat Waktu');
+                    state.absensi.push({ id: Date.now(), karyawanId: karyawan.id, tanggal: dateString, jamMasuk: timeString, jamPulang: null, statusMasuk: status, metode: metode, lat: lat, lng: lng });
+                    saveData(); playSound('masuk'); showToast('Masuk Berhasil', `Selamat bekerja, ${karyawan.nama}! (${status})`);
+                } else if (!absenHariIni.jamPulang) {
+                    absenHariIni.jamPulang = timeString; absenHariIni.metodePulang = metode;
+                    saveData(); playSound('pulang'); showToast('Pulang Berhasil', `Hati-hati di jalan, ${karyawan.nama}!`);
+                } else { playSound('error'); showToast('Informasi', `${karyawan.nama} sudah merampungkan absen hari ini.`, 'warning'); }
             }
 
             if (metode === 'QR' || metode === 'GPS') setTimeout(() => { isProcessingQR = false; }, 3000);
         };
 
-        async function stopScanner() {
-            if (html5QrCode && html5QrCode.isScanning) {
-                try { await html5QrCode.stop(); html5QrCode.clear(); } catch(err) {}
-            }
-        }
-
+        async function stopScanner() { if (html5QrCode && html5QrCode.isScanning) { try { await html5QrCode.stop(); html5QrCode.clear(); } catch(err) {} } }
         window.startScanner = function() {
             setTimeout(async () => {
                 if (state.currentView !== 'scanWajah' && state.currentView !== 'absenGPS') return; 
-                const readerElement = document.getElementById('reader');
-                if(!readerElement) return;
-
+                const readerElement = document.getElementById('reader'); if(!readerElement) return;
                 if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
                 if (html5QrCode.isScanning) await stopScanner();
-
                 try {
                     await html5QrCode.start(
-                        { facingMode: cameraFacingMode },
-                        { fps: 10, qrbox: { width: 250, height: 250 } },
-                        (decodedText) => { 
-                            if (state.currentView === 'absenGPS') {
-                                window.prosesGPSLaluAbsen(decodedText);
-                            } else {
-                                window.prosesKehadiran(decodedText, 'QR'); 
-                            }
-                        },
+                        { facingMode: cameraFacingMode }, { fps: 10, qrbox: { width: 250, height: 250 } },
+                        (decodedText) => { if (state.currentView === 'absenGPS') window.prosesGPSLaluAbsen(decodedText); else window.prosesKehadiran(decodedText, 'QR'); },
                         (errorMessage) => {}
                     );
                     document.getElementById('cameraError')?.classList.add('hidden');
                 } catch(err) {
-                    if(cameraFacingMode === "environment") {
-                        cameraFacingMode = "user";
-                        window.startScanner();
-                        return;
-                    }
-                    const errEl = document.getElementById('cameraError');
-                    if(errEl) {
-                        errEl.classList.remove('hidden');
-                        errEl.innerHTML = "<i class='fas fa-video-slash mr-2'></i>Kamera diblokir/tidak terdeteksi.";
-                    }
+                    if(cameraFacingMode === "environment") { cameraFacingMode = "user"; window.startScanner(); return; }
+                    const errEl = document.getElementById('cameraError'); if(errEl) { errEl.classList.remove('hidden'); errEl.innerHTML = "<i class='fas fa-video-slash mr-2'></i>Kamera diblokir/tidak terdeteksi."; }
                 }
             }, 500);
         };
 
         window.toggleKioskMode = function(mode) {
             kioskModeType = mode;
-            const btnAbsen = document.getElementById('btnModeAbsen');
-            const btnImk = document.getElementById('btnModeImk');
-            const titleEl = document.getElementById('kioskTitle');
-            const subtitleEl = document.getElementById('kioskSubtitle');
-
+            const btnAbsen = document.getElementById('btnModeAbsen'); const btnImk = document.getElementById('btnModeImk');
+            const titleEl = document.getElementById('kioskTitle'); const subtitleEl = document.getElementById('kioskSubtitle');
+            if(!btnAbsen || !btnImk) return;
             if (mode === 'imk') {
-                btnImk.className = "flex-1 bg-amber-600 text-white font-bold py-2.5 rounded-xl shadow transition text-xs";
-                btnAbsen.className = "flex-1 bg-white/10 text-white/70 font-semibold py-2.5 rounded-xl transition text-xs";
-                titleEl.innerText = "Terminal IMK (Keluar/Masuk)";
-                subtitleEl.innerText = "Scan 1x = Keluar Kantor | Scan ke-2 = Kembali";
+                btnImk.className = "flex-1 bg-amber-600 text-white font-bold py-2.5 rounded-xl shadow transition text-xs"; btnAbsen.className = "flex-1 bg-white/10 text-white/70 font-semibold py-2.5 rounded-xl transition text-xs";
+                titleEl.innerText = "Terminal IMK (Keluar/Masuk)"; subtitleEl.innerText = "Scan 1x = Keluar Kantor | Scan ke-2 = Kembali";
             } else {
-                btnAbsen.className = "flex-1 bg-emerald-600 text-white font-bold py-2.5 rounded-xl shadow transition text-xs";
-                btnImk.className = "flex-1 bg-white/10 text-white/70 font-semibold py-2.5 rounded-xl transition text-xs";
-                titleEl.innerText = "Terminal Mesin QR";
-                subtitleEl.innerText = "Dekatkan QR Code ke Kamera";
+                btnAbsen.className = "flex-1 bg-emerald-600 text-white font-bold py-2.5 rounded-xl shadow transition text-xs"; btnImk.className = "flex-1 bg-white/10 text-white/70 font-semibold py-2.5 rounded-xl transition text-xs";
+                titleEl.innerText = "Terminal Mesin QR"; subtitleEl.innerText = "Dekatkan QR Code ke Kamera";
             }
         };
 
-        window.toggleCamera = function() {
-            cameraFacingMode = (cameraFacingMode === "environment") ? "user" : "environment";
-            window.startScanner();
-        };
+        window.toggleCamera = function() { cameraFacingMode = (cameraFacingMode === "environment") ? "user" : "environment"; window.startScanner(); };
 
         window.prosesGPSLaluAbsen = function(nik) {
-            if (isProcessingQR) return;
-            isProcessingQR = true;
-
+            if (isProcessingQR) return; isProcessingQR = true;
             const karyawan = state.karyawan.find(k => k.nik === nik);
-            if(!karyawan) {
-                playSound('error');
-                showToast('Akses Ditolak', 'QR Code tidak terdaftar.', 'error');
-                setTimeout(() => { isProcessingQR = false; }, 3000);
-                return;
-            }
+            if(!karyawan) { playSound('error'); showToast('Akses Ditolak', 'QR Code tidak terdaftar.', 'error'); setTimeout(() => { isProcessingQR = false; }, 3000); return; }
+            if (!navigator.geolocation) { playSound('error'); showToast('Gagal', 'Sistem GPS tidak didukung.', 'error'); setTimeout(() => { isProcessingQR = false; }, 3000); return; }
 
-            if (!navigator.geolocation) {
-                playSound('error');
-                showToast('Gagal', 'Sistem GPS tidak didukung oleh perangkat ini.', 'error');
-                setTimeout(() => { isProcessingQR = false; }, 3000);
-                return;
-            }
-
-            showToast('Memindai GPS...', 'Mohon tunggu, mengambil titik koordinat lokasi...', 'warning');
-
+            showToast('Memindai GPS...', 'Mohon tunggu, mengunci titik koordinat lokasi...', 'warning');
             navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    isProcessingQR = false;
-                    window.prosesKehadiran(nik, 'GPS', pos.coords.latitude, pos.coords.longitude);
-                },
-                () => {
-                    playSound('error');
-                    showToast('Gagal', 'Izin lokasi (GPS) ditolak atau sinyal lemah.', 'error');
-                    setTimeout(() => { isProcessingQR = false; }, 3000);
-                },
+                (pos) => { isProcessingQR = false; window.prosesKehadiran(nik, 'GPS', pos.coords.latitude, pos.coords.longitude); },
+                () => { playSound('error'); showToast('Gagal', 'Izin lokasi (GPS) ditolak atau sinyal lemah.', 'error'); setTimeout(() => { isProcessingQR = false; }, 3000); },
                 { enableHighAccuracy: true, timeout: 10000 }
             );
         };
 
         window.confirmDelete = function(type, id) {
             deleteTarget = { type, id };
-            const modal = document.getElementById('globalDeleteModal');
-            const content = document.getElementById('globalDeleteModalContent');
-            const msg = document.getElementById('deleteModalMessage');
-            
-            if (type === 'semua_absensi') msg.innerText = "Kosongkan SELURUH riwayat absensi?";
-            else if (type === 'semua_imk') msg.innerText = "Kosongkan SELURUH riwayat IMK?";
-            else if (type === 'imk') msg.innerText = "Hapus data riwayat IMK ini?";
+            const modal = document.getElementById('globalDeleteModal'); const content = document.getElementById('globalDeleteModalContent'); const msg = document.getElementById('deleteModalMessage');
+            if (type === 'semua_absensi') msg.innerText = "Kosongkan SELURUH riwayat absensi secara permanen?";
+            else if (type === 'semua_imk') msg.innerText = "Kosongkan SELURUH riwayat IMK secara permanen?";
+            else if (type === 'imk') msg.innerText = "Hapus riwayat Izin Keluar Masuk ini?";
             else msg.innerText = `Yakin menghapus data ${type} ini?`;
-            
-            modal.classList.remove('hidden');
-            setTimeout(() => { modal.classList.add('opacity-100'); content.classList.remove('scale-95'); content.classList.add('scale-100'); }, 10);
+            modal.classList.remove('hidden'); setTimeout(() => { modal.classList.add('opacity-100'); content.classList.remove('scale-95'); content.classList.add('scale-100'); }, 10);
         };
 
         window.closeDeleteModal = function() {
-            const modal = document.getElementById('globalDeleteModal');
-            const content = document.getElementById('globalDeleteModalContent');
-            modal.classList.remove('opacity-100');
-            content.classList.remove('scale-100');
-            content.classList.add('scale-95');
+            const modal = document.getElementById('globalDeleteModal'); const content = document.getElementById('globalDeleteModalContent');
+            modal.classList.remove('opacity-100'); content.classList.remove('scale-100'); content.classList.add('scale-95');
             setTimeout(() => { modal.classList.add('hidden'); deleteTarget = null; }, 300);
         };
 
         document.getElementById('btnConfirmDelete')?.addEventListener('click', () => {
-            if(!deleteTarget) return;
-            const { type, id } = deleteTarget;
-            
+            if(!deleteTarget) return; const { type, id } = deleteTarget;
             if (type === 'karyawan') state.karyawan = state.karyawan.filter(x => x.id !== id);
             else if (type === 'jabatan') state.jabatan = state.jabatan.filter(x => x.id !== id);
             else if (type === 'absensi') state.absensi = state.absensi.filter(x => x.id !== id);
@@ -562,103 +339,86 @@
             else if (type === 'shift') state.pengaturan.shifts = state.pengaturan.shifts.filter(x => x.id !== id);
             else if (type === 'libur') state.pengaturan.liburNasional = state.pengaturan.liburNasional.filter(x => x.id !== id);
             
-            saveData(); window.closeDeleteModal(); render();
-            showToast('Sukses', 'Data berhasil dihapus');
+            saveData(); window.closeDeleteModal(); window.render(); showToast('Sukses', 'Proses hapus berhasil');
         });
 
         window.tampilkanQR = function(nik, nama) {
-            const modal = document.getElementById('modalQR');
-            const content = document.getElementById('modalQRContent');
-            document.getElementById('qrKaryawanNama').innerText = nama;
-            document.getElementById('qrImage').src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(nik)}`;
-            modal.classList.remove('hidden');
-            setTimeout(() => { modal.classList.add('opacity-100'); content.classList.remove('scale-95'); content.classList.add('scale-100'); }, 10);
+            const modal = document.getElementById('modalQR'); const content = document.getElementById('modalQRContent');
+            document.getElementById('qrKaryawanNama').innerText = nama; document.getElementById('qrImage').src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(nik)}`;
+            modal.classList.remove('hidden'); setTimeout(() => { modal.classList.add('opacity-100'); content.classList.remove('scale-95'); content.classList.add('scale-100'); }, 10);
         };
-
         window.tutupQR = function() {
-            const modal = document.getElementById('modalQR');
-            const content = document.getElementById('modalQRContent');
-            modal.classList.remove('opacity-100');
-            content.classList.remove('scale-100');
-            content.classList.add('scale-95');
+            const modal = document.getElementById('modalQR'); const content = document.getElementById('modalQRContent');
+            modal.classList.remove('opacity-100'); content.classList.remove('scale-100'); content.classList.add('scale-95');
             setTimeout(() => { modal.classList.add('hidden'); }, 300);
         };
 
         window.bukaModalHapusTanggal = function(mode = 'absensi') {
-            activeHapusMode = mode;
-            document.getElementById('del_startDate').value = '';
-            document.getElementById('del_endDate').value = '';
+            activeHapusMode = mode; document.getElementById('del_startDate').value = ''; document.getElementById('del_endDate').value = '';
             document.getElementById('modalHapusTanggalTitle').innerText = mode === 'imk' ? 'Hapus IMK via Tanggal' : 'Hapus Absen via Tanggal';
-            const modal = document.getElementById('modalHapusTanggal');
-            const content = document.getElementById('modalHapusTanggalContent');
-            modal.classList.remove('hidden');
-            setTimeout(() => { modal.classList.add('opacity-100'); content.classList.remove('scale-95'); content.classList.add('scale-100'); }, 10);
+            const modal = document.getElementById('modalHapusTanggal'); const content = document.getElementById('modalHapusTanggalContent');
+            modal.classList.remove('hidden'); setTimeout(() => { modal.classList.add('opacity-100'); content.classList.remove('scale-95'); content.classList.add('scale-100'); }, 10);
         };
-
         window.tutupModalHapusTanggal = function() {
-            const modal = document.getElementById('modalHapusTanggal');
-            const content = document.getElementById('modalHapusTanggalContent');
-            modal.classList.remove('opacity-100');
-            content.classList.remove('scale-100');
-            content.classList.add('scale-95');
+            const modal = document.getElementById('modalHapusTanggal'); const content = document.getElementById('modalHapusTanggalContent');
+            modal.classList.remove('opacity-100'); content.classList.remove('scale-100'); content.classList.add('scale-95');
             setTimeout(() => { modal.classList.add('hidden'); }, 300);
         };
-
         window.prosesHapusTanggal = function() {
-            const start = document.getElementById('del_startDate').value;
-            const end = document.getElementById('del_endDate').value;
-            if(!start || !end) return showToast('Error', 'Isi kedua tanggal!', 'error');
+            const start = document.getElementById('del_startDate').value; const end = document.getElementById('del_endDate').value;
+            if(!start || !end) return showToast('Error', 'Isi rentang tanggal dengan benar!', 'error');
             
             if (activeHapusMode === 'imk') {
                 state.imk = state.imk.filter(i => i.tanggal < start || i.tanggal > end);
-                showToast('Sukses', 'Riwayat IMK rentang tanggal dibersihkan.');
+                showToast('Sukses', 'Riwayat IMK rentang tanggal telah dibersihkan.');
             } else {
                 state.absensi = state.absensi.filter(a => a.tanggal < start || a.tanggal > end);
-                showToast('Sukses', 'Riwayat Absensi rentang tanggal dibersihkan.');
+                showToast('Sukses', 'Riwayat Absensi rentang tanggal telah dibersihkan.');
             }
-
-            saveData(); render(); window.tutupModalHapusTanggal();
+            saveData(); window.tutupModalHapusTanggal(); window.render();
         };
 
-        window.setView = function(view) {
-            stopScanner();
-            state.currentView = view;
-            render();
-        };
-
+        window.setView = function(view) { stopScanner(); state.currentView = view; window.render(); };
         window.handleLogin = function(role, e) {
             if(e) e.preventDefault();
             if (role === 'admin') {
-                const user = document.getElementById('loginUser').value;
-                const pass = document.getElementById('loginPass').value;
+                const user = document.getElementById('loginUser').value; const pass = document.getElementById('loginPass').value;
                 if (user === (state.pengaturan.adminUsername || 'admin') && pass === (state.pengaturan.adminPassword || 'admin123')) {
-                    state.currentUserRole = 'admin';
-                    window.setView('dashboard');
-                    showToast('Akses Diberikan', 'Selamat bekerja, Admin.');
-                } else {
-                    playSound('error');
-                    showToast('Akses Ditolak', 'Kredensial salah', 'error');
-                }
-            } else {
-                state.currentUserRole = role; 
-                window.setView(role === 'kiosk' ? 'scanWajah' : 'absenGPS');
-            }
+                    state.currentUserRole = 'admin'; window.setView('dashboard'); showToast('Sukses', 'Selamat bekerja, Admin.');
+                } else { playSound('error'); showToast('Akses Ditolak', 'Kredensial salah', 'error'); }
+            } else { state.currentUserRole = role; window.setView(role === 'kiosk' ? 'scanWajah' : 'absenGPS'); }
         };
-
         window.handleLogout = function() { state.currentUserRole = null; window.setView('login'); };
-        window.togglePassword = function(id, icon) {
-            const inp = document.getElementById(id); const ico = document.getElementById(icon);
-            if(inp.type === 'password') { inp.type = 'text'; ico.className = 'fas fa-eye-slash text-slate-500'; }
-            else { inp.type = 'password'; ico.className = 'fas fa-eye text-slate-400'; }
-        };
+        window.togglePassword = function(id, icon) { const inp = document.getElementById(id); const ico = document.getElementById(icon); if(inp.type === 'password') { inp.type = 'text'; ico.className = 'fas fa-eye-slash text-slate-500'; } else { inp.type = 'password'; ico.className = 'fas fa-eye text-slate-400'; } };
         window.toggleMobileMenu = function() { document.getElementById('mobileMenu')?.classList.toggle('hidden'); };
         window.toggleNotifDropdown = function(e) { if(e) e.stopPropagation(); document.getElementById('notifDropdown')?.classList.toggle('hidden'); };
+        document.addEventListener('click', (e) => { const drop = document.getElementById('notifDropdown'); const bell = document.getElementById('bellButton'); if(drop && !drop.classList.contains('hidden') && !drop.contains(e.target) && (!bell || !bell.contains(e.target))) drop.classList.add('hidden'); });
 
-        document.addEventListener('click', (e) => {
-            const drop = document.getElementById('notifDropdown');
-            const bell = document.getElementById('bellButton');
-            if(drop && !drop.classList.contains('hidden') && !drop.contains(e.target) && (!bell || !bell.contains(e.target))) drop.classList.add('hidden');
-        });
+        window.downloadBackupJSON = function() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
+            const a = document.createElement('a'); a.setAttribute("href", dataStr); a.setAttribute("download", `Backup_Destiny_HR_${Date.now()}.json`);
+            a.click(); showToast('Download', 'Menyimpan file JSON ke perangkat.');
+        };
+        window.restoreBackupJSON = function(event) {
+            const file = event.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const parsedData = JSON.parse(e.target.result);
+                    if (parsedData && parsedData.karyawan) { state = parsedData; await saveData(); showToast('Berhasil', 'Database dipulihkan!'); window.render(); }
+                } catch (err) { showToast('Error', 'File JSON tidak valid.', 'error'); }
+            };
+            reader.readAsText(file);
+        };
+        window.muatDataSempelBanyak = function() {
+            if(confirm("Tindakan ini akan menambah Data Sempel (Demo) Dummy ke database. Lanjutkan?")) {
+                state.jabatan = [ { id: 1, nama: 'Manager HRD' }, { id: 2, nama: 'Staff Administrasi' } ];
+                state.karyawan = [ { id: 101, nik: 'KRY-2023-001', nama: 'Andi Saputra', jabatanId: 1, shiftId: 'shift_1', gajiPokok: 15000000, noWa: '0811001001' } ];
+                const td = new Date(); const dstr = `${td.getFullYear()}-${String(td.getMonth() + 1).padStart(2, '0')}-${String(td.getDate()).padStart(2, '0')}`;
+                state.absensi = [ { id: 201, karyawanId: 101, tanggal: dstr, jamMasuk: '07:45', jamPulang: '17:00', statusMasuk: 'Tepat Waktu', metode: 'QR' } ];
+                saveData(); window.render(); showToast('Berhasil', 'Data Sempel dimuat!');
+            }
+        };
 
         function startRealTimeClock() {
             if (clockInterval) clearInterval(clockInterval);
@@ -667,27 +427,19 @@
                 document.querySelectorAll('.currentTimeDisplay').forEach(el => el.innerText = now.toLocaleTimeString('id-ID', { hour12: false }));
                 document.querySelectorAll('.currentDateDisplay').forEach(el => el.innerText = now.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }));
             };
-            updateClock();
-            clockInterval = setInterval(updateClock, 1000);
+            updateClock(); clockInterval = setInterval(updateClock, 1000);
         }
 
         function getNavItemsHTML(isMobile = false) {
             const items = [
-                { id: 'dashboard', icon: 'fa-chart-pie', label: 'Ringkasan Dasbor' },
-                { id: 'jabatan', icon: 'fa-user-tie', label: 'Struktur Jabatan' },
-                { id: 'karyawan', icon: 'fa-users', label: 'Database Karyawan' },
-                { id: 'absensi', icon: 'fa-history', label: 'Riwayat Kehadiran' },
-                { id: 'imk', icon: 'fa-running', label: 'Riwayat IMK (Keluar Masuk)' },
-                { id: 'cuti', icon: 'fa-envelope-open-text', label: 'Cuti & Izin' },
-                { id: 'gaji', icon: 'fa-file-invoice-dollar', label: 'Simulasi Penggajian' },
-                { id: 'laporan', icon: 'fa-print', label: 'Laporan Individu' },
-                { id: 'pengaturan', icon: 'fa-sliders-h', label: 'Pengaturan Sistem' }
+                { id: 'dashboard', icon: 'fa-chart-pie', label: 'Ringkasan Dasbor' }, { id: 'jabatan', icon: 'fa-user-tie', label: 'Struktur Jabatan' }, { id: 'karyawan', icon: 'fa-users', label: 'Database Karyawan' },
+                { id: 'absensi', icon: 'fa-history', label: 'Riwayat Kehadiran' }, { id: 'imk', icon: 'fa-running', label: 'Riwayat IMK' }, { id: 'cuti', icon: 'fa-envelope-open-text', label: 'Cuti & Izin' },
+                { id: 'gaji', icon: 'fa-file-invoice-dollar', label: 'Penggajian' }, { id: 'laporan', icon: 'fa-print', label: 'Rapor Individu' }, { id: 'pengaturan', icon: 'fa-sliders-h', label: 'Pengaturan Sistem' }
             ];
-
             return items.map(item => {
                 const isActive = state.currentView === item.id;
                 const activeClass = isActive ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200';
-                return `<button onclick="window.setView('${item.id}'); ${isMobile ? "window.toggleMobileMenu();" : ""}" class="w-full text-left px-4 py-3 rounded-xl transition flex items-center font-medium ${activeClass}"><i class="fas ${item.icon} w-6"></i> ${item.label}</button>`;
+                return `<button onclick="window.setView('${item.id}'); ${isMobile ? "window.toggleMobileMenu();" : ""}" class="w-full text-left px-4 py-3 rounded-xl transition flex items-center font-medium ${activeClass}"><i class="fas ${item.icon} w-6 text-center mr-1"></i> ${item.label}</button>`;
             }).join('');
         }
 
@@ -699,37 +451,18 @@
                     <div class="min-h-screen flex items-center justify-center p-4" style="background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);">
                         <div class="bg-white p-8 sm:p-10 rounded-3xl shadow-2xl w-full max-w-md relative overflow-hidden">
                             <div class="absolute top-0 right-0 w-32 h-32 bg-emerald-500 rounded-full blur-3xl opacity-20 transform translate-x-1/2 -translate-y-1/2"></div>
-                            <div class="text-center mb-8 relative z-10">
-                                <div class="w-20 h-20 bg-slate-100 rounded-2xl mx-auto flex items-center justify-center mb-4 shadow-inner border border-slate-200"><i class="fas fa-fingerprint text-3xl text-emerald-600"></i></div>
-                                <h2 class="text-2xl font-bold text-slate-800 tracking-tight">Destiny HR System</h2>
-                            </div>
-                            
+                            <div class="text-center mb-8 relative z-10"><div class="w-20 h-20 bg-slate-100 rounded-2xl mx-auto flex items-center justify-center mb-4 shadow-inner border border-slate-200"><i class="fas fa-fingerprint text-3xl text-emerald-600"></i></div><h2 class="text-2xl font-bold text-slate-800 tracking-tight">Destiny HR System</h2></div>
                             <form onsubmit="window.handleLogin('admin', event)" class="space-y-5 relative z-10 mb-6">
-                                <div>
-                                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Username Admin</label>
-                                    <input type="text" id="loginUser" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 outline-none" required>
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Password</label>
-                                    <div class="relative">
-                                        <input type="password" id="loginPass" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 pr-12 text-sm focus:ring-2 focus:ring-emerald-500 outline-none" required>
-                                        <button type="button" onclick="window.togglePassword('loginPass', 'eyeIconLogin')" class="absolute inset-y-0 right-0 px-4 flex items-center"><i id="eyeIconLogin" class="fas fa-eye text-slate-400"></i></button>
-                                    </div>
-                                </div>
+                                <div><label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Username Admin</label><input type="text" id="loginUser" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 outline-none" required></div>
+                                <div><label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Password</label><div class="relative"><input type="password" id="loginPass" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 pr-12 text-sm focus:ring-2 focus:ring-emerald-500 outline-none" required><button type="button" onclick="window.togglePassword('loginPass', 'eyeIconLogin')" class="absolute inset-y-0 right-0 px-4 flex items-center"><i id="eyeIconLogin" class="fas fa-eye text-slate-400"></i></button></div></div>
                                 <button type="submit" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3.5 rounded-xl shadow-lg transition"><i class="fas fa-sign-in-alt mr-2"></i> MASUK ADMIN</button>
                             </form>
-
                             <div class="grid grid-cols-2 gap-3 relative z-10 pt-4 border-t border-slate-100">
-                                <button onclick="window.handleLogin('kiosk')" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold py-3 px-2 rounded-xl border border-emerald-200 transition flex flex-col items-center justify-center text-xs text-center">
-                                    <i class="fas fa-qrcode mb-1 text-lg"></i> Kiosk (Mesin QR)
-                                </button>
-                                <button onclick="window.handleLogin('gps')" class="bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold py-3 px-2 rounded-xl border border-blue-200 transition flex flex-col items-center justify-center text-xs text-center">
-                                    <i class="fas fa-map-marker-alt mb-1 text-lg"></i> Absen Personal (GPS)
-                                </button>
+                                <button onclick="window.handleLogin('kiosk')" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold py-3 px-2 rounded-xl border border-emerald-200 transition flex flex-col items-center justify-center text-xs text-center"><i class="fas fa-qrcode mb-1 text-lg"></i> Kiosk (Mesin QR)</button>
+                                <button onclick="window.handleLogin('gps')" class="bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold py-3 px-2 rounded-xl border border-blue-200 transition flex flex-col items-center justify-center text-xs text-center"><i class="fas fa-map-marker-alt mb-1 text-lg"></i> Absen (GPS HP)</button>
                             </div>
                         </div>
-                    </div>
-                `;
+                    </div>`;
                 return;
             }
 
@@ -739,94 +472,34 @@
                     <div class="min-h-screen flex flex-col justify-center items-center p-4 sm:p-8" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);">
                         <div class="w-full max-w-xl">
                             <div class="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/10 flex justify-between items-center mb-6">
-                                <div class="flex items-center space-x-4">
-                                    <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-white"><i class="fas ${isKiosk ? 'fa-qrcode' : 'fa-map-marker-alt'}"></i></div>
-                                    <div>
-                                        <h1 class="text-xl font-bold text-white" id="kioskTitle">${isKiosk ? 'Terminal Mesin QR' : 'Absensi Personal GPS'}</h1>
-                                        <p class="text-xs text-emerald-400 font-medium" id="kioskSubtitle">${isKiosk ? 'Dekatkan QR Code ke Kamera' : 'Scan ID Card di depan kamera untuk lokasi GPS'}</p>
-                                    </div>
-                                </div>
+                                <div class="flex items-center space-x-4"><div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-white"><i class="fas ${isKiosk ? 'fa-qrcode' : 'fa-map-marker-alt'}"></i></div><div><h1 class="text-xl font-bold text-white" id="kioskTitle">${isKiosk ? 'Terminal Mesin QR' : 'Absen Personal GPS'}</h1><p class="text-xs text-emerald-400 font-medium" id="kioskSubtitle">${isKiosk ? 'Dekatkan QR Code ke Kamera' : 'Scan ID Card via HP untuk mengunci Lokasi'}</p></div></div>
                                 <button onclick="window.handleLogout()" class="text-white/50 hover:text-red-400 bg-white/5 p-3 rounded-xl transition"><i class="fas fa-power-off text-xl"></i></button>
                             </div>
-
                             <div class="bg-white rounded-3xl shadow-2xl p-8 border-b-8 border-emerald-500 relative text-center">
-                                <div class="mb-5">
-                                    <h2 class="text-5xl font-bold text-slate-800 currentTimeDisplay">00:00:00</h2>
-                                    <p class="text-sm font-semibold text-slate-500 mt-2 uppercase currentDateDisplay">Memuat tanggal...</p>
-                                </div>
-
-                                ${isKiosk ? `
-                                    <div class="flex bg-slate-100 p-1 rounded-2xl mb-4 border">
-                                        <button id="btnModeAbsen" onclick="window.toggleKioskMode('absen')" class="flex-1 bg-emerald-600 text-white font-bold py-2.5 rounded-xl shadow transition text-xs">Absen Masuk/Pulang Kerja</button>
-                                        <button id="btnModeImk" onclick="window.toggleKioskMode('imk')" class="flex-1 bg-white/10 text-slate-600 font-semibold py-2.5 rounded-xl transition text-xs">Izin Keluar Masuk (IMK)</button>
-                                    </div>
-                                ` : `
-                                    <div class="bg-blue-50 border border-blue-200 p-3 rounded-xl mb-4 text-blue-700 text-xs font-bold flex items-center justify-center">
-                                        <i class="fas fa-satellite-dish mr-2 animate-pulse text-lg"></i> Membutuhkan Akses Lokasi (GPS) & Scan ID Card
-                                    </div>
-                                `}
-
-                                <div class="relative bg-slate-900 rounded-2xl overflow-hidden shadow-inner mb-6" style="min-height: 240px; display:flex; align-items:center; justify-content:center;">
-                                    <p id="cameraError" class="text-amber-500 text-sm font-medium p-4 absolute inset-0 flex flex-col items-center justify-center hidden bg-slate-900 z-10"><i class="fas fa-video-slash text-3xl mb-2"></i> Kamera error.</p>
-                                    <div id="reader" class="w-full h-full object-cover"></div>
-                                </div>
-                                <div class="flex gap-2">
-                                    <button onclick="window.toggleCamera()" class="${isKiosk ? 'w-1/2' : 'w-full'} bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3.5 rounded-xl transition flex items-center justify-center border"><i class="fas fa-camera-rotate mr-2"></i> Putar Kamera</button>
-                                    ${isKiosk ? `<button onclick="window.bukaModalPengajuanCuti()" class="w-1/2 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3.5 rounded-xl transition flex items-center justify-center shadow"><i class="fas fa-envelope-open-text mr-2"></i> Form Izin</button>` : ''}
-                                </div>
+                                <div class="mb-5"><h2 class="text-5xl font-bold text-slate-800 currentTimeDisplay">00:00:00</h2><p class="text-sm font-semibold text-slate-500 mt-2 uppercase currentDateDisplay">Memuat tanggal...</p></div>
+                                ${isKiosk ? `<div class="flex bg-slate-100 p-1 rounded-2xl mb-4 border"><button id="btnModeAbsen" onclick="window.toggleKioskMode('absen')" class="flex-1 bg-emerald-600 text-white font-bold py-2.5 rounded-xl shadow transition text-xs">Absen Masuk/Pulang</button><button id="btnModeImk" onclick="window.toggleKioskMode('imk')" class="flex-1 bg-white/10 text-slate-600 font-semibold py-2.5 rounded-xl transition text-xs">Izin Keluar Masuk (IMK)</button></div>` : `<div class="bg-blue-50 border border-blue-200 p-3 rounded-xl mb-4 text-blue-700 text-xs font-bold flex items-center justify-center"><i class="fas fa-satellite-dish mr-2 animate-pulse text-lg"></i> Membutuhkan Akses Lokasi (GPS) & Scan ID Card</div>`}
+                                <div class="relative bg-slate-900 rounded-2xl overflow-hidden shadow-inner mb-6 flex items-center justify-center" style="min-height: 240px;"><p id="cameraError" class="text-amber-500 text-sm font-medium p-4 absolute inset-0 flex flex-col items-center justify-center hidden bg-slate-900 z-10"><i class="fas fa-video-slash text-3xl mb-2"></i> Kamera error.</p><div id="reader" class="w-full h-full object-cover"></div></div>
+                                <div class="flex gap-2"><button onclick="window.toggleCamera()" class="${isKiosk ? 'w-1/2' : 'w-full'} bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3.5 rounded-xl transition flex items-center justify-center border"><i class="fas fa-camera-rotate mr-2"></i> Putar Kamera</button>${isKiosk ? `<button onclick="window.bukaModalPengajuanCuti()" class="w-1/2 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3.5 rounded-xl transition flex items-center justify-center shadow"><i class="fas fa-envelope-open-text mr-2"></i> Form Izin</button>` : ''}</div>
                             </div>
                         </div>
-                    </div>
-                `;
-                startRealTimeClock();
-                window.startScanner();
-                return;
+                    </div>`;
+                startRealTimeClock(); window.startScanner(); return;
             }
 
             container.innerHTML = `
                 <div class="flex h-screen overflow-hidden bg-slate-50">
                     <aside class="w-72 bg-slate-900 flex flex-col hidden lg:flex shadow-2xl z-20">
-                        <div class="p-6 flex items-center space-x-4 border-b border-slate-800 bg-slate-950">
-                            <div class="bg-emerald-500 text-white w-10 h-10 rounded-xl flex items-center justify-center"><i class="fas fa-shield-alt text-lg"></i></div>
-                            <div>
-                                <h2 class="font-bold text-white text-lg leading-tight">HR Admin</h2>
-                                <div class="flex items-center text-[10px] uppercase tracking-wider text-slate-400 mt-1 font-bold">
-                                    ${isFirebaseConnected ? '<span class="w-2 h-2 rounded-full bg-emerald-500 mr-2"></span> Firebase Cloud' : '<span class="w-2 h-2 rounded-full bg-amber-500 mr-2"></span> Local Mode'}
-                                </div>
-                            </div>
-                        </div>
+                        <div class="p-6 flex items-center space-x-4 border-b border-slate-800 bg-slate-950"><div class="bg-emerald-500 text-white w-10 h-10 rounded-xl flex items-center justify-center"><i class="fas fa-shield-alt text-lg"></i></div><div><h2 class="font-bold text-white text-lg leading-tight">HR Admin</h2><div class="flex items-center text-[10px] uppercase tracking-wider text-slate-400 mt-1 font-bold">${isFirebaseConnected ? '<span class="w-2 h-2 rounded-full bg-emerald-500 mr-2 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span> Firebase Cloud' : '<span class="w-2 h-2 rounded-full bg-amber-500 mr-2"></span> Local Mode'}</div></div></div>
                         <nav class="flex-1 overflow-y-auto py-6 space-y-1.5 px-4 custom-scrollbar">${getNavItemsHTML()}</nav>
-                        <div class="p-5 border-t border-slate-800 bg-slate-950">
-                            <button onclick="window.handleLogout()" class="w-full text-left text-red-400 hover:text-white hover:bg-red-500/20 px-4 py-3 rounded-xl transition flex items-center font-medium"><i class="fas fa-sign-out-alt w-6"></i> Keluar Sistem</button>
-                        </div>
+                        <div class="p-5 border-t border-slate-800 bg-slate-950"><button onclick="window.handleLogout()" class="w-full text-left text-red-400 hover:text-white hover:bg-red-500/20 px-4 py-3 rounded-xl transition flex items-center font-medium"><i class="fas fa-sign-out-alt w-6 text-center mr-1"></i> Keluar Sistem</button></div>
                     </aside>
-
                     <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
-                        <header class="bg-white shadow-sm border-b border-slate-200 h-16 flex items-center justify-between px-4 z-10 lg:hidden">
-                            <div class="flex items-center space-x-3">
-                                <button onclick="window.toggleMobileMenu()" class="text-slate-600 p-2 rounded-lg bg-slate-100"><i class="fas fa-bars text-lg"></i></button>
-                                <span class="font-bold text-slate-800">HR Admin</span>
-                            </div>
-                        </header>
-                        
-                        <div id="mobileMenu" class="fixed inset-0 bg-slate-900/60 z-50 hidden lg:hidden flex backdrop-blur-sm" onclick="window.toggleMobileMenu()">
-                            <div class="w-72 bg-slate-900 h-full flex flex-col shadow-2xl" onclick="event.stopPropagation()">
-                                <div class="p-6 flex items-center justify-between border-b border-slate-800 bg-slate-950">
-                                    <div class="flex items-center space-x-3 text-white"><div class="bg-emerald-500 p-2 rounded-lg"><i class="fas fa-shield-alt"></i></div><h2 class="font-bold">HR Admin</h2></div>
-                                    <button onclick="window.toggleMobileMenu()" class="text-slate-400 bg-slate-800 p-2 rounded-lg"><i class="fas fa-times"></i></button>
-                                </div>
-                                <nav class="flex-1 overflow-y-auto py-6 space-y-1.5 px-4">${getNavItemsHTML(true)}</nav>
-                            </div>
-                        </div>
-
-                        <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-10 relative">
-                            <div class="max-w-7xl mx-auto" id="mainContentArea"></div>
-                        </main>
+                        <header class="bg-white shadow-sm border-b border-slate-200 h-16 flex items-center justify-between px-4 z-10 lg:hidden"><div class="flex items-center space-x-3"><button onclick="window.toggleMobileMenu()" class="text-slate-600 p-2 rounded-lg bg-slate-100"><i class="fas fa-bars text-lg"></i></button><span class="font-bold text-slate-800">HR Admin</span></div></header>
+                        <div id="mobileMenu" class="fixed inset-0 bg-slate-900/60 z-50 hidden lg:hidden flex backdrop-blur-sm" onclick="window.toggleMobileMenu()"><div class="w-72 bg-slate-900 h-full flex flex-col shadow-2xl" onclick="event.stopPropagation()"><div class="p-6 flex items-center justify-between border-b border-slate-800 bg-slate-950"><div class="flex items-center space-x-3 text-white"><div class="bg-emerald-500 p-2 rounded-lg"><i class="fas fa-shield-alt"></i></div><h2 class="font-bold">HR Admin</h2></div><button onclick="window.toggleMobileMenu()" class="text-slate-400 bg-slate-800 p-2 rounded-lg"><i class="fas fa-times"></i></button></div><nav class="flex-1 overflow-y-auto py-6 space-y-1.5 px-4">${getNavItemsHTML(true)}</nav></div></div>
+                        <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-10 relative"><div class="max-w-7xl mx-auto" id="mainContentArea"></div></main>
                     </div>
-                </div>
-            `;
-            startRealTimeClock();
-            window.renderMainContent();
+                </div>`;
+            startRealTimeClock(); window.renderMainContent();
         };
 
         window.renderMainContent = function() {
@@ -843,468 +516,229 @@
         };
 
         function getDashboardHTML() {
-            const today = new Date();
-            const dateToday = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-            const isLibur = state.pengaturan.liburNasional?.find(l => l.tanggal === dateToday);
+            const dateToday = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
             const absenHariIni = state.absensi.filter(a => a.tanggal === dateToday);
-            const hadir = absenHariIni.length;
-            const telat = absenHariIni.filter(a => a.statusMasuk === 'Terlambat').length;
+            const hadir = absenHariIni.length; const telat = absenHariIni.filter(a => a.statusMasuk === 'Terlambat').length;
             const cutiMenunggu = state.cuti.filter(c => c.status === 'Menunggu').length;
+            const isLibur = state.pengaturan.liburNasional?.find(l => l.tanggal === dateToday);
             
             let html = `
                 <div class="mb-8 flex justify-between items-start">
                     <div><h1 class="text-3xl font-bold text-slate-800">Halo, Admin!</h1><p class="text-slate-500 mt-1">Ringkasan aktivitas presensi hari ini.</p></div>
                     <div class="relative z-50">
-                        <button id="bellButton" onclick="window.toggleNotifDropdown(event)" class="relative p-3.5 bg-white rounded-xl shadow-sm border border-slate-200 hover:bg-slate-50 transition flex items-center justify-center">
-                            <i class="fas fa-bell ${cutiMenunggu > 0 ? 'text-amber-500' : 'text-slate-600'} text-xl"></i>
-                            ${cutiMenunggu > 0 ? `<span class="absolute top-2 right-2 flex h-3 w-3"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span></span><span class="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-full">${cutiMenunggu}</span>` : ''}
-                        </button>
-                        <div id="notifDropdown" class="hidden absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden">
-                            <div class="bg-slate-800 p-4 flex justify-between items-center"><h3 class="font-bold text-white text-sm">Notifikasi</h3><span class="bg-slate-700 text-slate-300 text-[10px] font-bold px-2 py-1 rounded-full">${formatDateID(dateToday)}</span></div>
-                            <div class="max-h-80 overflow-y-auto">
-                                ${cutiMenunggu > 0 ? `<div onclick="window.setView('cuti')" class="p-4 border-b border-slate-50 hover:bg-amber-50 cursor-pointer flex gap-3"><div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-500 shrink-0"><i class="fas fa-envelope-open-text"></i></div><div><p class="text-sm font-bold text-slate-800">Cuti / Izin</p><p class="text-xs text-slate-500 mt-0.5">Ada <b>${cutiMenunggu}</b> pengajuan tertunda.</p></div></div>` : '<div class="p-4 text-center text-sm text-slate-500">Tidak ada pengajuan cuti baru.</div>'}
-                            </div>
-                        </div>
+                        <button id="bellButton" onclick="window.toggleNotifDropdown(event)" class="relative p-3.5 bg-white rounded-xl shadow-sm border border-slate-200 hover:bg-slate-50 transition flex items-center justify-center"><i class="fas fa-bell ${cutiMenunggu > 0 ? 'text-amber-500' : 'text-slate-600'} text-xl"></i>${cutiMenunggu > 0 ? `<span class="absolute top-2 right-2 flex h-3 w-3"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span></span><span class="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-full">${cutiMenunggu}</span>` : ''}</button>
+                        <div id="notifDropdown" class="hidden absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden"><div class="bg-slate-800 p-4 flex justify-between items-center"><h3 class="font-bold text-white text-sm">Notifikasi</h3><span class="bg-slate-700 text-slate-300 text-[10px] font-bold px-2 py-1 rounded-full">${formatDateID(dateToday)}</span></div><div class="max-h-80 overflow-y-auto">${cutiMenunggu > 0 ? `<div onclick="window.setView('cuti')" class="p-4 border-b border-slate-50 hover:bg-amber-50 cursor-pointer flex gap-3"><div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-500 shrink-0"><i class="fas fa-envelope-open-text"></i></div><div><p class="text-sm font-bold text-slate-800">Cuti / Izin</p><p class="text-xs text-slate-500 mt-0.5">Ada <b>${cutiMenunggu}</b> pengajuan tertunda.</p></div></div>` : '<div class="p-4 text-center text-sm text-slate-500">Tidak ada pengajuan cuti baru.</div>'}</div></div>
                     </div>
                 </div>`;
-            
             if (isLibur) html += `<div class="bg-rose-50 border border-rose-200 p-5 rounded-2xl mb-8 flex items-center shadow-sm"><i class="fas fa-gift text-3xl text-rose-500 mr-4"></i><div><h3 class="font-bold text-rose-800">Hari Libur Nasional: ${isLibur.keterangan}</h3></div></div>`;
-
-            html += `<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
-                <div class="bg-white p-6 rounded-2xl border flex justify-between items-center shadow-sm"><div class="text-slate-500 text-xs font-bold uppercase">Total Pegawai<div class="text-3xl text-slate-800 mt-1">${state.karyawan.length}</div></div><i class="fas fa-users text-3xl text-slate-200"></i></div>
-                <div class="bg-white p-6 rounded-2xl border flex justify-between items-center shadow-sm"><div class="text-slate-500 text-xs font-bold uppercase">Hadir Hari Ini<div class="text-3xl text-slate-800 mt-1">${hadir}</div></div><i class="fas fa-user-check text-3xl text-emerald-200"></i></div>
-                <div class="bg-white p-6 rounded-2xl border flex justify-between items-center shadow-sm"><div class="text-slate-500 text-xs font-bold uppercase">Terlambat<div class="text-3xl text-slate-800 mt-1">${telat}</div></div><i class="fas fa-user-clock text-3xl text-amber-200"></i></div>
-                <div class="bg-white p-6 rounded-2xl border flex justify-between items-center shadow-sm"><div class="text-slate-500 text-xs font-bold uppercase">Jabatan<div class="text-3xl text-slate-800 mt-1">${state.jabatan.length}</div></div><i class="fas fa-user-tie text-3xl text-blue-200"></i></div>
-            </div>`;
+            html += `<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-8"><div class="bg-white p-6 rounded-2xl border flex justify-between items-center shadow-sm"><div class="text-slate-500 text-xs font-bold uppercase">Total Pegawai<div class="text-3xl text-slate-800 mt-1">${state.karyawan.length}</div></div><i class="fas fa-users text-3xl text-slate-200"></i></div><div class="bg-white p-6 rounded-2xl border flex justify-between items-center shadow-sm"><div class="text-slate-500 text-xs font-bold uppercase">Hadir Hari Ini<div class="text-3xl text-slate-800 mt-1">${hadir}</div></div><i class="fas fa-user-check text-3xl text-emerald-200"></i></div><div class="bg-white p-6 rounded-2xl border flex justify-between items-center shadow-sm"><div class="text-slate-500 text-xs font-bold uppercase">Terlambat<div class="text-3xl text-slate-800 mt-1">${telat}</div></div><i class="fas fa-user-clock text-3xl text-amber-200"></i></div><div class="bg-white p-6 rounded-2xl border flex justify-between items-center shadow-sm"><div class="text-slate-500 text-xs font-bold uppercase">Jabatan<div class="text-3xl text-slate-800 mt-1">${state.jabatan.length}</div></div><i class="fas fa-user-tie text-3xl text-blue-200"></i></div></div>`;
             return html;
         }
 
+        // KARYAWAN
         function getKaryawanHTML() {
-            return `
-                <div class="flex justify-between items-center mb-8"><div><h1 class="text-3xl font-bold text-slate-800">Database Karyawan</h1></div><button onclick="window.bukaModalKaryawan()" class="bg-emerald-600 text-white px-5 py-3 rounded-xl font-bold text-sm shadow"><i class="fas fa-plus mr-2"></i>Tambah Karyawan</button></div>
-                <div class="bg-white rounded-2xl border overflow-x-auto shadow-sm"><table class="min-w-full text-sm text-left"><thead class="bg-slate-50 text-slate-500 uppercase text-xs"><tr><th class="py-4 px-6">Identitas</th><th class="py-4 px-6">Jabatan & Shift</th><th class="py-4 px-6">Gaji Pokok</th><th class="py-4 px-6 text-center">Tindakan</th></tr></thead><tbody id="tabelKaryawanBody" class="divide-y"></tbody></table></div>
-                
-                <div id="modalKaryawan" class="fixed inset-0 bg-slate-900 bg-opacity-60 hidden z-[100] flex justify-center items-center p-4">
-                    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
-                        <div class="px-8 py-5 border-b flex justify-between"><h3 class="font-bold text-xl">Karyawan</h3><button onclick="document.getElementById('modalKaryawan').classList.add('hidden')"><i class="fas fa-times"></i></button></div>
-                        <div class="p-8 overflow-y-auto flex-1 bg-slate-50">
-                            <form id="formKaryawan" class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                <input type="hidden" id="fk_id">
-                                <div class="sm:col-span-2"><label class="block text-xs font-bold text-slate-500 mb-2">Nama</label><input type="text" id="fk_nama" required class="w-full border rounded-xl p-3 outline-none"></div>
-                                <div><label class="block text-xs font-bold text-slate-500 mb-2">Nomor ID Karyawan</label><input type="text" id="fk_nik" required class="w-full bg-slate-100 border rounded-xl p-3 outline-none font-mono"></div>
-                                <div><label class="block text-xs font-bold text-slate-500 mb-2">NIK</label><input type="text" id="fk_ktp" class="w-full border rounded-xl p-3 outline-none"></div>
-                                <div><label class="block text-xs font-bold text-slate-500 mb-2">No. WhatsApp</label><input type="tel" id="fk_wa" class="w-full border rounded-xl p-3 outline-none"></div>
-                                <div><label class="block text-xs font-bold text-slate-500 mb-2">Jabatan</label><select id="fk_jabatan" required class="w-full border rounded-xl p-3 outline-none"></select></div>
-                                <div><label class="block text-xs font-bold text-slate-500 mb-2">Shift Kerja</label><select id="fk_shift" required class="w-full border rounded-xl p-3 outline-none"></select></div>
-                                <div class="sm:col-span-2"><label class="block text-xs font-bold text-slate-500 mb-2">Gaji Pokok Bulanan</label><input type="number" id="fk_gaji" required class="w-full border rounded-xl p-3 outline-none"></div>
-                            </form>
-                        </div>
-                        <div class="px-8 py-5 border-t flex justify-end gap-3"><button onclick="window.simpanKaryawan()" class="bg-emerald-600 text-white px-6 py-2.5 rounded-xl font-bold">Simpan</button></div>
-                    </div>
-                </div>
-            `;
+            return `<div class="flex justify-between items-center mb-8"><div><h1 class="text-3xl font-bold text-slate-800">Database Karyawan</h1></div><button onclick="window.bukaModalKaryawan()" class="bg-emerald-600 text-white px-5 py-3 rounded-xl font-bold text-sm shadow"><i class="fas fa-plus mr-2"></i>Tambah Karyawan</button></div><div class="bg-white rounded-2xl border overflow-x-auto shadow-sm"><table class="min-w-full text-sm text-left"><thead class="bg-slate-50 text-slate-500 uppercase text-xs border-b"><tr><th class="py-4 px-6">Identitas</th><th class="py-4 px-6">Jabatan & Shift</th><th class="py-4 px-6 text-right">Gaji Pokok</th><th class="py-4 px-6 text-center">Tindakan</th></tr></thead><tbody id="tabelKaryawanBody" class="divide-y"></tbody></table></div>
+                <div id="modalKaryawan" class="fixed inset-0 bg-slate-900 bg-opacity-60 hidden z-[100] flex justify-center items-center p-4"><div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col"><div class="px-8 py-5 border-b flex justify-between"><h3 class="font-bold text-xl">Form Karyawan</h3><button onclick="document.getElementById('modalKaryawan').classList.add('hidden')"><i class="fas fa-times"></i></button></div><div class="p-8 overflow-y-auto flex-1 bg-slate-50"><form id="formKaryawan" class="grid grid-cols-1 sm:grid-cols-2 gap-6"><input type="hidden" id="fk_id"><div class="sm:col-span-2"><label class="block text-xs font-bold text-slate-500 mb-2">Nama</label><input type="text" id="fk_nama" required class="w-full border rounded-xl p-3 outline-none"></div><div><label class="block text-xs font-bold text-slate-500 mb-2">ID Karyawan</label><input type="text" id="fk_nik" required class="w-full bg-slate-100 border rounded-xl p-3 outline-none font-mono"></div><div><label class="block text-xs font-bold text-slate-500 mb-2">NIK KTP</label><input type="text" id="fk_ktp" class="w-full border rounded-xl p-3 outline-none"></div><div><label class="block text-xs font-bold text-slate-500 mb-2">No. WhatsApp</label><input type="tel" id="fk_wa" class="w-full border rounded-xl p-3 outline-none"></div><div><label class="block text-xs font-bold text-slate-500 mb-2">Gaji Pokok (Rp)</label><input type="number" id="fk_gaji" required class="w-full border rounded-xl p-3 outline-none"></div><div><label class="block text-xs font-bold text-slate-500 mb-2">Jabatan</label><select id="fk_jabatan" required class="w-full border rounded-xl p-3 outline-none"></select></div><div><label class="block text-xs font-bold text-slate-500 mb-2">Shift Kerja</label><select id="fk_shift" required class="w-full border rounded-xl p-3 outline-none"></select></div></form></div><div class="px-8 py-5 border-t flex justify-end gap-3"><button onclick="window.simpanKaryawan()" class="bg-emerald-600 text-white px-6 py-2.5 rounded-xl font-bold">Simpan</button></div></div></div>`;
         }
-
         function renderKaryawanTable() {
-            const tbody = document.getElementById('tabelKaryawanBody');
-            if(!tbody) return; tbody.innerHTML = '';
+            const tbody = document.getElementById('tabelKaryawanBody'); if(!tbody) return; tbody.innerHTML = '';
             state.karyawan.forEach(k => {
-                const jab = state.jabatan.find(j => j.id == k.jabatanId)?.nama || '-';
-                const shf = state.pengaturan.shifts.find(s => s.id == k.shiftId)?.nama || state.pengaturan.shifts[0]?.nama;
-                tbody.innerHTML += `<tr class="hover:bg-slate-50"><td class="py-4 px-6 font-bold text-slate-800">${k.nama}<br><span class="text-xs text-slate-500 font-normal font-mono bg-slate-100 px-1 rounded">${k.nik}</span><div class="text-xs text-slate-400 mt-1">NIK: ${k.noKtp || '-'}</div><div class="text-xs text-emerald-600 mt-1"><i class="fab fa-whatsapp mr-1"></i><a href="https://wa.me/${formatWANumber(k.noWa)}" target="_blank">${k.noWa || '-'}</a></div></td><td class="py-4 px-6"><span class="bg-indigo-50 text-indigo-700 text-xs px-2 py-1 rounded font-bold block mb-1 w-max">${jab}</span><span class="text-xs text-slate-500"><i class="fas fa-clock mr-1"></i>${shf}</span></td><td class="py-4 px-6 font-bold text-slate-700">${formatRupiah(k.gajiPokok)}</td><td class="py-4 px-6 text-center space-x-1 whitespace-nowrap"><button onclick="window.tampilkanQR('${k.nik}', '${k.nama}')" class="text-emerald-600 bg-emerald-50 p-2 rounded-lg"><i class="fas fa-qrcode"></i></button> <button onclick="window.bukaModalKaryawan(${k.id})" class="text-blue-600 bg-blue-50 p-2 rounded-lg"><i class="fas fa-edit"></i></button> <button onclick="window.confirmDelete('karyawan', ${k.id})" class="text-red-600 bg-red-50 p-2 rounded-lg"><i class="fas fa-trash"></i></button></td></tr>`;
+                const jab = state.jabatan.find(j => j.id == k.jabatanId)?.nama || '-'; const shf = state.pengaturan.shifts.find(s => s.id == k.shiftId)?.nama || state.pengaturan.shifts[0]?.nama;
+                tbody.innerHTML += `<tr class="hover:bg-slate-50"><td class="py-4 px-6 font-bold text-slate-800">${k.nama}<br><span class="text-xs text-slate-500 font-normal font-mono bg-slate-100 px-1 rounded border">${k.nik}</span><div class="text-xs text-slate-400 mt-1">NIK: ${k.noKtp || '-'}</div><div class="text-xs text-emerald-600 mt-1"><i class="fab fa-whatsapp mr-1"></i><a href="https://wa.me/${formatWANumber(k.noWa)}" target="_blank">${k.noWa || '-'}</a></div></td><td class="py-4 px-6"><span class="bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs px-2 py-1 rounded font-bold block mb-1 w-max">${jab}</span><span class="text-xs text-slate-500"><i class="fas fa-clock mr-1"></i>${shf}</span></td><td class="py-4 px-6 text-right font-bold text-slate-700">${formatRupiah(k.gajiPokok)}</td><td class="py-4 px-6 text-center space-x-1 whitespace-nowrap"><button onclick="window.tampilkanQR('${k.nik}', '${k.nama}')" class="text-emerald-600 bg-emerald-50 p-2 rounded-lg"><i class="fas fa-qrcode"></i></button> <button onclick="window.bukaModalKaryawan(${k.id})" class="text-blue-600 bg-blue-50 p-2 rounded-lg"><i class="fas fa-edit"></i></button> <button onclick="window.confirmDelete('karyawan', ${k.id})" class="text-red-600 bg-red-50 p-2 rounded-lg"><i class="fas fa-trash"></i></button></td></tr>`;
             });
         }
-
         window.bukaModalKaryawan = function(id = null) {
-            const selJab = document.getElementById('fk_jabatan');
-            const selShift = document.getElementById('fk_shift');
-            selJab.innerHTML = '<option value="">-- Pilih Jabatan --</option>' + state.jabatan.map(j => `<option value="${j.id}">${j.nama}</option>`).join('');
-            selShift.innerHTML = state.pengaturan.shifts.map(s => `<option value="${s.id}">${s.nama} (${s.jamMasuk})</option>`).join('');
-            
-            if (id) {
-                const k = state.karyawan.find(x => x.id === id);
-                document.getElementById('fk_id').value = k.id;
-                document.getElementById('fk_nama').value = k.nama;
-                document.getElementById('fk_nik').value = k.nik;
-                document.getElementById('fk_ktp').value = k.noKtp || '';
-                document.getElementById('fk_wa').value = k.noWa || '';
-                document.getElementById('fk_jabatan').value = k.jabatanId;
-                document.getElementById('fk_shift').value = k.shiftId || state.pengaturan.shifts[0].id;
-                document.getElementById('fk_gaji').value = k.gajiPokok;
-            } else {
-                document.getElementById('formKaryawan').reset();
-                document.getElementById('fk_id').value = '';
-                document.getElementById('fk_nik').value = `KRY-${new Date().toISOString().slice(0,7).replace('-','')}-${String(state.karyawan.length+1).padStart(3,'0')}`;
-            }
+            document.getElementById('fk_jabatan').innerHTML = '<option value="">-- Pilih --</option>' + state.jabatan.map(j => `<option value="${j.id}">${j.nama}</option>`).join('');
+            document.getElementById('fk_shift').innerHTML = state.pengaturan.shifts.map(s => `<option value="${s.id}">${s.nama} (${s.jamMasuk})</option>`).join('');
+            if (id) { const k = state.karyawan.find(x => x.id === id); document.getElementById('fk_id').value = k.id; document.getElementById('fk_nama').value = k.nama; document.getElementById('fk_nik').value = k.nik; document.getElementById('fk_ktp').value = k.noKtp || ''; document.getElementById('fk_wa').value = k.noWa || ''; document.getElementById('fk_jabatan').value = k.jabatanId; document.getElementById('fk_shift').value = k.shiftId || state.pengaturan.shifts[0].id; document.getElementById('fk_gaji').value = k.gajiPokok; } 
+            else { document.getElementById('formKaryawan').reset(); document.getElementById('fk_id').value = ''; document.getElementById('fk_nik').value = `KRY-${new Date().toISOString().slice(0,7).replace('-','')}-${String(state.karyawan.length+1).padStart(3,'0')}`; }
             document.getElementById('modalKaryawan').classList.remove('hidden');
         };
-
         window.simpanKaryawan = function() {
-            const data = {
-                nama: document.getElementById('fk_nama').value, nik: document.getElementById('fk_nik').value,
-                noKtp: document.getElementById('fk_ktp').value, noWa: document.getElementById('fk_wa').value,
-                jabatanId: document.getElementById('fk_jabatan').value, shiftId: document.getElementById('fk_shift').value,
-                gajiPokok: parseFloat(document.getElementById('fk_gaji').value)
-            };
+            const data = { nama: document.getElementById('fk_nama').value, nik: document.getElementById('fk_nik').value, noKtp: document.getElementById('fk_ktp').value, noWa: document.getElementById('fk_wa').value, jabatanId: document.getElementById('fk_jabatan').value, shiftId: document.getElementById('fk_shift').value, gajiPokok: parseFloat(document.getElementById('fk_gaji').value) };
             if(!data.nama || !data.jabatanId || isNaN(data.gajiPokok)) return showToast('Error', 'Data wajib belum diisi', 'error');
-
             const id = document.getElementById('fk_id').value;
-            if (id) {
-                const idx = state.karyawan.findIndex(k => k.id == parseInt(id, 10));
-                state.karyawan[idx] = { ...state.karyawan[idx], ...data };
-            } else { data.id = Date.now(); state.karyawan.push(data); }
+            if (id) { const idx = state.karyawan.findIndex(k => k.id == parseInt(id, 10)); state.karyawan[idx] = { ...state.karyawan[idx], ...data }; } else { data.id = Date.now(); state.karyawan.push(data); }
             saveData(); document.getElementById('modalKaryawan').classList.add('hidden'); renderKaryawanTable(); showToast('Tersimpan', 'Data Karyawan Diperbarui');
         };
 
-        function getJabatanHTML() {
-            return `
-                <div class="flex justify-between items-center mb-8"><div><h1 class="text-3xl font-bold">Struktur Jabatan</h1></div><button onclick="window.bukaModalJabatan()" class="bg-indigo-600 text-white px-5 py-3 rounded-xl font-bold shadow text-sm">Tambah Jabatan</button></div>
-                <div class="bg-white rounded-2xl border overflow-hidden max-w-3xl"><table class="w-full text-sm text-left"><thead class="bg-slate-50 border-b"><tr><th class="py-4 px-6">Nama Jabatan</th><th class="py-4 px-6 text-center">Anggota</th><th class="py-4 px-6 text-center">Aksi</th></tr></thead><tbody id="tabelJabatanBody" class="divide-y"></tbody></table></div>
-                <div id="modalJabatan" class="fixed inset-0 bg-slate-900 bg-opacity-60 hidden z-[100] flex justify-center items-center p-4"><div class="bg-white rounded-3xl w-full max-w-md p-6"><h3 class="font-bold text-lg mb-4">Jabatan</h3><input type="hidden" id="fj_id"><label class="block text-xs font-bold mb-2">Nama Jabatan</label><input type="text" id="fj_nama" class="w-full border rounded-xl p-3"><div class="mt-6 flex justify-end gap-2"><button onclick="document.getElementById('modalJabatan').classList.add('hidden')" class="px-4 py-2 bg-slate-100 rounded-lg font-bold">Batal</button><button onclick="window.simpanJabatan()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg font-bold">Simpan</button></div></div></div>
-            `;
-        }
-
+        // JABATAN
+        function getJabatanHTML() { return `<div class="flex justify-between items-center mb-8"><div><h1 class="text-3xl font-bold">Struktur Jabatan</h1></div><button onclick="window.bukaModalJabatan()" class="bg-indigo-600 text-white px-5 py-3 rounded-xl font-bold shadow text-sm"><i class="fas fa-plus mr-2"></i>Tambah Jabatan</button></div><div class="bg-white rounded-2xl border overflow-hidden max-w-3xl shadow-sm"><table class="w-full text-sm text-left"><thead class="bg-slate-50 border-b text-xs text-slate-500 uppercase"><tr><th class="py-4 px-6">Nama Jabatan</th><th class="py-4 px-6 text-center">Anggota</th><th class="py-4 px-6 text-center">Aksi</th></tr></thead><tbody id="tabelJabatanBody" class="divide-y"></tbody></table></div><div id="modalJabatan" class="fixed inset-0 bg-slate-900 bg-opacity-60 hidden z-[100] flex justify-center items-center p-4"><div class="bg-white rounded-3xl w-full max-w-md p-6"><h3 class="font-bold text-lg mb-4">Jabatan</h3><input type="hidden" id="fj_id"><label class="block text-xs font-bold mb-2">Nama Jabatan</label><input type="text" id="fj_nama" class="w-full border rounded-xl p-3"><div class="mt-6 flex justify-end gap-2"><button onclick="document.getElementById('modalJabatan').classList.add('hidden')" class="px-4 py-2 bg-slate-100 rounded-lg font-bold">Batal</button><button onclick="window.simpanJabatan()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg font-bold">Simpan</button></div></div></div>`; }
         function renderJabatanTable() {
-            const tbody = document.getElementById('tabelJabatanBody');
-            if(!tbody) return; tbody.innerHTML = '';
-            state.jabatan.forEach(j => {
-                const jml = state.karyawan.filter(k => k.jabatanId == j.id).length;
-                tbody.innerHTML += `<tr><td class="py-4 px-6 font-bold text-indigo-700">${j.nama}</td><td class="py-4 px-6 text-center"><span class="bg-slate-100 px-3 py-1 rounded-full text-xs font-bold border">${jml} Orang</span></td><td class="py-4 px-6 text-center"><button onclick="window.bukaModalJabatan(${j.id})" class="text-indigo-500 bg-indigo-50 p-2 rounded-lg"><i class="fas fa-edit"></i></button> <button onclick="window.confirmDelete('jabatan', ${j.id})" class="text-red-500 bg-red-50 p-2 rounded-lg"><i class="fas fa-trash"></i></button></td></tr>`;
-            });
+            const tbody = document.getElementById('tabelJabatanBody'); if(!tbody) return; tbody.innerHTML = '';
+            state.jabatan.forEach(j => { const jml = state.karyawan.filter(k => k.jabatanId == j.id).length; tbody.innerHTML += `<tr><td class="py-4 px-6 font-bold text-indigo-700">${j.nama}</td><td class="py-4 px-6 text-center"><span class="bg-slate-100 px-3 py-1 rounded-full text-xs font-bold border">${jml} Orang</span></td><td class="py-4 px-6 text-center"><button onclick="window.bukaModalJabatan(${j.id})" class="text-indigo-500 bg-indigo-50 p-2 rounded-lg"><i class="fas fa-edit"></i></button> <button onclick="window.confirmDelete('jabatan', ${j.id})" class="text-red-500 bg-red-50 p-2 rounded-lg"><i class="fas fa-trash"></i></button></td></tr>`; });
         }
+        window.bukaModalJabatan = function(id = null) { if(id) { const j = state.jabatan.find(x => x.id === id); document.getElementById('fj_id').value = j.id; document.getElementById('fj_nama').value = j.nama; } else { document.getElementById('fj_id').value = ''; document.getElementById('fj_nama').value = ''; } document.getElementById('modalJabatan').classList.remove('hidden'); };
+        window.simpanJabatan = function() { const id = document.getElementById('fj_id').value; const nama = document.getElementById('fj_nama').value; if(!nama) return; if(id) { const idx = state.jabatan.findIndex(j => j.id == parseInt(id, 10)); state.jabatan[idx].nama = nama; } else { state.jabatan.push({ id: Date.now(), nama }); } saveData(); document.getElementById('modalJabatan').classList.add('hidden'); renderJabatanTable(); };
 
-        window.bukaModalJabatan = function(id = null) {
-            if(id) { const j = state.jabatan.find(x => x.id === id); document.getElementById('fj_id').value = j.id; document.getElementById('fj_nama').value = j.nama; }
-            else { document.getElementById('fj_id').value = ''; document.getElementById('fj_nama').value = ''; }
-            document.getElementById('modalJabatan').classList.remove('hidden');
-        };
-
-        window.simpanJabatan = function() {
-            const id = document.getElementById('fj_id').value; const nama = document.getElementById('fj_nama').value;
-            if(!nama) return;
-            if(id) { const idx = state.jabatan.findIndex(j => j.id == parseInt(id, 10)); state.jabatan[idx].nama = nama; }
-            else { state.jabatan.push({ id: Date.now(), nama }); }
-            saveData(); document.getElementById('modalJabatan').classList.add('hidden'); renderJabatanTable();
-        };
-
-        function getAbsensiHTML() {
-            return `
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-                    <div><h1 class="text-3xl font-bold text-slate-800">Riwayat Kehadiran</h1></div>
-                    <div class="flex gap-2">
-                        <button onclick="window.bukaModalHapusTanggal('absensi')" class="bg-amber-500 hover:bg-amber-600 text-white font-semibold px-4 py-3 rounded-xl shadow text-sm transition"><i class="fas fa-calendar-times mr-2"></i>Hapus via Tanggal</button>
-                        <button onclick="window.confirmDelete('semua_absensi', 'all')" class="bg-red-500 hover:bg-red-600 text-white font-semibold px-4 py-3 rounded-xl shadow text-sm transition"><i class="fas fa-trash-alt mr-2"></i>Kosongkan</button>
-                    </div>
-                </div>
-                <div class="bg-white rounded-2xl border overflow-x-auto shadow-sm"><table class="min-w-full text-sm text-left"><thead class="bg-slate-50 border-b"><tr><th class="py-4 px-6">Tgl</th><th class="py-4 px-6">Karyawan</th><th class="py-4 px-6">Masuk</th><th class="py-4 px-6">Pulang</th><th class="py-4 px-6">Jalur</th><th class="py-4 px-6">Status</th><th class="py-4 px-6 text-center">Aksi</th></tr></thead><tbody id="tabelAbsensiBody" class="divide-y"></tbody></table></div>
-            `;
-        }
-
+        // ABSENSI & IMK
+        function getAbsensiHTML() { return `<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4"><div><h1 class="text-3xl font-bold text-slate-800">Riwayat Kehadiran</h1></div><div class="flex gap-2"><button onclick="window.bukaModalHapusTanggal('absensi')" class="bg-amber-500 hover:bg-amber-600 text-white font-semibold px-4 py-3 rounded-xl shadow text-sm transition"><i class="fas fa-calendar-times mr-2"></i>Hapus via Tanggal</button><button onclick="window.confirmDelete('semua_absensi', 'all')" class="bg-red-500 hover:bg-red-600 text-white font-semibold px-4 py-3 rounded-xl shadow text-sm transition"><i class="fas fa-trash-alt mr-2"></i>Kosongkan</button></div></div><div class="bg-white rounded-2xl border overflow-x-auto shadow-sm"><table class="min-w-full text-sm text-left"><thead class="bg-slate-50 border-b text-xs text-slate-500 uppercase"><tr><th class="py-4 px-6">Tgl</th><th class="py-4 px-6">Karyawan</th><th class="py-4 px-6">Masuk</th><th class="py-4 px-6">Pulang</th><th class="py-4 px-6">Metode</th><th class="py-4 px-6">Status</th><th class="py-4 px-6 text-center">Aksi</th></tr></thead><tbody id="tabelAbsensiBody" class="divide-y"></tbody></table></div>`; }
         function renderAbsensiTable() {
-            const tbody = document.getElementById('tabelAbsensiBody');
-            if(!tbody) return; tbody.innerHTML = '';
+            const tbody = document.getElementById('tabelAbsensiBody'); if(!tbody) return; tbody.innerHTML = '';
             const sorted = [...state.absensi].sort((a, b) => b.id - a.id);
             if(sorted.length === 0){ tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-slate-400">Database kosong.</td></tr>'; return; }
-
             sorted.forEach(a => {
-                const k = state.karyawan.find(x => x.id == a.karyawanId);
-                const badge = (a.statusMasuk === 'Tepat Waktu' || a.statusMasuk?.includes('Libur')) ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700';
-                
-                let metodeVisual = '';
-                if (a.metode === 'GPS') {
-                    metodeVisual = `<a href="https://maps.google.com/?q=${a.lat},${a.lng}" target="_blank" class="text-blue-600 bg-blue-50 hover:bg-blue-100 px-2 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center w-max shadow-sm border border-blue-200 transition-colors"><i class="fas fa-map-marker-alt mr-1.5 text-blue-500"></i>Buka Peta</a>`;
-                } else {
-                    metodeVisual = `<span class="text-slate-500 bg-slate-100 border border-slate-200 px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center w-max"><i class="fas fa-qrcode mr-1.5 text-slate-400"></i>Kiosk QR</span>`;
-                }
-
-                tbody.innerHTML += `<tr><td class="py-4 px-6 text-slate-600">${formatDateID(a.tanggal)}</td><td class="py-4 px-6 font-bold text-slate-800">${k ? k.nama : 'Dihapus'}</td><td class="py-4 px-6 font-mono">${a.jamMasuk}</td><td class="py-4 px-6 font-mono">${a.jamPulang || '-'}</td><td class="py-4 px-6">${metodeVisual}</td><td class="py-4 px-6"><span class="px-3 py-1 rounded-full text-[10px] uppercase font-bold ${badge}">${a.statusMasuk}</span></td><td class="py-4 px-6 text-center"><button onclick="window.confirmDelete('absensi', ${a.id})" class="text-red-500 bg-red-50 hover:bg-red-500 hover:text-white transition-colors p-2 rounded-lg"><i class="fas fa-trash"></i></button></td></tr>`;
+                const k = state.karyawan.find(x => x.id == a.karyawanId); const badge = (a.statusMasuk === 'Tepat Waktu' || a.statusMasuk?.includes('Libur')) ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700';
+                let met = a.metode === 'GPS' ? `<a href="https://maps.google.com/?q=${a.lat},${a.lng}" target="_blank" class="text-blue-600 bg-blue-50 border border-blue-200 px-2 py-1 rounded text-xs font-bold whitespace-nowrap"><i class="fas fa-map-marker-alt mr-1 text-blue-500"></i>Buka Peta</a>` : `<span class="text-slate-500 bg-slate-100 border px-2 py-1 rounded text-xs font-bold"><i class="fas fa-qrcode mr-1"></i>Kiosk QR</span>`;
+                tbody.innerHTML += `<tr><td class="py-4 px-6 text-slate-600 whitespace-nowrap">${formatDateID(a.tanggal)}</td><td class="py-4 px-6 font-bold text-slate-800">${k ? k.nama : 'Dihapus'}</td><td class="py-4 px-6 font-mono">${a.jamMasuk}</td><td class="py-4 px-6 font-mono">${a.jamPulang || '-'}</td><td class="py-4 px-6">${met}</td><td class="py-4 px-6"><span class="px-3 py-1 rounded-full text-[10px] uppercase font-bold ${badge}">${a.statusMasuk}</span></td><td class="py-4 px-6 text-center"><button onclick="window.confirmDelete('absensi', ${a.id})" class="text-red-500 bg-red-50 p-2 rounded-lg"><i class="fas fa-trash"></i></button></td></tr>`;
             });
         }
-
-        function getImkHTML() {
-            return `
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-                    <div>
-                        <h1 class="text-3xl font-bold text-slate-800 tracking-tight">Riwayat IMK (Keluar Masuk)</h1>
-                        <p class="text-slate-500 mt-1">Pencatatan karyawan yang keluar kantor di sela jam kerja.</p>
-                    </div>
-                    <div class="flex gap-2">
-                        <button onclick="window.bukaModalHapusTanggal('imk')" class="bg-amber-500 hover:bg-amber-600 text-white font-semibold px-4 py-3 rounded-xl shadow text-sm transition"><i class="fas fa-calendar-times mr-2"></i>Hapus via Tanggal</button>
-                        <button onclick="window.confirmDelete('semua_imk', 'all')" class="bg-red-500 hover:bg-red-600 text-white font-semibold px-4 py-3 rounded-xl shadow text-sm transition"><i class="fas fa-trash-alt mr-2"></i>Kosongkan</button>
-                    </div>
-                </div>
-                <div class="bg-white rounded-2xl border overflow-x-auto shadow-sm">
-                    <table class="min-w-full text-sm text-left">
-                        <thead class="bg-slate-50 border-b text-xs text-slate-500 uppercase">
-                            <tr>
-                                <th class="py-4 px-6">Tanggal</th>
-                                <th class="py-4 px-6">Nama Karyawan</th>
-                                <th class="py-4 px-6">Jam Keluar</th>
-                                <th class="py-4 px-6">Jam Kembali</th>
-                                <th class="py-4 px-6">Durasi di Luar</th>
-                                <th class="py-4 px-6 text-center">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tabelImkBody" class="divide-y"></tbody>
-                    </table>
-                </div>
-            `;
-        }
-
+        function getImkHTML() { return `<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4"><div><h1 class="text-3xl font-bold text-slate-800">Riwayat IMK</h1><p class="text-slate-500 text-sm mt-1">Izin Keluar Sementara</p></div><div class="flex gap-2"><button onclick="window.bukaModalHapusTanggal('imk')" class="bg-amber-500 hover:bg-amber-600 text-white font-semibold px-4 py-3 rounded-xl shadow text-sm transition"><i class="fas fa-calendar-times mr-2"></i>Hapus via Tanggal</button><button onclick="window.confirmDelete('semua_imk', 'all')" class="bg-red-500 hover:bg-red-600 text-white font-semibold px-4 py-3 rounded-xl shadow text-sm transition"><i class="fas fa-trash-alt mr-2"></i>Kosongkan</button></div></div><div class="bg-white rounded-2xl border overflow-x-auto shadow-sm"><table class="min-w-full text-sm text-left"><thead class="bg-slate-50 border-b text-xs text-slate-500 uppercase"><tr><th class="py-4 px-6">Tanggal</th><th class="py-4 px-6">Nama Karyawan</th><th class="py-4 px-6">Jam Keluar</th><th class="py-4 px-6">Jam Kembali</th><th class="py-4 px-6">Durasi di Luar</th><th class="py-4 px-6 text-center">Aksi</th></tr></thead><tbody id="tabelImkBody" class="divide-y"></tbody></table></div>`; }
         function renderImkTable() {
-            const tbody = document.getElementById('tabelImkBody');
-            if(!tbody) return; tbody.innerHTML = '';
-            if(!state.imk) state.imk = [];
-            const sorted = [...state.imk].sort((a,b) => b.id - a.id);
-
-            if(sorted.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-slate-400">Belum ada riwayat IMK tercatat.</td></tr>';
-                return;
-            }
-
+            const tbody = document.getElementById('tabelImkBody'); if(!tbody) return; tbody.innerHTML = '';
+            const sorted = [...(state.imk || [])].sort((a,b) => b.id - a.id);
+            if(sorted.length === 0) { tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-slate-400">Belum ada riwayat IMK tercatat.</td></tr>'; return; }
             sorted.forEach(i => {
-                const k = state.karyawan.find(x => x.id == i.karyawanId);
-                const statusKembali = i.jamKembali ? `<span class="font-mono">${i.jamKembali}</span>` : `<span class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-xs font-bold animate-pulse">Sedang di Luar</span>`;
-                
-                tbody.innerHTML += `
-                    <tr class="hover:bg-slate-50">
-                        <td class="py-4 px-6 text-slate-600">${formatDateID(i.tanggal)}</td>
-                        <td class="py-4 px-6 font-bold text-slate-800">${k ? k.nama : 'Dihapus'}</td>
-                        <td class="py-4 px-6 font-mono text-amber-600">${i.jamKeluar}</td>
-                        <td class="py-4 px-6">${statusKembali}</td>
-                        <td class="py-4 px-6 font-semibold text-slate-700">${i.durasi}</td>
-                        <td class="py-4 px-6 text-center"><button onclick="window.confirmDelete('imk', ${i.id})" class="text-red-500 bg-red-50 p-2 rounded-lg"><i class="fas fa-trash"></i></button></td>
-                    </tr>
-                `;
+                const k = state.karyawan.find(x => x.id == i.karyawanId); const statusKembali = i.jamKembali ? `<span class="font-mono">${i.jamKembali}</span>` : `<span class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-xs font-bold animate-pulse">Sedang di Luar</span>`;
+                tbody.innerHTML += `<tr class="hover:bg-slate-50"><td class="py-4 px-6 text-slate-600 whitespace-nowrap">${formatDateID(i.tanggal)}</td><td class="py-4 px-6 font-bold text-slate-800">${k ? k.nama : 'Dihapus'}</td><td class="py-4 px-6 font-mono text-amber-600">${i.jamKeluar}</td><td class="py-4 px-6">${statusKembali}</td><td class="py-4 px-6 font-semibold text-slate-700">${i.durasi}</td><td class="py-4 px-6 text-center"><button onclick="window.confirmDelete('imk', ${i.id})" class="text-red-500 bg-red-50 p-2 rounded-lg"><i class="fas fa-trash"></i></button></td></tr>`;
             });
         }
 
-        function getCutiHTML() {
-            return `
-                <div class="mb-8"><h1 class="text-3xl font-bold">Cuti & Izin</h1></div>
-                <div class="bg-white rounded-2xl border overflow-x-auto shadow-sm"><table class="min-w-full text-sm text-left"><thead class="bg-slate-50 border-b"><tr><th class="py-4 px-6">Tgl Kirim</th><th class="py-4 px-6">Karyawan</th><th class="py-4 px-6">Jenis</th><th class="py-4 px-6">Periode</th><th class="py-4 px-6">Status</th><th class="py-4 px-6 text-center">Aksi</th></tr></thead><tbody id="tabelCutiBody" class="divide-y"></tbody></table></div>
-                
-                <div id="modalDetailCuti" class="fixed inset-0 bg-slate-900 bg-opacity-60 hidden z-[100] flex justify-center items-center p-4">
-                    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md">
-                        <div class="px-6 py-5 border-b flex justify-between"><h3 class="font-bold text-xl">Detail Pengajuan</h3><button onclick="window.tutupModalDetailCuti()"><i class="fas fa-times"></i></button></div>
-                        <div class="p-6 bg-slate-50 space-y-4">
-                            <div><p class="text-xs font-bold text-slate-400 uppercase">Pemohon</p><p class="font-bold text-lg" id="dc_nama">-</p></div>
-                            <div class="grid grid-cols-2 gap-4"><div class="bg-white p-3 rounded-xl border"><p class="text-xs font-bold text-slate-400 uppercase">Jenis</p><p class="font-bold text-amber-600" id="dc_jenis">-</p></div><div class="bg-white p-3 rounded-xl border"><p class="text-xs font-bold text-slate-400 uppercase">Status</p><p class="font-bold" id="dc_status">-</p></div></div>
-                            <div class="bg-white p-3 rounded-xl border"><p class="text-xs font-bold text-slate-400 uppercase">Periode</p><p class="font-semibold" id="dc_periode">-</p></div>
-                            <div class="bg-white p-3 rounded-xl border"><p class="text-xs font-bold text-slate-400 uppercase">Alasan</p><p class="text-sm" id="dc_alasan">-</p></div>
-                        </div>
-                        <div id="dc_action_buttons" class="px-6 py-5 border-t flex-col gap-3 hidden">
-                            <button onclick="window.forwardWAKepsek()" class="w-full bg-slate-50 hover:bg-emerald-50 text-emerald-600 border font-bold py-3 rounded-xl mb-1 flex justify-center items-center"><i class="fab fa-whatsapp mr-2 text-xl"></i> Minta ACC Atasan via WA</button>
-                            <div class="flex gap-3"><button onclick="window.updateStatusCuti('Ditolak')" class="flex-1 bg-red-100 text-red-700 font-bold py-3 rounded-xl">Tolak</button><button onclick="window.updateStatusCuti('Disetujui')" class="flex-1 bg-emerald-500 text-white font-bold py-3 rounded-xl">Setujui</button></div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        window.bukaModalPengajuanCuti = function() {
-            if(state.karyawan.length === 0) return showToast('Peringatan', 'Belum ada data karyawan.', 'warning');
-            const sel = document.getElementById('pc_karyawan'); sel.innerHTML = '<option value="">-- Pilih Nama Anda --</option>' + state.karyawan.map(k => `<option value="${k.id}">${k.nik} - ${k.nama}</option>`).join('');
-            document.getElementById('formPengajuanCuti').reset();
-            document.getElementById('modalPengajuanCuti').classList.remove('hidden');
-            stopScanner();
-        };
-        window.tutupModalPengajuanCuti = function() { document.getElementById('modalPengajuanCuti').classList.add('hidden'); startScanner(); };
-
-        window.simpanPengajuanCuti = function() {
-            const d = { karyawanId: document.getElementById('pc_karyawan').value, jenis: document.getElementById('pc_jenis').value, mulai: document.getElementById('pc_mulai').value, selesai: document.getElementById('pc_selesai').value, alasan: document.getElementById('pc_alasan').value };
-            if(!d.karyawanId || !d.mulai || !d.selesai || !d.alasan) return showToast('Error', 'Lengkapi form!', 'error');
-            
-            state.cuti.push({ id: Date.now(), karyawanId: parseInt(d.karyawanId,10), tanggalPengajuan: new Date().toISOString(), jenis: d.jenis, mulai: d.mulai, selesai: d.selesai, alasan: d.alasan, status: 'Menunggu' });
-            saveData(); window.tutupModalPengajuanCuti(); showToast('Terkirim', 'Pengajuan masuk.');
-        };
-
+        // CUTI & IZIN
+        function getCutiHTML() { return `<div class="mb-8"><h1 class="text-3xl font-bold">Cuti & Izin</h1></div><div class="bg-white rounded-2xl border overflow-x-auto shadow-sm"><table class="min-w-full text-sm text-left"><thead class="bg-slate-50 border-b"><tr><th class="py-4 px-6">Tgl Kirim</th><th class="py-4 px-6">Karyawan</th><th class="py-4 px-6">Jenis</th><th class="py-4 px-6">Periode</th><th class="py-4 px-6">Status</th><th class="py-4 px-6 text-center">Aksi</th></tr></thead><tbody id="tabelCutiBody" class="divide-y"></tbody></table></div><div id="modalDetailCuti" class="fixed inset-0 bg-slate-900 bg-opacity-60 hidden z-[100] flex justify-center items-center p-4"><div class="bg-white rounded-3xl shadow-2xl w-full max-w-md"><div class="px-6 py-5 border-b flex justify-between"><h3 class="font-bold text-xl">Detail Pengajuan</h3><button onclick="window.tutupModalDetailCuti()"><i class="fas fa-times"></i></button></div><div class="p-6 bg-slate-50 space-y-4"><div><p class="text-xs font-bold text-slate-400 uppercase">Pemohon</p><p class="font-bold text-lg" id="dc_nama">-</p></div><div class="grid grid-cols-2 gap-4"><div class="bg-white p-3 rounded-xl border"><p class="text-xs font-bold text-slate-400 uppercase">Jenis</p><p class="font-bold text-amber-600" id="dc_jenis">-</p></div><div class="bg-white p-3 rounded-xl border"><p class="text-xs font-bold text-slate-400 uppercase">Status</p><p class="font-bold" id="dc_status">-</p></div></div><div class="bg-white p-3 rounded-xl border"><p class="text-xs font-bold text-slate-400 uppercase">Periode</p><p class="font-semibold" id="dc_periode">-</p></div><div class="bg-white p-3 rounded-xl border"><p class="text-xs font-bold text-slate-400 uppercase">Alasan</p><p class="text-sm" id="dc_alasan">-</p></div></div><div id="dc_action_buttons" class="px-6 py-5 border-t flex-col gap-3 hidden"><button onclick="window.forwardWAKepsek()" class="w-full bg-slate-50 hover:bg-emerald-50 text-emerald-600 border font-bold py-3 rounded-xl mb-1 flex justify-center items-center"><i class="fab fa-whatsapp mr-2 text-xl"></i> Minta ACC Atasan via WA</button><div class="flex gap-3"><button onclick="window.updateStatusCuti('Ditolak')" class="flex-1 bg-red-100 text-red-700 font-bold py-3 rounded-xl">Tolak</button><button onclick="window.updateStatusCuti('Disetujui')" class="flex-1 bg-emerald-500 text-white font-bold py-3 rounded-xl">Setujui</button></div></div></div></div><!-- Modal Kiosk Cuti --><div id="modalPengajuanCuti" class="fixed inset-0 bg-slate-900 bg-opacity-80 hidden z-[200] flex justify-center items-center p-4 backdrop-blur-sm"><div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden"><div class="px-6 py-5 border-b bg-slate-50 flex justify-between items-center"><h3 class="font-bold text-xl"><i class="fas fa-envelope-open-text text-amber-500 mr-2"></i> Formulir Pengajuan</h3><button onclick="window.tutupModalPengajuanCuti()" class="bg-white p-2 rounded-full"><i class="fas fa-times"></i></button></div><div class="p-6"><form id="formPengajuanCuti" class="space-y-4 text-left"><div><label class="block text-xs font-bold uppercase mb-1.5">Pilih Nama Anda</label><select id="pc_karyawan" required class="w-full bg-slate-50 border rounded-xl p-3 text-sm outline-none"></select></div><div><label class="block text-xs font-bold uppercase mb-1.5">Jenis Pengajuan</label><select id="pc_jenis" class="w-full bg-slate-50 border rounded-xl p-3 text-sm outline-none"><option value="Izin">Izin (Pribadi)</option><option value="Sakit">Sakit</option><option value="Cuti">Cuti Tahunan</option></select></div><div class="grid grid-cols-2 gap-4"><div><label class="block text-xs font-bold uppercase mb-1.5">Mulai Tanggal</label><input type="date" id="pc_mulai" required class="w-full bg-slate-50 border rounded-xl p-3 text-sm outline-none"></div><div><label class="block text-xs font-bold uppercase mb-1.5">Sampai Tanggal</label><input type="date" id="pc_selesai" required class="w-full bg-slate-50 border rounded-xl p-3 text-sm outline-none"></div></div><div><label class="block text-xs font-bold uppercase mb-1.5">Alasan</label><textarea id="pc_alasan" required rows="3" class="w-full bg-slate-50 border rounded-xl p-3 text-sm outline-none"></textarea></div><button type="button" onclick="window.simpanPengajuanCuti()" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3.5 rounded-xl mt-4">Kirim Pengajuan</button></form></div></div></div>`; }
         function renderCutiTable() {
             const tbody = document.getElementById('tabelCutiBody'); if(!tbody) return; tbody.innerHTML = '';
             const sorted = [...state.cuti].sort((a,b) => (b.tanggalPengajuan ? new Date(b.tanggalPengajuan).getTime() : b.id) - (a.tanggalPengajuan ? new Date(a.tanggalPengajuan).getTime() : a.id));
             if(sorted.length === 0) return tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8">Kosong</td></tr>';
-            
             sorted.forEach(c => {
-                const k = state.karyawan.find(x => x.id == c.karyawanId);
-                const bs = c.status === 'Menunggu' ? 'bg-amber-100 text-amber-700' : (c.status === 'Disetujui' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700');
-                tbody.innerHTML += `<tr><td class="py-4 px-6">${c.tanggalPengajuan ? formatDateID(c.tanggalPengajuan) : '-'}</td><td class="py-4 px-6 font-bold">${k?k.nama:'Dihapus'}</td><td class="py-4 px-6">${c.jenis}</td><td class="py-4 px-6 text-sm">${formatDateID(c.mulai)} s.d ${formatDateID(c.selesai)}</td><td class="py-4 px-6"><span class="px-3 py-1 rounded-full text-xs font-bold ${bs}">${c.status}</span></td><td class="py-4 px-6 text-center"><button onclick="window.bukaModalDetailCuti(${c.id})" class="text-blue-500 bg-blue-50 p-2.5 rounded-lg"><i class="fas fa-eye"></i></button></td></tr>`;
+                const k = state.karyawan.find(x => x.id == c.karyawanId); const bs = c.status === 'Menunggu' ? 'bg-amber-100 text-amber-700' : (c.status === 'Disetujui' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700');
+                tbody.innerHTML += `<tr><td class="py-4 px-6">${c.tanggalPengajuan ? formatDateID(c.tanggalPengajuan) : '-'}</td><td class="py-4 px-6 font-bold">${k?k.nama:'Dihapus'}</td><td class="py-4 px-6">${c.jenis}</td><td class="py-4 px-6 text-sm whitespace-nowrap">${formatDateID(c.mulai)} - ${formatDateID(c.selesai)}</td><td class="py-4 px-6"><span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase ${bs}">${c.status}</span></td><td class="py-4 px-6 text-center"><button onclick="window.bukaModalDetailCuti(${c.id})" class="text-blue-500 bg-blue-50 p-2.5 rounded-lg"><i class="fas fa-eye"></i></button></td></tr>`;
             });
         }
-
+        window.bukaModalPengajuanCuti = function() {
+            if(state.karyawan.length === 0) return showToast('Peringatan', 'Belum ada data karyawan.', 'warning');
+            document.getElementById('pc_karyawan').innerHTML = '<option value="">-- Pilih Nama --</option>' + state.karyawan.map(k => `<option value="${k.id}">${k.nik} - ${k.nama}</option>`).join('');
+            document.getElementById('formPengajuanCuti').reset(); document.getElementById('modalPengajuanCuti').classList.remove('hidden'); window.stopScanner();
+        };
+        window.tutupModalPengajuanCuti = function() { document.getElementById('modalPengajuanCuti').classList.add('hidden'); window.startScanner(); };
+        window.simpanPengajuanCuti = function() {
+            const d = { karyawanId: document.getElementById('pc_karyawan').value, jenis: document.getElementById('pc_jenis').value, mulai: document.getElementById('pc_mulai').value, selesai: document.getElementById('pc_selesai').value, alasan: document.getElementById('pc_alasan').value };
+            if(!d.karyawanId || !d.mulai || !d.selesai || !d.alasan) return showToast('Error', 'Lengkapi form!', 'error');
+            state.cuti.push({ id: Date.now(), karyawanId: parseInt(d.karyawanId,10), tanggalPengajuan: new Date().toISOString(), ...d, status: 'Menunggu' });
+            saveData(); window.tutupModalPengajuanCuti(); showToast('Terkirim', 'Pengajuan masuk.'); playSound('notif_admin');
+        };
         let idCutiAktif = null;
         window.bukaModalDetailCuti = function(id) {
-            idCutiAktif = id; const c = state.cuti.find(x => x.id === id); if(!c) return;
-            const k = state.karyawan.find(x => x.id == c.karyawanId);
+            idCutiAktif = id; const c = state.cuti.find(x => x.id === id); if(!c) return; const k = state.karyawan.find(x => x.id == c.karyawanId);
             document.getElementById('dc_nama').innerText = k ? k.nama : '-'; document.getElementById('dc_jenis').innerText = c.jenis; document.getElementById('dc_status').innerText = c.status; document.getElementById('dc_periode').innerText = `${formatDateID(c.mulai)} - ${formatDateID(c.selesai)}`; document.getElementById('dc_alasan').innerText = c.alasan;
-            
-            const b = document.getElementById('dc_action_buttons');
-            if(c.status === 'Menunggu') { b.classList.remove('hidden'); b.classList.add('flex'); } else { b.classList.add('hidden'); b.classList.remove('flex'); }
+            const b = document.getElementById('dc_action_buttons'); if(c.status === 'Menunggu') { b.classList.remove('hidden'); b.classList.add('flex'); } else { b.classList.add('hidden'); b.classList.remove('flex'); }
             document.getElementById('modalDetailCuti').classList.remove('hidden');
         };
         window.tutupModalDetailCuti = function() { document.getElementById('modalDetailCuti').classList.add('hidden'); idCutiAktif = null; };
-
         window.forwardWAKepsek = function() {
             const c = state.cuti.find(x => x.id === idCutiAktif); if(!c) return; const k = state.karyawan.find(x => x.id == c.karyawanId);
             const noWaKepsek = state.pengaturan?.waKepalaSekolah; if(!noWaKepsek) return showToast('Peringatan', 'Nomor WA Atasan belum diatur di Pengaturan!', 'warning');
-            const targetWA = formatWANumber(noWaKepsek);
-            const pesan = `Halo Bapak/Ibu,%0A%0ATerdapat pengajuan *${c.jenis}* baru:%0A*Nama:* ${k?k.nama:'-'}%0A*Periode:* ${formatDateID(c.mulai)} s.d ${formatDateID(c.selesai)}%0A*Alasan:* ${c.alasan}`;
-            window.open(`https://wa.me/${targetWA}?text=${pesan}`, '_blank');
+            window.open(`https://wa.me/${formatWANumber(noWaKepsek)}?text=Halo Bapak/Ibu,%0A%0ATerdapat pengajuan *${c.jenis}* baru:%0A*Nama:* ${k?k.nama:'-'}%0A*Periode:* ${formatDateID(c.mulai)} s.d ${formatDateID(c.selesai)}%0A*Alasan:* ${c.alasan}`, '_blank');
         };
-
         window.updateStatusCuti = function(status) {
-            const idx = state.cuti.findIndex(x => x.id === idCutiAktif); if(idx === -1) return;
-            const c = state.cuti[idx]; const k = state.karyawan.find(x => x.id == c.karyawanId);
-            let url = null;
-            if (k && k.noWa) {
-                const pesan = `Halo *${k.nama}*,%0A%0APengajuan *${c.jenis}* Anda telah *${status.toUpperCase()}*.`;
-                url = `https://wa.me/${formatWANumber(k.noWa)}?text=${pesan}`;
-            }
-            c.status = status; saveData(); showToast('Berhasil', `Status menjadi ${status}`); window.tutupModalDetailCuti(); render();
-            if (url) window.open(url, '_blank');
+            const idx = state.cuti.findIndex(x => x.id === idCutiAktif); if(idx === -1) return; const c = state.cuti[idx]; const k = state.karyawan.find(x => x.id == c.karyawanId);
+            let url = null; if (k && k.noWa) url = `https://wa.me/${formatWANumber(k.noWa)}?text=Halo *${k.nama}*,%0A%0APengajuan *${c.jenis}* Anda telah *${status.toUpperCase()}*.`;
+            c.status = status; saveData(); showToast('Berhasil', `Status menjadi ${status}`); window.tutupModalDetailCuti(); window.render(); if (url) window.open(url, '_blank');
         };
 
+        // GAJI & LAPORAN
         function getGajiHTML() {
-            let mo = ''; const td = new Date();
-            for(let i=0; i<6; i++){ let m=td.getMonth()+1-i; let y=td.getFullYear(); if(m<=0){m+=12; y-=1;} mo+=`<option value="${y}-${String(m).padStart(2,'0')}">${new Date(y,m-1,1).toLocaleDateString('id-ID',{month:'long',year:'numeric'})}</option>`; }
-            return `
-                <div class="mb-8"><h1 class="text-3xl font-bold">Kalkulasi Penggajian</h1></div>
-                <div class="bg-white p-6 rounded-2xl border mb-8 flex gap-4 items-end"><div class="flex-1"><label class="block text-xs font-bold mb-2">Periode Bulan</label><select id="bulanGaji" class="w-full border rounded-xl p-3 outline-none">${mo}</select></div><button onclick="window.hitungGaji()" class="bg-slate-800 text-white font-bold px-8 py-3.5 rounded-xl shadow"><i class="fas fa-calculator mr-2"></i> Kalkulasi</button><button id="btnExp" onclick="window.eksporGaji()" style="display:none;" class="bg-emerald-600 text-white font-bold px-6 py-3.5 rounded-xl shadow"><i class="fas fa-file-excel mr-2"></i> Ekspor</button></div>
-                <div class="bg-white rounded-2xl border overflow-hidden" id="gajiResult" style="display:none;"><table class="min-w-full text-sm text-left"><thead class="bg-white border-b"><tr><th class="py-4 px-6">Pegawai</th><th class="py-4 px-6 text-center">Hadir / Telat</th><th class="py-4 px-6 text-right">Gaji Pokok</th><th class="py-4 px-6 text-right">+ Tunj. / - Denda</th><th class="py-4 px-6 text-right bg-slate-50">Total Bersih</th></tr></thead><tbody id="tg_body" class="divide-y"></tbody></table></div>
-            `;
+            let mo = ''; const td = new Date(); for(let i=0; i<6; i++){ let m=td.getMonth()+1-i; let y=td.getFullYear(); if(m<=0){m+=12; y-=1;} mo+=`<option value="${y}-${String(m).padStart(2,'0')}">${new Date(y,m-1,1).toLocaleDateString('id-ID',{month:'long',year:'numeric'})}</option>`; }
+            return `<div class="mb-8"><h1 class="text-3xl font-bold">Kalkulasi Penggajian</h1></div><div class="bg-white p-6 rounded-2xl border mb-8 flex gap-4 items-end"><div class="flex-1"><label class="block text-xs font-bold mb-2">Periode Bulan</label><select id="bulanGaji" class="w-full border rounded-xl p-3 outline-none">${mo}</select></div><button onclick="window.hitungGaji()" class="bg-slate-800 text-white font-bold px-8 py-3.5 rounded-xl shadow"><i class="fas fa-calculator mr-2"></i> Kalkulasi</button><button id="btnExp" onclick="window.eksporGaji()" style="display:none;" class="bg-emerald-600 text-white font-bold px-6 py-3.5 rounded-xl shadow"><i class="fas fa-file-excel mr-2"></i> Ekspor</button></div><div class="bg-white rounded-2xl border overflow-hidden" id="gajiResult" style="display:none;"><table class="min-w-full text-sm text-left"><thead class="bg-slate-50 border-b text-xs uppercase text-slate-500"><tr><th class="py-4 px-6">Pegawai</th><th class="py-4 px-6 text-center">Hadir / Telat</th><th class="py-4 px-6 text-right">Gaji Pokok</th><th class="py-4 px-6 text-right">+ Tunj. / - Denda</th><th class="py-4 px-6 text-right bg-slate-100">Total Bersih</th></tr></thead><tbody id="tg_body" class="divide-y"></tbody></table></div>`;
         }
-
         window.hitungGaji = function() {
             const bln = document.getElementById('bulanGaji').value; document.getElementById('gajiResult').style.display='block'; document.getElementById('btnExp').style.display='flex';
             const tb = document.getElementById('tg_body'); tb.innerHTML = '';
             state.karyawan.forEach(k => {
-                const ab = state.absensi.filter(a => a.karyawanId === k.id && a.tanggal.startsWith(bln));
-                const h = ab.length; const t = ab.filter(a => a.statusMasuk === 'Terlambat').length;
-                const tunj = h * state.pengaturan.tunjanganHadir; const den = t * state.pengaturan.dendaTelat;
-                let tot = k.gajiPokok + tunj - den; if (tot < 0) tot = 0;
-                tb.innerHTML += `<tr><td class="py-4 px-6"><b>${k.nama}</b><br><span class="text-xs text-slate-500">${k.nik}</span></td><td class="py-4 px-6 text-center"><span class="text-emerald-600 font-bold">${h} Hari</span><br><span class="text-xs ${t>0?'text-red-500':'text-slate-400'}">${t} Telat</span></td><td class="py-4 px-6 text-right">${formatRupiah(k.gajiPokok)}</td><td class="py-4 px-6 text-right"><div class="text-emerald-600 text-xs">+ ${formatRupiah(tunj)}</div><div class="text-red-500 text-xs">- ${formatRupiah(den)}</div></td><td class="py-4 px-6 text-right bg-slate-50 font-bold">${formatRupiah(tot)}</td></tr>`;
+                const ab = state.absensi.filter(a => a.karyawanId === k.id && a.tanggal.startsWith(bln)); const h = ab.length; const t = ab.filter(a => a.statusMasuk === 'Terlambat').length;
+                const tunj = h * state.pengaturan.tunjanganHadir; const den = t * state.pengaturan.dendaTelat; let tot = k.gajiPokok + tunj - den; if (tot < 0) tot = 0;
+                tb.innerHTML += `<tr><td class="py-4 px-6"><b>${k.nama}</b><br><span class="text-xs text-slate-500">${k.nik}</span></td><td class="py-4 px-6 text-center"><span class="text-emerald-600 font-bold">${h} Hadir</span><br><span class="text-xs ${t>0?'text-red-500':'text-slate-400'}">${t} Telat</span></td><td class="py-4 px-6 text-right">${formatRupiah(k.gajiPokok)}</td><td class="py-4 px-6 text-right"><div class="text-emerald-600 text-xs">+ ${formatRupiah(tunj)}</div><div class="text-red-500 text-xs">- ${formatRupiah(den)}</div></td><td class="py-4 px-6 text-right bg-slate-50 font-bold border-l">${formatRupiah(tot)}</td></tr>`;
             });
         };
-
         window.eksporGaji = function() {
             const bln = document.getElementById('bulanGaji').value; if(!bln) return;
             const data = state.karyawan.map(k => {
-                const ab = state.absensi.filter(a => a.karyawanId === k.id && a.tanggal.startsWith(bln));
-                const h = ab.length; const t = ab.filter(a => a.statusMasuk === 'Terlambat').length;
+                const ab = state.absensi.filter(a => a.karyawanId === k.id && a.tanggal.startsWith(bln)); const h = ab.length; const t = ab.filter(a => a.statusMasuk === 'Terlambat').length;
                 const tunj = h * state.pengaturan.tunjanganHadir; const den = t * state.pengaturan.dendaTelat;
                 return { "NIK": k.nik, "Nama": k.nama, "Bulan": bln, "Hadir": h, "Telat": t, "Gaji Pokok": k.gajiPokok, "Tunjangan": tunj, "Denda": den, "Total": Math.max(0, k.gajiPokok + tunj - den) };
             });
             try { const ws = XLSX.utils.json_to_sheet(data); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Gaji"); XLSX.writeFile(wb, `Gaji_${bln}.xlsx`); } catch(e){}
         };
-
         function getLaporanHTML() {
             let opt = '<option value="">-- Pilih --</option>' + state.karyawan.map(k => `<option value="${k.id}">${k.nama}</option>`).join('');
             let mo = ''; const td = new Date(); for(let i=0; i<6; i++){ let m=td.getMonth()+1-i; let y=td.getFullYear(); if(m<=0){m+=12; y-=1;} mo+=`<option value="${y}-${String(m).padStart(2,'0')}">${y}-${String(m).padStart(2,'0')}</option>`; }
-            return `
-                <div class="mb-8"><h1 class="text-3xl font-bold">Rapor Individu</h1></div>
-                <div class="bg-white p-6 rounded-2xl border mb-8 flex gap-4 items-end"><div class="flex-1"><label class="block text-xs font-bold mb-2">Pegawai</label><select id="lapK" class="w-full border rounded-xl p-3 outline-none">${opt}</select></div><div><label class="block text-xs font-bold mb-2">Bulan</label><select id="lapB" class="w-full border rounded-xl p-3 outline-none">${mo}</select></div><button onclick="window.tampilLaporan()" class="bg-blue-600 text-white font-bold px-8 py-3.5 rounded-xl"><i class="fas fa-search"></i> Cari</button></div>
-                <div id="lapRes" class="hidden bg-white rounded-2xl border overflow-hidden"><table class="min-w-full text-sm text-left"><thead class="bg-slate-50 border-b"><tr><th class="py-4 px-6">Tanggal</th><th class="py-4 px-6">Masuk</th><th class="py-4 px-6">Pulang</th><th class="py-4 px-6">Status</th></tr></thead><tbody id="tl_body" class="divide-y"></tbody></table></div>
-            `;
+            return `<div class="mb-8"><h1 class="text-3xl font-bold">Rapor Individu</h1></div><div class="bg-white p-6 rounded-2xl border mb-8 flex gap-4 items-end"><div class="flex-1"><label class="block text-xs font-bold mb-2">Pegawai</label><select id="lapK" class="w-full border rounded-xl p-3 outline-none">${opt}</select></div><div><label class="block text-xs font-bold mb-2">Bulan</label><select id="lapB" class="w-full border rounded-xl p-3 outline-none">${mo}</select></div><button onclick="window.tampilLaporan()" class="bg-blue-600 text-white font-bold px-8 py-3.5 rounded-xl"><i class="fas fa-search"></i> Cari</button></div><div id="lapRes" class="hidden bg-white rounded-2xl border overflow-hidden"><table class="min-w-full text-sm text-left"><thead class="bg-slate-50 border-b"><tr><th class="py-4 px-6">Tanggal</th><th class="py-4 px-6">Masuk</th><th class="py-4 px-6">Pulang</th><th class="py-4 px-6">Status</th></tr></thead><tbody id="tl_body" class="divide-y"></tbody></table></div>`;
         }
-
         window.tampilLaporan = function() {
             const kId = document.getElementById('lapK').value; const b = document.getElementById('lapB').value; if(!kId) return;
             const ab = state.absensi.filter(a => a.karyawanId == kId && a.tanggal.startsWith(b)).sort((a,b)=>a.tanggal.localeCompare(b.tanggal));
             const tb = document.getElementById('tl_body'); tb.innerHTML = '';
-            ab.forEach(a => { const bg = a.statusMasuk==='Tepat Waktu'?'bg-emerald-100 text-emerald-700':'bg-amber-100 text-amber-700'; tb.innerHTML += `<tr><td class="py-4 px-6">${formatDateID(a.tanggal)}</td><td class="py-4 px-6 font-mono">${a.jamMasuk}</td><td class="py-4 px-6 font-mono">${a.jamPulang||'-'}</td><td class="py-4 px-6"><span class="px-3 py-1 rounded-full text-xs font-bold ${bg}">${a.statusMasuk}</span></td></tr>`; });
+            ab.forEach(a => { const bg = (a.statusMasuk==='Tepat Waktu' || a.statusMasuk?.includes('Libur')) ? 'bg-emerald-100 text-emerald-700':'bg-amber-100 text-amber-700'; tb.innerHTML += `<tr><td class="py-4 px-6 whitespace-nowrap">${formatDateID(a.tanggal)}</td><td class="py-4 px-6 font-mono">${a.jamMasuk}</td><td class="py-4 px-6 font-mono">${a.jamPulang||'-'}</td><td class="py-4 px-6"><span class="px-3 py-1 rounded-full text-[10px] uppercase font-bold ${bg}">${a.statusMasuk}</span></td></tr>`; });
             document.getElementById('lapRes').classList.remove('hidden');
         };
 
+        // PENGATURAN SISTEM
         function getPengaturanHTML() {
             const p = state.pengaturan || {};
             return `
-                <div class="mb-8"><h1 class="text-3xl font-bold">Pengaturan Sistem</h1></div>
+                <div class="mb-8"><h1 class="text-3xl font-bold">Pengaturan Sistem</h1><p class="text-slate-500 mt-1">Konfigurasi Aturan, Audio MP3, dan Backup/Restore JSON.</p></div>
                 <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
                     <div class="bg-white rounded-2xl border p-8"><div class="flex justify-between items-center mb-6"><h2 class="font-bold flex items-center"><i class="fas fa-clock text-indigo-500 mr-2"></i>Shift Kerja</h2><button onclick="window.bukaModalShift()" class="bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded text-sm font-bold">Tambah</button></div><table class="w-full text-sm"><tbody id="tb_shift" class="divide-y"></tbody></table></div>
                     <div class="bg-white rounded-2xl border p-8"><div class="flex justify-between items-center mb-6"><h2 class="font-bold flex items-center"><i class="fas fa-calendar-day text-rose-500 mr-2"></i>Libur Nasional</h2><button onclick="window.bukaModalLibur()" class="bg-rose-50 text-rose-600 px-3 py-1.5 rounded text-sm font-bold">Tambah</button></div><table class="w-full text-sm"><tbody id="tb_libur" class="divide-y"></tbody></table></div>
                 </div>
-
                 <div class="bg-white rounded-2xl border p-8 mb-8">
-                    <h2 class="font-bold mb-4">Gaji & Kontak</h2>
+                    <h2 class="font-bold mb-4">Gaji, Denda, & Kontak</h2>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div><label class="block text-xs font-bold mb-2">Tunjangan Hadir</label><input type="number" id="s_th" value="${p.tunjanganHadir||0}" class="w-full border p-3 rounded-xl"></div>
-                        <div><label class="block text-xs font-bold mb-2">Denda Telat</label><input type="number" id="s_dt" value="${p.dendaTelat||0}" class="w-full border p-3 rounded-xl"></div>
-                        <div><label class="block text-xs font-bold mb-2">WA Kepsek</label><input type="tel" id="s_wa" value="${p.waKepalaSekolah||''}" class="w-full border p-3 rounded-xl"></div>
+                        <div><label class="block text-xs font-bold mb-2">Tunjangan Hadir / Hari (Rp)</label><input type="number" id="s_th" value="${p.tunjanganHadir||0}" class="w-full border p-3 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500"></div>
+                        <div><label class="block text-xs font-bold mb-2">Denda Telat / Kali (Rp)</label><input type="number" id="s_dt" value="${p.dendaTelat||0}" class="w-full border p-3 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500"></div>
+                        <div><label class="block text-xs font-bold mb-2">No. WA Kepsek (Untuk Cuti)</label><input type="tel" id="s_wa" value="${p.waKepalaSekolah||''}" placeholder="0812..." class="w-full border p-3 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500"></div>
                     </div>
-                    <button onclick="window.simpanPengaturanUmum()" class="mt-4 bg-emerald-600 text-white font-bold py-3 px-6 rounded-xl">Simpan</button>
+                    <button onclick="window.simpanPengaturanUmum()" class="mt-4 bg-emerald-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg">Simpan Aturan</button>
                 </div>
-                
                 <div class="bg-white rounded-2xl border p-8 mb-8">
-                    <h2 class="font-bold mb-4 flex items-center"><i class="fas fa-volume-up text-indigo-500 mr-2"></i>Audio Notifikasi</h2>
+                    <h2 class="font-bold mb-4 flex items-center"><i class="fas fa-volume-up text-indigo-500 mr-2"></i>Audio Notifikasi (MP3/WAV)</h2>
                     <div class="space-y-4">
                         <div class="bg-slate-50 p-4 rounded-xl border flex justify-between items-center">
-                            <div><h4 class="font-bold text-sm">Audio Masuk</h4><p class="text-xs text-slate-500">${p.audioMasuk ? 'Aktif' : 'Default'}</p></div>
-                            <div class="flex gap-2">
-                                <button onclick="window.tesSuara('masuk')" class="bg-emerald-100 text-emerald-700 px-3 py-2 rounded-lg text-xs font-bold">Tes</button>
-                                <label class="bg-slate-800 text-white px-3 py-2 rounded-lg text-xs font-bold cursor-pointer">Upload<input type="file" accept="audio/*" onchange="window.handleAudioUpload(event, 'audioMasuk')" class="hidden"></label>
-                                ${p.audioMasuk ? `<button onclick="window.hapusAudioKustom('audioMasuk')" class="bg-red-100 text-red-600 px-3 py-2 rounded-lg text-xs"><i class="fas fa-trash"></i></button>` : ''}
-                            </div>
+                            <div><h4 class="font-bold text-sm">Audio Masuk</h4><p class="text-xs text-slate-500">${p.audioMasuk ? 'Aktif' : 'Default (Bawaan)'}</p></div>
+                            <div class="flex gap-2"><button onclick="window.tesSuara('masuk')" class="bg-emerald-100 text-emerald-700 px-3 py-2 rounded-lg text-xs font-bold">Tes</button><label class="bg-slate-800 text-white px-3 py-2 rounded-lg text-xs font-bold cursor-pointer">Upload<input type="file" accept="audio/*" onchange="window.handleAudioUpload(event, 'audioMasuk')" class="hidden"></label>${p.audioMasuk ? `<button onclick="window.hapusAudioKustom('audioMasuk')" class="bg-red-100 text-red-600 px-3 py-2 rounded-lg text-xs"><i class="fas fa-trash"></i></button>` : ''}</div>
                         </div>
-
                         <div class="bg-slate-50 p-4 rounded-xl border flex justify-between items-center">
-                            <div><h4 class="font-bold text-sm">Audio Pulang</h4><p class="text-xs text-slate-500">${p.audioPulang ? 'Aktif' : 'Default'}</p></div>
-                            <div class="flex gap-2">
-                                <button onclick="window.tesSuara('pulang')" class="bg-blue-100 text-blue-700 px-3 py-2 rounded-lg text-xs font-bold">Tes</button>
-                                <label class="bg-slate-800 text-white px-3 py-2 rounded-lg text-xs font-bold cursor-pointer">Upload<input type="file" accept="audio/*" onchange="window.handleAudioUpload(event, 'audioPulang')" class="hidden"></label>
-                                ${p.audioPulang ? `<button onclick="window.hapusAudioKustom('audioPulang')" class="bg-red-100 text-red-600 px-3 py-2 rounded-lg text-xs"><i class="fas fa-trash"></i></button>` : ''}
-                            </div>
+                            <div><h4 class="font-bold text-sm">Audio Pulang</h4><p class="text-xs text-slate-500">${p.audioPulang ? 'Aktif' : 'Default (Bawaan)'}</p></div>
+                            <div class="flex gap-2"><button onclick="window.tesSuara('pulang')" class="bg-blue-100 text-blue-700 px-3 py-2 rounded-lg text-xs font-bold">Tes</button><label class="bg-slate-800 text-white px-3 py-2 rounded-lg text-xs font-bold cursor-pointer">Upload<input type="file" accept="audio/*" onchange="window.handleAudioUpload(event, 'audioPulang')" class="hidden"></label>${p.audioPulang ? `<button onclick="window.hapusAudioKustom('audioPulang')" class="bg-red-100 text-red-600 px-3 py-2 rounded-lg text-xs"><i class="fas fa-trash"></i></button>` : ''}</div>
                         </div>
-
                         <div class="bg-slate-50 p-4 rounded-xl border flex justify-between items-center">
-                            <div><h4 class="font-bold text-sm">Audio IMK (Keluar)</h4><p class="text-xs text-slate-500">${p.audioImkKeluar ? 'Aktif' : 'Default'}</p></div>
-                            <div class="flex gap-2">
-                                <button onclick="window.tesSuara('imk_keluar')" class="bg-amber-100 text-amber-700 px-3 py-2 rounded-lg text-xs font-bold">Tes</button>
-                                <label class="bg-slate-800 text-white px-3 py-2 rounded-lg text-xs font-bold cursor-pointer">Upload<input type="file" accept="audio/*" onchange="window.handleAudioUpload(event, 'audioImkKeluar')" class="hidden"></label>
-                                ${p.audioImkKeluar ? `<button onclick="window.hapusAudioKustom('audioImkKeluar')" class="bg-red-100 text-red-600 px-3 py-2 rounded-lg text-xs"><i class="fas fa-trash"></i></button>` : ''}
-                            </div>
+                            <div><h4 class="font-bold text-sm">Audio IMK (Keluar)</h4><p class="text-xs text-slate-500">${p.audioImkKeluar ? 'Aktif' : 'Default (Bawaan)'}</p></div>
+                            <div class="flex gap-2"><button onclick="window.tesSuara('imk_keluar')" class="bg-amber-100 text-amber-700 px-3 py-2 rounded-lg text-xs font-bold">Tes</button><label class="bg-slate-800 text-white px-3 py-2 rounded-lg text-xs font-bold cursor-pointer">Upload<input type="file" accept="audio/*" onchange="window.handleAudioUpload(event, 'audioImkKeluar')" class="hidden"></label>${p.audioImkKeluar ? `<button onclick="window.hapusAudioKustom('audioImkKeluar')" class="bg-red-100 text-red-600 px-3 py-2 rounded-lg text-xs"><i class="fas fa-trash"></i></button>` : ''}</div>
                         </div>
-
                         <div class="bg-slate-50 p-4 rounded-xl border flex justify-between items-center">
-                            <div><h4 class="font-bold text-sm">Audio IMK (Kembali)</h4><p class="text-xs text-slate-500">${p.audioImkKembali ? 'Aktif' : 'Default'}</p></div>
-                            <div class="flex gap-2">
-                                <button onclick="window.tesSuara('imk_kembali')" class="bg-indigo-100 text-indigo-700 px-3 py-2 rounded-lg text-xs font-bold">Tes</button>
-                                <label class="bg-slate-800 text-white px-3 py-2 rounded-lg text-xs font-bold cursor-pointer">Upload<input type="file" accept="audio/*" onchange="window.handleAudioUpload(event, 'audioImkKembali')" class="hidden"></label>
-                                ${p.audioImkKembali ? `<button onclick="window.hapusAudioKustom('audioImkKembali')" class="bg-red-100 text-red-600 px-3 py-2 rounded-lg text-xs"><i class="fas fa-trash"></i></button>` : ''}
-                            </div>
+                            <div><h4 class="font-bold text-sm">Audio IMK (Kembali)</h4><p class="text-xs text-slate-500">${p.audioImkKembali ? 'Aktif' : 'Default (Bawaan)'}</p></div>
+                            <div class="flex gap-2"><button onclick="window.tesSuara('imk_kembali')" class="bg-indigo-100 text-indigo-700 px-3 py-2 rounded-lg text-xs font-bold">Tes</button><label class="bg-slate-800 text-white px-3 py-2 rounded-lg text-xs font-bold cursor-pointer">Upload<input type="file" accept="audio/*" onchange="window.handleAudioUpload(event, 'audioImkKembali')" class="hidden"></label>${p.audioImkKembali ? `<button onclick="window.hapusAudioKustom('audioImkKembali')" class="bg-red-100 text-red-600 px-3 py-2 rounded-lg text-xs"><i class="fas fa-trash"></i></button>` : ''}</div>
                         </div>
-
                         <div class="bg-slate-50 p-4 rounded-xl border flex justify-between items-center">
-                            <div><h4 class="font-bold text-sm">Audio Cuti / Error</h4><p class="text-xs text-slate-500">${p.audioCuti ? 'Aktif' : 'Default'}</p></div>
-                            <div class="flex gap-2">
-                                <button onclick="window.tesSuara('error')" class="bg-rose-100 text-rose-700 px-3 py-2 rounded-lg text-xs font-bold">Tes</button>
-                                <label class="bg-slate-800 text-white px-3 py-2 rounded-lg text-xs font-bold cursor-pointer">Upload<input type="file" accept="audio/*" onchange="window.handleAudioUpload(event, 'audioCuti')" class="hidden"></label>
-                                ${p.audioCuti ? `<button onclick="window.hapusAudioKustom('audioCuti')" class="bg-red-100 text-red-600 px-3 py-2 rounded-lg text-xs"><i class="fas fa-trash"></i></button>` : ''}
-                            </div>
+                            <div><h4 class="font-bold text-sm">Audio Cuti / Error</h4><p class="text-xs text-slate-500">${p.audioCuti ? 'Aktif' : 'Default (Bawaan)'}</p></div>
+                            <div class="flex gap-2"><button onclick="window.tesSuara('error')" class="bg-rose-100 text-rose-700 px-3 py-2 rounded-lg text-xs font-bold">Tes</button><label class="bg-slate-800 text-white px-3 py-2 rounded-lg text-xs font-bold cursor-pointer">Upload<input type="file" accept="audio/*" onchange="window.handleAudioUpload(event, 'audioCuti')" class="hidden"></label>${p.audioCuti ? `<button onclick="window.hapusAudioKustom('audioCuti')" class="bg-red-100 text-red-600 px-3 py-2 rounded-lg text-xs"><i class="fas fa-trash"></i></button>` : ''}</div>
                         </div>
                     </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    <div class="bg-white rounded-2xl border p-8"><h2 class="font-bold mb-4 flex items-center"><i class="fas fa-lock text-amber-500 mr-2"></i>Akses Admin</h2><div class="space-y-4"><div><label class="block text-xs font-bold mb-1">Username Baru</label><input type="text" id="set_user" value="${p.adminUsername||'admin'}" class="w-full border p-3 rounded-xl"></div><div><label class="block text-xs font-bold mb-1">Password Baru</label><input type="password" id="set_pass" placeholder="Kosongkan jika tidak diubah" class="w-full border p-3 rounded-xl"></div><button onclick="window.simpanKredensial()" class="w-full bg-amber-500 text-white font-bold py-3 rounded-xl">Update Akun</button></div></div>
+                    <div class="bg-slate-900 rounded-2xl p-8 shadow-lg relative overflow-hidden"><div class="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-bl-full"></div><h2 class="font-bold text-white mb-2 flex items-center relative z-10"><i class="fas fa-database text-blue-400 mr-2"></i>Backup & Restore</h2><p class="text-xs text-slate-400 mb-6 relative z-10">Unduh atau pulihkan JSON data.</p><div class="space-y-3 relative z-10"><button onclick="window.downloadBackupJSON()" class="w-full bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold py-3 rounded-xl text-sm transition"><i class="fas fa-download mr-2"></i> Download JSON Backup</button><label class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl text-sm transition flex items-center justify-center cursor-pointer shadow-lg"><i class="fas fa-upload mr-2"></i> Restore File JSON<input type="file" accept=".json" onchange="window.restoreBackupJSON(event)" class="hidden"></label><hr class="border-slate-700 my-4 border-dashed"><button onclick="window.muatDataSempelBanyak()" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 rounded-xl text-sm transition"><i class="fas fa-magic mr-2"></i> Muat Data Sempel (Demo)</button></div></div>
                 </div>
 
                 <!-- MODAL SHIFT -->
-                <div id="m_shift" class="fixed inset-0 bg-black/60 hidden z-[100] flex justify-center items-center p-4"><div class="bg-white rounded-3xl w-full max-w-sm p-6"><h3 class="font-bold text-lg mb-4">Shift</h3><label class="block text-xs font-bold mb-1">Nama</label><input type="text" id="ms_nm" class="w-full border rounded p-2"><label class="block text-xs font-bold mb-1 mt-3">Masuk</label><input type="time" id="ms_ms" class="w-full border rounded p-2"><label class="block text-xs font-bold mb-1 mt-3">Pulang</label><input type="time" id="ms_pl" class="w-full border rounded p-2"><div class="mt-4 flex gap-2"><button onclick="document.getElementById('m_shift').classList.add('hidden')" class="px-4 py-2 bg-slate-100 rounded">Batal</button><button onclick="window.simpanShift()" class="px-4 py-2 bg-indigo-600 text-white rounded">Simpan</button></div></div></div>
+                <div id="m_shift" class="fixed inset-0 bg-black/60 hidden z-[100] flex justify-center items-center p-4"><div class="bg-white rounded-3xl w-full max-w-sm p-6"><h3 class="font-bold text-lg mb-4">Shift</h3><label class="block text-xs font-bold mb-1">Nama</label><input type="text" id="ms_nm" class="w-full border rounded p-2 outline-none focus:border-indigo-500"><label class="block text-xs font-bold mb-1 mt-3">Masuk</label><input type="time" id="ms_ms" class="w-full border rounded p-2 outline-none focus:border-indigo-500"><label class="block text-xs font-bold mb-1 mt-3">Pulang</label><input type="time" id="ms_pl" class="w-full border rounded p-2 outline-none focus:border-indigo-500"><div class="mt-4 flex gap-2"><button onclick="document.getElementById('m_shift').classList.add('hidden')" class="px-4 py-2 bg-slate-100 rounded font-bold w-1/2">Batal</button><button onclick="window.simpanShift()" class="px-4 py-2 bg-indigo-600 text-white rounded font-bold w-1/2">Simpan</button></div></div></div>
                 <!-- MODAL LIBUR -->
-                <div id="m_libur" class="fixed inset-0 bg-black/60 hidden z-[100] flex justify-center items-center p-4"><div class="bg-white rounded-3xl w-full max-w-sm p-6"><h3 class="font-bold text-lg mb-4">Libur</h3><label class="block text-xs font-bold mb-1">Tanggal</label><input type="date" id="ml_tgl" class="w-full border rounded p-2"><label class="block text-xs font-bold mb-1 mt-3">Ket</label><input type="text" id="ml_ket" class="w-full border rounded p-2"><div class="mt-4 flex gap-2"><button onclick="document.getElementById('m_libur').classList.add('hidden')" class="px-4 py-2 bg-slate-100 rounded">Batal</button><button onclick="window.simpanLibur()" class="px-4 py-2 bg-rose-600 text-white rounded">Simpan</button></div></div></div>
+                <div id="m_libur" class="fixed inset-0 bg-black/60 hidden z-[100] flex justify-center items-center p-4"><div class="bg-white rounded-3xl w-full max-w-sm p-6"><h3 class="font-bold text-lg mb-4">Libur</h3><label class="block text-xs font-bold mb-1">Tanggal</label><input type="date" id="ml_tgl" class="w-full border rounded p-2 outline-none focus:border-rose-500"><label class="block text-xs font-bold mb-1 mt-3">Ket</label><input type="text" id="ml_ket" class="w-full border rounded p-2 outline-none focus:border-rose-500"><div class="mt-4 flex gap-2"><button onclick="document.getElementById('m_libur').classList.add('hidden')" class="px-4 py-2 bg-slate-100 rounded font-bold w-1/2">Batal</button><button onclick="window.simpanLibur()" class="px-4 py-2 bg-rose-600 text-white rounded font-bold w-1/2">Simpan</button></div></div></div>
             `;
         }
-
         function renderShiftTable() {
             const tb = document.getElementById('tb_shift'); if(!tb) return; tb.innerHTML = '';
-            state.pengaturan.shifts.forEach(s => { tb.innerHTML += `<tr><td class="py-2"><b>${s.nama}</b><br><span class="text-xs text-slate-500">${s.jamMasuk} - ${s.jamPulang}</span></td><td class="text-right"><button onclick="window.confirmDelete('shift','${s.id}')" class="text-red-500"><i class="fas fa-trash"></i></button></td></tr>`; });
+            state.pengaturan.shifts.forEach(s => { tb.innerHTML += `<tr><td class="py-2"><b>${s.nama}</b><br><span class="text-xs text-slate-500">${s.jamMasuk} - ${s.jamPulang}</span></td><td class="text-right"><button onclick="window.confirmDelete('shift','${s.id}')" class="text-red-500 p-2"><i class="fas fa-trash"></i></button></td></tr>`; });
         }
         window.bukaModalShift = function() { document.getElementById('m_shift').classList.remove('hidden'); };
         window.simpanShift = function() {
             const nm = document.getElementById('ms_nm').value; const ms = document.getElementById('ms_ms').value; const pl = document.getElementById('ms_pl').value;
-            if(!nm || !ms) return;
-            state.pengaturan.shifts.push({ id: 'shift_'+Date.now(), nama: nm, jamMasuk: ms, jamPulang: pl });
+            if(!nm || !ms) return; state.pengaturan.shifts.push({ id: 'shift_'+Date.now(), nama: nm, jamMasuk: ms, jamPulang: pl });
             saveData(); document.getElementById('m_shift').classList.add('hidden'); renderShiftTable();
         };
-
         function renderLiburTable() {
             const tb = document.getElementById('tb_libur'); if(!tb) return; tb.innerHTML = '';
-            state.pengaturan.liburNasional.forEach(l => { tb.innerHTML += `<tr><td class="py-2"><b class="text-rose-600">${formatDateID(l.tanggal)}</b><br><span class="text-xs text-slate-500">${l.keterangan}</span></td><td class="text-right"><button onclick="window.confirmDelete('libur',${l.id})" class="text-red-500"><i class="fas fa-trash"></i></button></td></tr>`; });
+            state.pengaturan.liburNasional.forEach(l => { tb.innerHTML += `<tr><td class="py-2"><b class="text-rose-600">${formatDateID(l.tanggal)}</b><br><span class="text-xs text-slate-500">${l.keterangan}</span></td><td class="text-right"><button onclick="window.confirmDelete('libur',${l.id})" class="text-red-500 p-2"><i class="fas fa-trash"></i></button></td></tr>`; });
         }
         window.bukaModalLibur = function() { document.getElementById('m_libur').classList.remove('hidden'); };
         window.simpanLibur = function() {
@@ -1312,12 +746,15 @@
             state.pengaturan.liburNasional.push({ id: Date.now(), tanggal: t, keterangan: k });
             saveData(); document.getElementById('m_libur').classList.add('hidden'); renderLiburTable();
         };
-
         window.simpanPengaturanUmum = function() {
-            state.pengaturan.tunjanganHadir = parseFloat(document.getElementById('s_th').value)||0;
-            state.pengaturan.dendaTelat = parseFloat(document.getElementById('s_dt').value)||0;
-            state.pengaturan.waKepalaSekolah = document.getElementById('s_wa').value;
-            saveData(); showToast('Tersimpan', 'Pengaturan diperbarui.');
+            state.pengaturan.tunjanganHadir = parseFloat(document.getElementById('s_th').value)||0; state.pengaturan.dendaTelat = parseFloat(document.getElementById('s_dt').value)||0; state.pengaturan.waKepalaSekolah = document.getElementById('s_wa').value;
+            saveData(); showToast('Tersimpan', 'Aturan Kehadiran diperbarui.');
+        };
+        window.simpanKredensial = function() {
+            const user = document.getElementById('set_user').value; const pass = document.getElementById('set_pass').value;
+            if(!user) return showToast('Error', 'Username wajib diisi!', 'error');
+            state.pengaturan.adminUsername = user; if(pass) state.pengaturan.adminPassword = pass;
+            saveData(); showToast('Aman', 'Kredensial Login diubah.'); document.getElementById('set_pass').value = '';
         };
 
         window.onload = () => loadData();
