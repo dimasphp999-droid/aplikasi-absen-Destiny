@@ -8,7 +8,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
     <!-- Script HTML5-QRCode untuk memindai QR secara Native -->
-    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://ug.com/html5-qrcode"></script>
 
     <!-- Script SheetJS untuk Ekspor Excel -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -59,10 +59,10 @@
     <div id="modalHapusTanggal" class="fixed inset-0 bg-slate-900 bg-opacity-60 hidden z-[250] flex justify-center items-center p-4 backdrop-blur-sm transition-opacity duration-300 opacity-0">
         <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-8 transform scale-95 transition-all duration-300" id="modalHapusTanggalContent">
             <div class="flex justify-between items-center mb-5">
-                <h3 class="text-xl font-bold text-slate-800">Hapus via Tanggal</h3>
+                <h3 class="text-xl font-bold text-slate-800" id="modalHapusTanggalTitle">Hapus via Tanggal</h3>
                 <button onclick="tutupModalHapusTanggal()" class="text-slate-400 hover:text-red-500 transition"><i class="fas fa-times text-xl"></i></button>
             </div>
-            <p class="text-sm text-slate-500 mb-5">Pilih rentang tanggal untuk menghapus data riwayat absensi secara massal.</p>
+            <p class="text-sm text-slate-500 mb-5">Pilih rentang tanggal untuk menghapus data riwayat secara massal.</p>
             <div class="space-y-4 mb-6">
                 <div>
                     <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Dari Tanggal</label>
@@ -97,7 +97,7 @@
     <div id="appContainer" class="w-full h-full min-h-screen"></div>
 
     <script>
-   const firebaseConfig = {
+        const firebaseConfig = {
             apiKey: "AIzaSyAHCb-IGYuJbsZIiqDUmQEGC8H5mSPmR4A",
             authDomain: "absen-destiny.firebaseapp.com",
             databaseURL: "https://absen-destiny-default-rtdb.asia-southeast1.firebasedatabase.app",
@@ -127,7 +127,7 @@
                 { id: 2, nama: 'Staff' }
             ],
             absensi: [],
-            imk: [], // Riwayat Izin Keluar Masuk
+            imk: [], 
             cuti: [],
             pengaturan: {
                 tunjanganHadir: 50000,
@@ -138,6 +138,8 @@
                 audioMasuk: null,
                 audioPulang: null,
                 audioCuti: null,
+                audioImkKeluar: null,
+                audioImkKembali: null,
                 shifts: [
                     { id: 'shift_1', nama: 'Shift Standar (Pagi)', jamMasuk: '08:00', jamPulang: '17:00' }
                 ],
@@ -151,7 +153,8 @@
         let clockInterval = null;
         let deleteTarget = null;
         let isInitialLoad = true;
-        let kioskModeType = 'absen'; // 'absen' atau 'imk'
+        let kioskModeType = 'absen'; 
+        let activeHapusMode = 'absensi'; // 'absensi' atau 'imk'
 
         function playSound(type) {
             try {
@@ -211,7 +214,7 @@
             } catch(e) {}
         }
 
-        function handleAudioUpload(event, key) {
+        window.handleAudioUpload = function(event, key) {
             const file = event.target.files[0];
             if (!file) return;
             if (file.size > 700 * 1024) return showToast("File Terlalu Besar", "Harap pilih file di bawah 700 KB.", "warning");
@@ -224,18 +227,18 @@
                 if (state.currentView === 'pengaturan') render();
             };
             reader.readAsDataURL(file);
-        }
+        };
 
-        function hapusAudioKustom(key) {
+        window.hapusAudioKustom = function(key) {
             if(state.pengaturan && state.pengaturan[key]) {
                 delete state.pengaturan[key];
                 saveData();
                 showToast("Dihapus", "Kembali menggunakan nada bawaan.");
                 if (state.currentView === 'pengaturan') render();
             }
-        }
+        };
 
-        function tesSuara(type) { playSound(type); }
+        window.tesSuara = function(type) { playSound(type); };
 
         function formatRupiah(angka) {
             return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
@@ -331,17 +334,16 @@
             }
         }
 
-        // LOGIKA UTAMA SCANNING (Absensi & IMK)
         window.prosesKehadiran = function(nikScanned, metode = 'QR', lat = null, lng = null) {
-            if (isProcessingQR && metode === 'QR') return;
-            if (metode === 'QR') isProcessingQR = true;
+            if (isProcessingQR && (metode === 'QR' || metode === 'GPS')) return;
+            if (metode === 'QR' || metode === 'GPS') isProcessingQR = true;
 
             const karyawan = state.karyawan.find(k => k.nik === nikScanned);
             
             if(!karyawan) {
                 playSound('error');
                 showToast('Akses Ditolak', 'Data tidak dikenali oleh sistem.', 'error');
-                if (metode === 'QR') setTimeout(() => { isProcessingQR = false; }, 3000);
+                if (metode === 'QR' || metode === 'GPS') setTimeout(() => { isProcessingQR = false; }, 3000);
                 return;
             }
 
@@ -349,13 +351,11 @@
             const timeString = now.toTimeString().substring(0, 5); 
             const dateString = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-            // Jika Kiosk sedang mode IMK (Izin Keluar Masuk)
             if (kioskModeType === 'imk') {
                 if(!state.imk) state.imk = [];
                 let imkHariIni = state.imk.find(i => i.karyawanId === karyawan.id && i.tanggal === dateString && !i.jamKembali);
 
                 if (!imkHariIni) {
-                    // Catat Keluar Kantor
                     state.imk.push({
                         id: Date.now(),
                         karyawanId: karyawan.id,
@@ -368,10 +368,7 @@
                     playSound('imk_keluar');
                     showToast('IMK: Izin Keluar', `${karyawan.nama} tercatat KELUAR kantor pukul ${timeString}`);
                 } else {
-                    // Catat Kembali ke Kantor
                     imkHariIni.jamKembali = timeString;
-                    
-                    // Hitung selisih durasi
                     const [hK, mK] = imkHariIni.jamKeluar.split(':').map(Number);
                     const [hB, mB] = timeString.split(':').map(Number);
                     let diffMins = (hB * 60 + mB) - (hK * 60 + mK);
@@ -389,7 +386,6 @@
                 return;
             }
 
-            // Mode Normal (Absen Masuk / Pulang)
             let absenHariIni = state.absensi.find(a => a.karyawanId === karyawan.id && a.tanggal === dateString);
             const isLibur = state.pengaturan.liburNasional?.find(l => l.tanggal === dateString);
             const shiftKaryawan = state.pengaturan.shifts?.find(s => s.id === karyawan.shiftId) || state.pengaturan.shifts[0];
@@ -422,7 +418,7 @@
                 showToast('Informasi', `${karyawan.nama} sudah merampungkan absen hari ini.`, 'warning');
             }
 
-            if (metode === 'QR') setTimeout(() => { isProcessingQR = false; }, 3000);
+            if (metode === 'QR' || metode === 'GPS') setTimeout(() => { isProcessingQR = false; }, 3000);
         };
 
         async function stopScanner() {
@@ -433,7 +429,7 @@
 
         window.startScanner = function() {
             setTimeout(async () => {
-                if (state.currentView !== 'scanWajah') return; 
+                if (state.currentView !== 'scanWajah' && state.currentView !== 'absenGPS') return; 
                 const readerElement = document.getElementById('reader');
                 if(!readerElement) return;
 
@@ -444,7 +440,13 @@
                     await html5QrCode.start(
                         { facingMode: cameraFacingMode },
                         { fps: 10, qrbox: { width: 250, height: 250 } },
-                        (decodedText) => { window.prosesKehadiran(decodedText, 'QR'); },
+                        (decodedText) => { 
+                            if (state.currentView === 'absenGPS') {
+                                window.prosesGPSLaluAbsen(decodedText);
+                            } else {
+                                window.prosesKehadiran(decodedText, 'QR'); 
+                            }
+                        },
                         (errorMessage) => {}
                     );
                     document.getElementById('cameraError')?.classList.add('hidden');
@@ -488,26 +490,36 @@
             window.startScanner();
         };
 
-        window.absenViaGPS = function(e) {
-            e.preventDefault();
-            const nik = document.getElementById('gpsNik').value;
-            if(!nik) return showToast('Peringatan', 'Harap masukkan NIK Anda.', 'warning');
-            if (!navigator.geolocation) return showToast('Gagal', 'GPS tidak didukung perangkat.', 'error');
+        window.prosesGPSLaluAbsen = function(nik) {
+            if (isProcessingQR) return;
+            isProcessingQR = true;
 
-            const btn = document.getElementById('btnGpsSubmit');
-            const orig = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Melacak Lokasi...';
-            btn.disabled = true;
+            const karyawan = state.karyawan.find(k => k.nik === nik);
+            if(!karyawan) {
+                playSound('error');
+                showToast('Akses Ditolak', 'QR Code tidak terdaftar.', 'error');
+                setTimeout(() => { isProcessingQR = false; }, 3000);
+                return;
+            }
+
+            if (!navigator.geolocation) {
+                playSound('error');
+                showToast('Gagal', 'Sistem GPS tidak didukung oleh perangkat ini.', 'error');
+                setTimeout(() => { isProcessingQR = false; }, 3000);
+                return;
+            }
+
+            showToast('Memindai GPS...', 'Mohon tunggu, mengambil titik koordinat lokasi...', 'warning');
 
             navigator.geolocation.getCurrentPosition(
                 (pos) => {
+                    isProcessingQR = false;
                     window.prosesKehadiran(nik, 'GPS', pos.coords.latitude, pos.coords.longitude);
-                    btn.innerHTML = orig; btn.disabled = false;
-                    document.getElementById('gpsNik').value = '';
                 },
                 () => {
-                    showToast('Gagal', 'Izin lokasi ditolak perangkat.', 'error');
-                    btn.innerHTML = orig; btn.disabled = false;
+                    playSound('error');
+                    showToast('Gagal', 'Izin lokasi (GPS) ditolak atau sinyal lemah.', 'error');
+                    setTimeout(() => { isProcessingQR = false; }, 3000);
                 },
                 { enableHighAccuracy: true, timeout: 10000 }
             );
@@ -520,6 +532,7 @@
             const msg = document.getElementById('deleteModalMessage');
             
             if (type === 'semua_absensi') msg.innerText = "Kosongkan SELURUH riwayat absensi?";
+            else if (type === 'semua_imk') msg.innerText = "Kosongkan SELURUH riwayat IMK?";
             else if (type === 'imk') msg.innerText = "Hapus data riwayat IMK ini?";
             else msg.innerText = `Yakin menghapus data ${type} ini?`;
             
@@ -545,6 +558,7 @@
             else if (type === 'absensi') state.absensi = state.absensi.filter(x => x.id !== id);
             else if (type === 'imk') state.imk = state.imk.filter(x => x.id !== id);
             else if (type === 'semua_absensi') state.absensi = [];
+            else if (type === 'semua_imk') state.imk = [];
             else if (type === 'shift') state.pengaturan.shifts = state.pengaturan.shifts.filter(x => x.id !== id);
             else if (type === 'libur') state.pengaturan.liburNasional = state.pengaturan.liburNasional.filter(x => x.id !== id);
             
@@ -570,9 +584,11 @@
             setTimeout(() => { modal.classList.add('hidden'); }, 300);
         };
 
-        window.bukaModalHapusTanggal = function() {
+        window.bukaModalHapusTanggal = function(mode = 'absensi') {
+            activeHapusMode = mode;
             document.getElementById('del_startDate').value = '';
             document.getElementById('del_endDate').value = '';
+            document.getElementById('modalHapusTanggalTitle').innerText = mode === 'imk' ? 'Hapus IMK via Tanggal' : 'Hapus Absen via Tanggal';
             const modal = document.getElementById('modalHapusTanggal');
             const content = document.getElementById('modalHapusTanggalContent');
             modal.classList.remove('hidden');
@@ -593,9 +609,15 @@
             const end = document.getElementById('del_endDate').value;
             if(!start || !end) return showToast('Error', 'Isi kedua tanggal!', 'error');
             
-            state.absensi = state.absensi.filter(a => a.tanggal < start || a.tanggal > end);
+            if (activeHapusMode === 'imk') {
+                state.imk = state.imk.filter(i => i.tanggal < start || i.tanggal > end);
+                showToast('Sukses', 'Riwayat IMK rentang tanggal dibersihkan.');
+            } else {
+                state.absensi = state.absensi.filter(a => a.tanggal < start || a.tanggal > end);
+                showToast('Sukses', 'Riwayat Absensi rentang tanggal dibersihkan.');
+            }
+
             saveData(); render(); window.tutupModalHapusTanggal();
-            showToast('Sukses', 'Data rentang tanggal dibersihkan.');
         };
 
         window.setView = function(view) {
@@ -721,7 +743,7 @@
                                     <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-white"><i class="fas ${isKiosk ? 'fa-qrcode' : 'fa-map-marker-alt'}"></i></div>
                                     <div>
                                         <h1 class="text-xl font-bold text-white" id="kioskTitle">${isKiosk ? 'Terminal Mesin QR' : 'Absensi Personal GPS'}</h1>
-                                        <p class="text-xs text-emerald-400 font-medium" id="kioskSubtitle">${isKiosk ? 'Dekatkan QR Code ke Kamera' : 'Izinkan akses lokasi browser Anda'}</p>
+                                        <p class="text-xs text-emerald-400 font-medium" id="kioskSubtitle">${isKiosk ? 'Dekatkan QR Code ke Kamera' : 'Scan ID Card di depan kamera untuk lokasi GPS'}</p>
                                     </div>
                                 </div>
                                 <button onclick="window.handleLogout()" class="text-white/50 hover:text-red-400 bg-white/5 p-3 rounded-xl transition"><i class="fas fa-power-off text-xl"></i></button>
@@ -734,35 +756,30 @@
                                 </div>
 
                                 ${isKiosk ? `
-                                    <!-- Toggle Mode Absen vs IMK -->
                                     <div class="flex bg-slate-100 p-1 rounded-2xl mb-4 border">
-                                        <button id="btnModeAbsen" onclick="window.toggleKioskMode('absen')" class="flex-1 bg-emerald-600 text-white font-bold py-2.5 rounded-xl shadow transition text-xs">Absen Masuk/Pulang</button>
+                                        <button id="btnModeAbsen" onclick="window.toggleKioskMode('absen')" class="flex-1 bg-emerald-600 text-white font-bold py-2.5 rounded-xl shadow transition text-xs">Absen Masuk/Pulang Kerja</button>
                                         <button id="btnModeImk" onclick="window.toggleKioskMode('imk')" class="flex-1 bg-white/10 text-slate-600 font-semibold py-2.5 rounded-xl transition text-xs">Izin Keluar Masuk (IMK)</button>
                                     </div>
-
-                                    <div class="relative bg-slate-900 rounded-2xl overflow-hidden shadow-inner mb-6" style="min-height: 240px; display:flex; align-items:center; justify-content:center;">
-                                        <p id="cameraError" class="text-amber-500 text-sm font-medium p-4 absolute inset-0 flex flex-col items-center justify-center hidden bg-slate-900 z-10"><i class="fas fa-video-slash text-3xl mb-2"></i> Kamera error.</p>
-                                        <div id="reader" class="w-full h-full object-cover"></div>
-                                    </div>
-                                    <div class="flex gap-2">
-                                        <button onclick="window.toggleCamera()" class="w-1/2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3.5 rounded-xl transition flex items-center justify-center border"><i class="fas fa-camera-rotate mr-2"></i> Putar Kamera</button>
-                                        <button onclick="window.bukaModalPengajuanCuti()" class="w-1/2 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3.5 rounded-xl transition flex items-center justify-center shadow"><i class="fas fa-envelope-open-text mr-2"></i> Form Izin</button>
-                                    </div>
                                 ` : `
-                                    <div class="bg-blue-50 border border-blue-200 rounded-2xl p-8 mb-6 text-center">
-                                        <i class="fas fa-satellite-dish text-5xl text-blue-300 mb-4 animate-pulse"></i>
-                                        <form onsubmit="window.absenViaGPS(event)" class="space-y-4 max-w-sm mx-auto">
-                                            <div><input type="text" id="gpsNik" placeholder="Ketik NIK Anda..." required class="w-full bg-white border border-slate-300 rounded-xl p-4 text-center text-lg font-bold text-slate-700 outline-none uppercase shadow-inner"></div>
-                                            <button type="submit" id="btnGpsSubmit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg transition flex items-center justify-center text-lg"><i class="fas fa-location-arrow mr-2"></i> Kunci Lokasi & Absen</button>
-                                        </form>
+                                    <div class="bg-blue-50 border border-blue-200 p-3 rounded-xl mb-4 text-blue-700 text-xs font-bold flex items-center justify-center">
+                                        <i class="fas fa-satellite-dish mr-2 animate-pulse text-lg"></i> Membutuhkan Akses Lokasi (GPS) & Scan ID Card
                                     </div>
                                 `}
+
+                                <div class="relative bg-slate-900 rounded-2xl overflow-hidden shadow-inner mb-6" style="min-height: 240px; display:flex; align-items:center; justify-content:center;">
+                                    <p id="cameraError" class="text-amber-500 text-sm font-medium p-4 absolute inset-0 flex flex-col items-center justify-center hidden bg-slate-900 z-10"><i class="fas fa-video-slash text-3xl mb-2"></i> Kamera error.</p>
+                                    <div id="reader" class="w-full h-full object-cover"></div>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button onclick="window.toggleCamera()" class="${isKiosk ? 'w-1/2' : 'w-full'} bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3.5 rounded-xl transition flex items-center justify-center border"><i class="fas fa-camera-rotate mr-2"></i> Putar Kamera</button>
+                                    ${isKiosk ? `<button onclick="window.bukaModalPengajuanCuti()" class="w-1/2 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3.5 rounded-xl transition flex items-center justify-center shadow"><i class="fas fa-envelope-open-text mr-2"></i> Form Izin</button>` : ''}
+                                </div>
                             </div>
                         </div>
                     </div>
                 `;
                 startRealTimeClock();
-                if(isKiosk) window.startScanner();
+                window.startScanner();
                 return;
             }
 
@@ -975,8 +992,8 @@
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
                     <div><h1 class="text-3xl font-bold text-slate-800">Riwayat Kehadiran</h1></div>
                     <div class="flex gap-2">
-                        <button onclick="window.bukaModalHapusTanggal()" class="bg-amber-500 text-white font-semibold px-4 py-3 rounded-xl shadow text-sm"><i class="fas fa-calendar-times mr-2"></i>Hapus via Tanggal</button>
-                        <button onclick="window.confirmDelete('semua_absensi', 'all')" class="bg-red-500 text-white font-semibold px-4 py-3 rounded-xl shadow text-sm"><i class="fas fa-trash-alt mr-2"></i>Kosongkan</button>
+                        <button onclick="window.bukaModalHapusTanggal('absensi')" class="bg-amber-500 hover:bg-amber-600 text-white font-semibold px-4 py-3 rounded-xl shadow text-sm transition"><i class="fas fa-calendar-times mr-2"></i>Hapus via Tanggal</button>
+                        <button onclick="window.confirmDelete('semua_absensi', 'all')" class="bg-red-500 hover:bg-red-600 text-white font-semibold px-4 py-3 rounded-xl shadow text-sm transition"><i class="fas fa-trash-alt mr-2"></i>Kosongkan</button>
                     </div>
                 </div>
                 <div class="bg-white rounded-2xl border overflow-x-auto shadow-sm"><table class="min-w-full text-sm text-left"><thead class="bg-slate-50 border-b"><tr><th class="py-4 px-6">Tgl</th><th class="py-4 px-6">Karyawan</th><th class="py-4 px-6">Masuk</th><th class="py-4 px-6">Pulang</th><th class="py-4 px-6">Jalur</th><th class="py-4 px-6">Status</th><th class="py-4 px-6 text-center">Aksi</th></tr></thead><tbody id="tabelAbsensiBody" class="divide-y"></tbody></table></div>
@@ -992,18 +1009,29 @@
             sorted.forEach(a => {
                 const k = state.karyawan.find(x => x.id == a.karyawanId);
                 const badge = (a.statusMasuk === 'Tepat Waktu' || a.statusMasuk?.includes('Libur')) ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700';
-                let metodeVisual = (a.metode === 'GPS') ? `<span class="text-blue-500 bg-blue-50 px-2 py-1 rounded text-xs font-bold">GPS</span>` : `<span class="text-slate-500 bg-slate-100 px-2 py-1 rounded text-xs font-bold">Kiosk</span>`;
+                
+                let metodeVisual = '';
+                if (a.metode === 'GPS') {
+                    metodeVisual = `<a href="https://maps.google.com/?q=${a.lat},${a.lng}" target="_blank" class="text-blue-600 bg-blue-50 hover:bg-blue-100 px-2 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center w-max shadow-sm border border-blue-200 transition-colors"><i class="fas fa-map-marker-alt mr-1.5 text-blue-500"></i>Buka Peta</a>`;
+                } else {
+                    metodeVisual = `<span class="text-slate-500 bg-slate-100 border border-slate-200 px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center w-max"><i class="fas fa-qrcode mr-1.5 text-slate-400"></i>Kiosk QR</span>`;
+                }
 
-                tbody.innerHTML += `<tr><td class="py-4 px-6 text-slate-600">${formatDateID(a.tanggal)}</td><td class="py-4 px-6 font-bold text-slate-800">${k ? k.nama : 'Dihapus'}</td><td class="py-4 px-6 font-mono">${a.jamMasuk}</td><td class="py-4 px-6 font-mono">${a.jamPulang || '-'}</td><td class="py-4 px-6">${metodeVisual}</td><td class="py-4 px-6"><span class="px-3 py-1 rounded-full text-[10px] uppercase font-bold ${badge}">${a.statusMasuk}</span></td><td class="py-4 px-6 text-center"><button onclick="window.confirmDelete('absensi', ${a.id})" class="text-red-500 bg-red-50 p-2 rounded-lg"><i class="fas fa-trash"></i></button></td></tr>`;
+                tbody.innerHTML += `<tr><td class="py-4 px-6 text-slate-600">${formatDateID(a.tanggal)}</td><td class="py-4 px-6 font-bold text-slate-800">${k ? k.nama : 'Dihapus'}</td><td class="py-4 px-6 font-mono">${a.jamMasuk}</td><td class="py-4 px-6 font-mono">${a.jamPulang || '-'}</td><td class="py-4 px-6">${metodeVisual}</td><td class="py-4 px-6"><span class="px-3 py-1 rounded-full text-[10px] uppercase font-bold ${badge}">${a.statusMasuk}</span></td><td class="py-4 px-6 text-center"><button onclick="window.confirmDelete('absensi', ${a.id})" class="text-red-500 bg-red-50 hover:bg-red-500 hover:text-white transition-colors p-2 rounded-lg"><i class="fas fa-trash"></i></button></td></tr>`;
             });
         }
 
-        // TABEL RIWAYAT IMK
         function getImkHTML() {
             return `
-                <div class="mb-8">
-                    <h1 class="text-3xl font-bold text-slate-800 tracking-tight">Riwayat IMK (Izin Keluar Masuk Kantor)</h1>
-                    <p class="text-slate-500 mt-1">Pencatatan karyawan yang keluar kantor di sela jam kerja.</p>
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+                    <div>
+                        <h1 class="text-3xl font-bold text-slate-800 tracking-tight">Riwayat IMK (Keluar Masuk)</h1>
+                        <p class="text-slate-500 mt-1">Pencatatan karyawan yang keluar kantor di sela jam kerja.</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="window.bukaModalHapusTanggal('imk')" class="bg-amber-500 hover:bg-amber-600 text-white font-semibold px-4 py-3 rounded-xl shadow text-sm transition"><i class="fas fa-calendar-times mr-2"></i>Hapus via Tanggal</button>
+                        <button onclick="window.confirmDelete('semua_imk', 'all')" class="bg-red-500 hover:bg-red-600 text-white font-semibold px-4 py-3 rounded-xl shadow text-sm transition"><i class="fas fa-trash-alt mr-2"></i>Kosongkan</button>
+                    </div>
                 </div>
                 <div class="bg-white rounded-2xl border overflow-x-auto shadow-sm">
                     <table class="min-w-full text-sm text-left">
@@ -1213,7 +1241,7 @@
                             <div class="flex gap-2">
                                 <button onclick="window.tesSuara('masuk')" class="bg-emerald-100 text-emerald-700 px-3 py-2 rounded-lg text-xs font-bold">Tes</button>
                                 <label class="bg-slate-800 text-white px-3 py-2 rounded-lg text-xs font-bold cursor-pointer">Upload<input type="file" accept="audio/*" onchange="window.handleAudioUpload(event, 'audioMasuk')" class="hidden"></label>
-                                ${p.audioMasuk ? `<button onclick="window.hapusAudioKustom('audioMasuk')" class="bg-red-100 text-red-600 px-3 py-2 rounded-lg text-xs" title="Hapus Suara"><i class="fas fa-trash"></i></button>` : ''}
+                                ${p.audioMasuk ? `<button onclick="window.hapusAudioKustom('audioMasuk')" class="bg-red-100 text-red-600 px-3 py-2 rounded-lg text-xs"><i class="fas fa-trash"></i></button>` : ''}
                             </div>
                         </div>
 
@@ -1222,7 +1250,7 @@
                             <div class="flex gap-2">
                                 <button onclick="window.tesSuara('pulang')" class="bg-blue-100 text-blue-700 px-3 py-2 rounded-lg text-xs font-bold">Tes</button>
                                 <label class="bg-slate-800 text-white px-3 py-2 rounded-lg text-xs font-bold cursor-pointer">Upload<input type="file" accept="audio/*" onchange="window.handleAudioUpload(event, 'audioPulang')" class="hidden"></label>
-                                ${p.audioPulang ? `<button onclick="window.hapusAudioKustom('audioPulang')" class="bg-red-100 text-red-600 px-3 py-2 rounded-lg text-xs" title="Hapus Suara"><i class="fas fa-trash"></i></button>` : ''}
+                                ${p.audioPulang ? `<button onclick="window.hapusAudioKustom('audioPulang')" class="bg-red-100 text-red-600 px-3 py-2 rounded-lg text-xs"><i class="fas fa-trash"></i></button>` : ''}
                             </div>
                         </div>
 
@@ -1231,7 +1259,7 @@
                             <div class="flex gap-2">
                                 <button onclick="window.tesSuara('imk_keluar')" class="bg-amber-100 text-amber-700 px-3 py-2 rounded-lg text-xs font-bold">Tes</button>
                                 <label class="bg-slate-800 text-white px-3 py-2 rounded-lg text-xs font-bold cursor-pointer">Upload<input type="file" accept="audio/*" onchange="window.handleAudioUpload(event, 'audioImkKeluar')" class="hidden"></label>
-                                ${p.audioImkKeluar ? `<button onclick="window.hapusAudioKustom('audioImkKeluar')" class="bg-red-100 text-red-600 px-3 py-2 rounded-lg text-xs" title="Hapus Suara"><i class="fas fa-trash"></i></button>` : ''}
+                                ${p.audioImkKeluar ? `<button onclick="window.hapusAudioKustom('audioImkKeluar')" class="bg-red-100 text-red-600 px-3 py-2 rounded-lg text-xs"><i class="fas fa-trash"></i></button>` : ''}
                             </div>
                         </div>
 
@@ -1240,7 +1268,7 @@
                             <div class="flex gap-2">
                                 <button onclick="window.tesSuara('imk_kembali')" class="bg-indigo-100 text-indigo-700 px-3 py-2 rounded-lg text-xs font-bold">Tes</button>
                                 <label class="bg-slate-800 text-white px-3 py-2 rounded-lg text-xs font-bold cursor-pointer">Upload<input type="file" accept="audio/*" onchange="window.handleAudioUpload(event, 'audioImkKembali')" class="hidden"></label>
-                                ${p.audioImkKembali ? `<button onclick="window.hapusAudioKustom('audioImkKembali')" class="bg-red-100 text-red-600 px-3 py-2 rounded-lg text-xs" title="Hapus Suara"><i class="fas fa-trash"></i></button>` : ''}
+                                ${p.audioImkKembali ? `<button onclick="window.hapusAudioKustom('audioImkKembali')" class="bg-red-100 text-red-600 px-3 py-2 rounded-lg text-xs"><i class="fas fa-trash"></i></button>` : ''}
                             </div>
                         </div>
 
@@ -1249,7 +1277,7 @@
                             <div class="flex gap-2">
                                 <button onclick="window.tesSuara('error')" class="bg-rose-100 text-rose-700 px-3 py-2 rounded-lg text-xs font-bold">Tes</button>
                                 <label class="bg-slate-800 text-white px-3 py-2 rounded-lg text-xs font-bold cursor-pointer">Upload<input type="file" accept="audio/*" onchange="window.handleAudioUpload(event, 'audioCuti')" class="hidden"></label>
-                                ${p.audioCuti ? `<button onclick="window.hapusAudioKustom('audioCuti')" class="bg-red-100 text-red-600 px-3 py-2 rounded-lg text-xs" title="Hapus Suara"><i class="fas fa-trash"></i></button>` : ''}
+                                ${p.audioCuti ? `<button onclick="window.hapusAudioKustom('audioCuti')" class="bg-red-100 text-red-600 px-3 py-2 rounded-lg text-xs"><i class="fas fa-trash"></i></button>` : ''}
                             </div>
                         </div>
                     </div>
