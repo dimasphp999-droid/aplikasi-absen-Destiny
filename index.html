@@ -254,16 +254,47 @@
         }
 
         async function saveData() {
-            pastikanDataMigrasi(); localStorage.setItem('destinyAbsensiData', JSON.stringify(state));
-            if (isFirebaseConnected) { try { await firebase.database().ref('hr_system_data').set(state); } catch (err) {} }
+            pastikanDataMigrasi(); 
+            
+            // FITUR KEAMANAN: Jangan simpan status Login/UI (currentView & currentUserRole) ke Database Cloud
+            const dataToSave = {
+                karyawan: state.karyawan || [],
+                jabatan: state.jabatan || [],
+                absensi: state.absensi || [],
+                imk: state.imk || [],
+                cuti: state.cuti || [],
+                pengaturan: state.pengaturan || {}
+            };
+
+            localStorage.setItem('destinyAbsensiData', JSON.stringify(dataToSave));
+            if (isFirebaseConnected) { try { await firebase.database().ref('hr_system_data').set(dataToSave); } catch (err) {} }
         }
 
         function loadData() {
             if (isFirebaseConnected) {
                 firebase.database().ref('hr_system_data').on('value', (snapshot) => {
                     const data = snapshot.val();
-                    if (data) { state = { ...state, ...data }; pastikanDataMigrasi(); localStorage.setItem('destinyAbsensiData', JSON.stringify(state)); if(!isInitialLoad && state.currentUserRole) window.render(); } 
+                    if (data) { 
+                        // Cegah state Login tertimpa oleh sisa data dari Cloud versi lama
+                        const activeView = state.currentView;
+                        const activeRole = state.currentUserRole;
+                        
+                        state = { ...state, ...data }; 
+                        
+                        // Kembalikan status layar ke posisi aslinya
+                        state.currentView = activeView;
+                        state.currentUserRole = activeRole;
+                        
+                        pastikanDataMigrasi(); 
+                        
+                        // Simpan kembali data steril ke Local Storage
+                        const dataToSave = { karyawan: state.karyawan, jabatan: state.jabatan, absensi: state.absensi, imk: state.imk, cuti: state.cuti, pengaturan: state.pengaturan };
+                        localStorage.setItem('destinyAbsensiData', JSON.stringify(dataToSave)); 
+                        
+                        if(!isInitialLoad && state.currentUserRole) window.render(); 
+                    } 
                     else fallbackLocalLoad();
+                    
                     if (isInitialLoad) { isInitialLoad = false; window.render(); }
                 });
             } else { fallbackLocalLoad(); window.render(); }
@@ -271,7 +302,18 @@
 
         function fallbackLocalLoad() {
             const saved = localStorage.getItem('destinyAbsensiData');
-            if (saved) { state = { ...state, ...JSON.parse(saved) }; pastikanDataMigrasi(); }
+            if (saved) { 
+                const activeView = state.currentView;
+                const activeRole = state.currentUserRole;
+                
+                state = { ...state, ...JSON.parse(saved) }; 
+                
+                // Kembalikan status layar
+                state.currentView = activeView;
+                state.currentUserRole = activeRole;
+                
+                pastikanDataMigrasi(); 
+            }
         }
 
         window.prosesKehadiran = function(nikScanned, metode = 'QR', lat = null, lng = null) {
