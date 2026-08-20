@@ -90,6 +90,47 @@
         </div>
     </div>
 
+    <!-- MODAL FORM IZIN/CUTI (GLOBAL) -->
+    <div id="modalPengajuanCuti" class="fixed inset-0 bg-slate-900 bg-opacity-80 hidden z-[300] flex justify-center items-center p-4 backdrop-blur-sm transition-opacity duration-300 opacity-0">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden transform scale-95 transition-all duration-300" id="modalPengajuanCutiContent">
+            <div class="px-6 py-5 border-b bg-slate-50 flex justify-between items-center">
+                <h3 class="font-bold text-xl text-slate-800"><i class="fas fa-envelope-open-text text-amber-500 mr-2"></i> Formulir Izin/Cuti</h3>
+                <button onclick="window.tutupModalPengajuanCuti()" class="text-slate-400 hover:text-red-500 transition"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            <div class="p-6">
+                <form id="formPengajuanCuti" class="space-y-4 text-left">
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Pilih Nama Anda</label>
+                        <select id="pc_karyawan" required class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-amber-500 outline-none transition"></select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Jenis Pengajuan</label>
+                        <select id="pc_jenis" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-amber-500 outline-none transition">
+                            <option value="Izin">Izin (Pribadi)</option>
+                            <option value="Sakit">Sakit</option>
+                            <option value="Cuti">Cuti Tahunan</option>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Mulai Tanggal</label>
+                            <input type="date" id="pc_mulai" required class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-amber-500 outline-none transition">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Sampai Tanggal</label>
+                            <input type="date" id="pc_selesai" required class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-amber-500 outline-none transition">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Alasan / Keterangan</label>
+                        <textarea id="pc_alasan" required rows="3" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-amber-500 outline-none transition" placeholder="Tuliskan keterangan..."></textarea>
+                    </div>
+                    <button type="button" onclick="window.simpanPengajuanCuti()" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3.5 rounded-xl mt-4 transition shadow-lg shadow-amber-500/30">Kirim Pengajuan</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- MAIN APP CONTAINER -->
     <div id="appContainer" class="w-full h-full min-h-screen"></div>
 
@@ -696,7 +737,7 @@
         }
 
         // CUTI & IZIN
-        function getCutiHTML() { return `<div class="mb-8"><h1 class="text-3xl font-bold">Cuti & Izin</h1></div><div class="bg-white rounded-2xl border overflow-x-auto shadow-sm"><table class="min-w-full text-sm text-left"><thead class="bg-slate-50 border-b"><tr><th class="py-4 px-6">Tgl Kirim</th><th class="py-4 px-6">Karyawan</th><th class="py-4 px-6">Jenis</th><th class="py-4 px-6">Periode</th><th class="py-4 px-6">Status</th><th class="py-4 px-6 text-center">Aksi</th></tr></thead><tbody id="tabelCutiBody" class="divide-y"></tbody></table></div><div id="modalDetailCuti" class="fixed inset-0 bg-slate-900 bg-opacity-60 hidden z-[100] flex justify-center items-center p-4"><div class="bg-white rounded-3xl shadow-2xl w-full max-w-md"><div class="px-6 py-5 border-b flex justify-between"><h3 class="font-bold text-xl">Detail Pengajuan</h3><button onclick="window.tutupModalDetailCuti()"><i class="fas fa-times"></i></button></div><div class="p-6 bg-slate-50 space-y-4"><div><p class="text-xs font-bold text-slate-400 uppercase">Pemohon</p><p class="font-bold text-lg" id="dc_nama">-</p></div><div class="grid grid-cols-2 gap-4"><div class="bg-white p-3 rounded-xl border"><p class="text-xs font-bold text-slate-400 uppercase">Jenis</p><p class="font-bold text-amber-600" id="dc_jenis">-</p></div><div class="bg-white p-3 rounded-xl border"><p class="text-xs font-bold text-slate-400 uppercase">Status</p><p class="font-bold" id="dc_status">-</p></div></div><div class="bg-white p-3 rounded-xl border"><p class="text-xs font-bold text-slate-400 uppercase">Periode</p><p class="font-semibold" id="dc_periode">-</p></div><div class="bg-white p-3 rounded-xl border"><p class="text-xs font-bold text-slate-400 uppercase">Alasan</p><p class="text-sm" id="dc_alasan">-</p></div></div><div id="dc_action_buttons" class="px-6 py-5 border-t flex-col gap-3 hidden"><button onclick="window.forwardWAKepsek()" class="w-full bg-slate-50 hover:bg-emerald-50 text-emerald-600 border font-bold py-3 rounded-xl mb-1 flex justify-center items-center"><i class="fab fa-whatsapp mr-2 text-xl"></i> Minta ACC Atasan via WA</button><div class="flex gap-3"><button onclick="window.updateStatusCuti('Ditolak')" class="flex-1 bg-red-100 text-red-700 font-bold py-3 rounded-xl">Tolak</button><button onclick="window.updateStatusCuti('Disetujui')" class="flex-1 bg-emerald-500 text-white font-bold py-3 rounded-xl">Setujui</button></div></div></div></div><!-- Modal Kiosk Cuti --><div id="modalPengajuanCuti" class="fixed inset-0 bg-slate-900 bg-opacity-80 hidden z-[200] flex justify-center items-center p-4 backdrop-blur-sm"><div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden"><div class="px-6 py-5 border-b bg-slate-50 flex justify-between items-center"><h3 class="font-bold text-xl"><i class="fas fa-envelope-open-text text-amber-500 mr-2"></i> Formulir Pengajuan</h3><button onclick="window.tutupModalPengajuanCuti()" class="bg-white p-2 rounded-full"><i class="fas fa-times"></i></button></div><div class="p-6"><form id="formPengajuanCuti" class="space-y-4 text-left"><div><label class="block text-xs font-bold uppercase mb-1.5">Pilih Nama Anda</label><select id="pc_karyawan" required class="w-full bg-slate-50 border rounded-xl p-3 text-sm outline-none"></select></div><div><label class="block text-xs font-bold uppercase mb-1.5">Jenis Pengajuan</label><select id="pc_jenis" class="w-full bg-slate-50 border rounded-xl p-3 text-sm outline-none"><option value="Izin">Izin (Pribadi)</option><option value="Sakit">Sakit</option><option value="Cuti">Cuti Tahunan</option></select></div><div class="grid grid-cols-2 gap-4"><div><label class="block text-xs font-bold uppercase mb-1.5">Mulai Tanggal</label><input type="date" id="pc_mulai" required class="w-full bg-slate-50 border rounded-xl p-3 text-sm outline-none"></div><div><label class="block text-xs font-bold uppercase mb-1.5">Sampai Tanggal</label><input type="date" id="pc_selesai" required class="w-full bg-slate-50 border rounded-xl p-3 text-sm outline-none"></div></div><div><label class="block text-xs font-bold uppercase mb-1.5">Alasan</label><textarea id="pc_alasan" required rows="3" class="w-full bg-slate-50 border rounded-xl p-3 text-sm outline-none"></textarea></div><button type="button" onclick="window.simpanPengajuanCuti()" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3.5 rounded-xl mt-4">Kirim Pengajuan</button></form></div></div></div>`; }
+        function getCutiHTML() { return `<div class="mb-8"><h1 class="text-3xl font-bold">Cuti & Izin</h1></div><div class="bg-white rounded-2xl border overflow-x-auto shadow-sm"><table class="min-w-full text-sm text-left"><thead class="bg-slate-50 border-b"><tr><th class="py-4 px-6">Tgl Kirim</th><th class="py-4 px-6">Karyawan</th><th class="py-4 px-6">Jenis</th><th class="py-4 px-6">Periode</th><th class="py-4 px-6">Status</th><th class="py-4 px-6 text-center">Aksi</th></tr></thead><tbody id="tabelCutiBody" class="divide-y"></tbody></table></div><div id="modalDetailCuti" class="fixed inset-0 bg-slate-900 bg-opacity-60 hidden z-[100] flex justify-center items-center p-4"><div class="bg-white rounded-3xl shadow-2xl w-full max-w-md"><div class="px-6 py-5 border-b flex justify-between"><h3 class="font-bold text-xl">Detail Pengajuan</h3><button onclick="window.tutupModalDetailCuti()"><i class="fas fa-times"></i></button></div><div class="p-6 bg-slate-50 space-y-4"><div><p class="text-xs font-bold text-slate-400 uppercase">Pemohon</p><p class="font-bold text-lg" id="dc_nama">-</p></div><div class="grid grid-cols-2 gap-4"><div class="bg-white p-3 rounded-xl border"><p class="text-xs font-bold text-slate-400 uppercase">Jenis</p><p class="font-bold text-amber-600" id="dc_jenis">-</p></div><div class="bg-white p-3 rounded-xl border"><p class="text-xs font-bold text-slate-400 uppercase">Status</p><p class="font-bold" id="dc_status">-</p></div></div><div class="bg-white p-3 rounded-xl border"><p class="text-xs font-bold text-slate-400 uppercase">Periode</p><p class="font-semibold" id="dc_periode">-</p></div><div class="bg-white p-3 rounded-xl border"><p class="text-xs font-bold text-slate-400 uppercase">Alasan</p><p class="text-sm" id="dc_alasan">-</p></div></div><div id="dc_action_buttons" class="px-6 py-5 border-t flex-col gap-3 hidden"><button onclick="window.forwardWAKepsek()" class="w-full bg-slate-50 hover:bg-emerald-50 text-emerald-600 border font-bold py-3 rounded-xl mb-1 flex justify-center items-center"><i class="fab fa-whatsapp mr-2 text-xl"></i> Minta ACC Atasan via WA</button><div class="flex gap-3"><button onclick="window.updateStatusCuti('Ditolak')" class="flex-1 bg-red-100 text-red-700 font-bold py-3 rounded-xl">Tolak</button><button onclick="window.updateStatusCuti('Disetujui')" class="flex-1 bg-emerald-500 text-white font-bold py-3 rounded-xl">Setujui</button></div></div></div></div>`; }
         function renderCutiTable() {
             const tbody = document.getElementById('tabelCutiBody'); if(!tbody) return; tbody.innerHTML = '';
             const sorted = [...state.cuti].sort((a,b) => (b.tanggalPengajuan ? new Date(b.tanggalPengajuan).getTime() : b.id) - (a.tanggalPengajuan ? new Date(a.tanggalPengajuan).getTime() : a.id));
@@ -709,9 +750,37 @@
         window.bukaModalPengajuanCuti = function() {
             if(state.karyawan.length === 0) return showToast('Peringatan', 'Belum ada data karyawan.', 'warning');
             document.getElementById('pc_karyawan').innerHTML = '<option value="">-- Pilih Nama --</option>' + state.karyawan.map(k => `<option value="${k.id}">${k.nik} - ${k.nama}</option>`).join('');
-            document.getElementById('formPengajuanCuti').reset(); document.getElementById('modalPengajuanCuti').classList.remove('hidden'); window.stopScanner();
+            document.getElementById('formPengajuanCuti').reset(); 
+            
+            const modal = document.getElementById('modalPengajuanCuti');
+            const content = document.getElementById('modalPengajuanCutiContent');
+            
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.add('opacity-100');
+                if(content) {
+                    content.classList.remove('scale-95');
+                    content.classList.add('scale-100');
+                }
+            }, 10);
+            
+            window.stopScanner();
         };
-        window.tutupModalPengajuanCuti = function() { document.getElementById('modalPengajuanCuti').classList.add('hidden'); window.startScanner(); };
+        window.tutupModalPengajuanCuti = function() { 
+            const modal = document.getElementById('modalPengajuanCuti');
+            const content = document.getElementById('modalPengajuanCutiContent');
+            
+            modal.classList.remove('opacity-100');
+            if(content) {
+                content.classList.remove('scale-100');
+                content.classList.add('scale-95');
+            }
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                window.startScanner();
+            }, 300);
+        };
         window.simpanPengajuanCuti = function() {
             const d = { karyawanId: document.getElementById('pc_karyawan').value, jenis: document.getElementById('pc_jenis').value, mulai: document.getElementById('pc_mulai').value, selesai: document.getElementById('pc_selesai').value, alasan: document.getElementById('pc_alasan').value };
             if(!d.karyawanId || !d.mulai || !d.selesai || !d.alasan) return showToast('Error', 'Lengkapi form!', 'error');
