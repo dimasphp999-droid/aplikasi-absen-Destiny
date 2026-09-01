@@ -853,23 +853,102 @@
             let mo = ''; const td = new Date(); for(let i=0; i<6; i++){ let m=td.getMonth()+1-i; let y=td.getFullYear(); if(m<=0){m+=12; y-=1;} mo+=`<option value="${y}-${String(m).padStart(2,'0')}">${new Date(y,m-1,1).toLocaleDateString('id-ID',{month:'long',year:'numeric'})}</option>`; }
             return `<div class="mb-8"><h1 class="text-3xl font-bold">Kalkulasi Penggajian</h1></div><div class="bg-white p-6 rounded-2xl border mb-8 flex flex-col sm:flex-row gap-4 items-end"><div class="flex-1 w-full"><label class="block text-xs font-bold mb-2">Periode Bulan</label><select id="bulanGaji" class="w-full border rounded-xl p-3 outline-none">${mo}</select></div><div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto"><button onclick="window.hitungGaji()" class="bg-slate-800 text-white font-bold px-8 py-3.5 rounded-xl shadow"><i class="fas fa-calculator mr-2"></i> Kalkulasi</button><button id="btnExp" onclick="window.eksporGaji()" style="display:none;" class="bg-emerald-600 text-white font-bold px-6 py-3.5 rounded-xl shadow"><i class="fas fa-file-excel mr-2"></i> Ekspor</button></div></div><div class="bg-white rounded-2xl border overflow-x-auto" id="gajiResult" style="display:none;"><table class="min-w-full text-sm text-left"><thead class="bg-slate-50 border-b text-xs uppercase text-slate-500"><tr><th class="py-4 px-6">Pegawai</th><th class="py-4 px-6 text-center">Hadir / Telat</th><th class="py-4 px-6 text-right">Gaji Pokok</th><th class="py-4 px-6 text-right">+ Tunj. / - Denda</th><th class="py-4 px-6 text-right bg-slate-100">Total Bersih</th></tr></thead><tbody id="tg_body" class="divide-y"></tbody></table></div>`;
         }
+
+        // FUNGSI LOGIKA PERHITUNGAN GAJI BARU (Tunjangan Hadir hangus jika pulang cepat / lupa absen)
         window.hitungGaji = function() {
-            const bln = document.getElementById('bulanGaji').value; document.getElementById('gajiResult').style.display='block'; document.getElementById('btnExp').style.display='flex';
-            const tb = document.getElementById('tg_body'); tb.innerHTML = '';
+            const bln = document.getElementById('bulanGaji').value; 
+            document.getElementById('gajiResult').style.display='block'; 
+            document.getElementById('btnExp').style.display='flex';
+            const tb = document.getElementById('tg_body'); 
+            tb.innerHTML = '';
+            
             state.karyawan.forEach(k => {
-                const ab = state.absensi.filter(a => a.karyawanId === k.id && a.tanggal.startsWith(bln)); const h = ab.length; const t = ab.filter(a => a.statusMasuk === 'Terlambat').length;
-                const tunj = h * state.pengaturan.tunjanganHadir; const den = t * state.pengaturan.dendaTelat; let tot = k.gajiPokok + tunj - den; if (tot < 0) tot = 0;
-                tb.innerHTML += `<tr><td class="py-4 px-6"><b>${k.nama}</b><br><span class="text-xs text-slate-500">${k.nik}</span></td><td class="py-4 px-6 text-center"><span class="text-emerald-600 font-bold">${h} Hadir</span><br><span class="text-xs ${t>0?'text-red-500':'text-slate-400'}">${t} Telat</span></td><td class="py-4 px-6 text-right">${formatRupiah(k.gajiPokok)}</td><td class="py-4 px-6 text-right"><div class="text-emerald-600 text-xs">+ ${formatRupiah(tunj)}</div><div class="text-red-500 text-xs">- ${formatRupiah(den)}</div></td><td class="py-4 px-6 text-right bg-slate-50 font-bold border-l">${formatRupiah(tot)}</td></tr>`;
+                const ab = state.absensi.filter(a => a.karyawanId === k.id && a.tanggal.startsWith(bln)); 
+                const h = ab.length; 
+                const t = ab.filter(a => a.statusMasuk === 'Terlambat').length;
+                
+                // Cari Shift milik karyawan ini
+                const shiftK = state.pengaturan.shifts.find(s => s.id === k.shiftId) || state.pengaturan.shifts[0];
+                const batasPulang = shiftK ? shiftK.jamPulang : '17:00';
+                
+                // Hitung hari valid tunjangan (Cek apakah ada jam pulang & tidak pulang cepat)
+                let hariTunjangan = 0;
+                ab.forEach(a => {
+                    if (a.jamPulang && a.jamPulang >= batasPulang) {
+                        hariTunjangan++;
+                    }
+                });
+
+                const tunj = hariTunjangan * state.pengaturan.tunjanganHadir; 
+                const den = t * state.pengaturan.dendaTelat; 
+                let tot = k.gajiPokok + tunj - den; 
+                if (tot < 0) tot = 0;
+                
+                tb.innerHTML += `
+                    <tr>
+                        <td class="py-4 px-6">
+                            <b>${k.nama}</b><br>
+                            <span class="text-xs text-slate-500">${k.nik}</span>
+                        </td>
+                        <td class="py-4 px-6 text-center">
+                            <span class="text-emerald-600 font-bold">${h} Hadir</span><br>
+                            <span class="text-xs ${t>0?'text-red-500':'text-slate-400'}">${t} Telat</span><br>
+                            <span class="text-[10px] text-blue-500 font-bold">(${hariTunjangan} Full Shift)</span>
+                        </td>
+                        <td class="py-4 px-6 text-right">${formatRupiah(k.gajiPokok)}</td>
+                        <td class="py-4 px-6 text-right">
+                            <div class="text-emerald-600 text-xs" title="${hariTunjangan} Hari Valid x ${formatRupiah(state.pengaturan.tunjanganHadir)}">
+                                + ${formatRupiah(tunj)}
+                            </div>
+                            <div class="text-red-500 text-xs">- ${formatRupiah(den)}</div>
+                        </td>
+                        <td class="py-4 px-6 text-right bg-slate-50 font-bold border-l">${formatRupiah(tot)}</td>
+                    </tr>`;
             });
         };
+
         window.eksporGaji = function() {
             const bln = document.getElementById('bulanGaji').value; if(!bln) return;
             const data = state.karyawan.map(k => {
-                const ab = state.absensi.filter(a => a.karyawanId === k.id && a.tanggal.startsWith(bln)); const h = ab.length; const t = ab.filter(a => a.statusMasuk === 'Terlambat').length;
-                const tunj = h * state.pengaturan.tunjanganHadir; const den = t * state.pengaturan.dendaTelat;
-                return { "NIK": k.nik, "Nama": k.nama, "Bulan": bln, "Hadir": h, "Telat": t, "Gaji Pokok": k.gajiPokok, "Tunjangan": tunj, "Denda": den, "Total": Math.max(0, k.gajiPokok + tunj - den) };
+                const ab = state.absensi.filter(a => a.karyawanId === k.id && a.tanggal.startsWith(bln)); 
+                const h = ab.length; 
+                const t = ab.filter(a => a.statusMasuk === 'Terlambat').length;
+                
+                // Cari Shift & hitung hari valid (sama dengan logika kalkulasi di atas)
+                const shiftK = state.pengaturan.shifts.find(s => s.id === k.shiftId) || state.pengaturan.shifts[0];
+                const batasPulang = shiftK ? shiftK.jamPulang : '17:00';
+                let hariTunjangan = 0;
+                ab.forEach(a => {
+                    if (a.jamPulang && a.jamPulang >= batasPulang) {
+                        hariTunjangan++;
+                    }
+                });
+
+                const tunj = hariTunjangan * state.pengaturan.tunjanganHadir; 
+                const den = t * state.pengaturan.dendaTelat;
+                
+                return { 
+                    "NIK": k.nik, 
+                    "Nama": k.nama, 
+                    "Bulan": bln, 
+                    "Total Hadir": h,
+                    "Hadir (Full Shift)": hariTunjangan,
+                    "Telat": t, 
+                    "Gaji Pokok": k.gajiPokok, 
+                    "Tunjangan": tunj, 
+                    "Denda": den, 
+                    "Total Bersih": Math.max(0, k.gajiPokok + tunj - den) 
+                };
             });
-            try { const ws = XLSX.utils.json_to_sheet(data); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Gaji"); XLSX.writeFile(wb, `Gaji_${bln}.xlsx`); showToast('Berhasil', 'Excel diunduh'); } catch(e){ showToast('Gagal', 'Terjadi kesalahan excel', 'error'); }
+            try { 
+                const ws = XLSX.utils.json_to_sheet(data); 
+                const wb = XLSX.utils.book_new(); 
+                XLSX.utils.book_append_sheet(wb, ws, "Gaji"); 
+                XLSX.writeFile(wb, `Gaji_${bln}.xlsx`); 
+                showToast('Berhasil', 'Excel diunduh'); 
+            } catch(e){ 
+                showToast('Gagal', 'Terjadi kesalahan excel', 'error'); 
+            }
         };
 
         function getLaporanHTML() {
