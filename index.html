@@ -374,48 +374,70 @@
             const timeString = now.toTimeString().substring(0, 5); 
             const dateString = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-            if (kioskModeType === 'imk' && state.currentView === 'scanWajah') {
-                // LOGIKA IZIN KELUAR MASUK (IMK)
+            if (kioskModeType === 'imk' && (state.currentView === 'scanWajah' || state.currentView === 'absenGPS')) {
+                // LOGIKA IZIN KELUAR MASUK (IMK) - SUPPORT SHIFT MALAM LINTAS TANGGAL
                 if(!state.imk) state.imk = [];
-                let imkHariIni = state.imk.find(i => i.karyawanId === karyawan.id && i.tanggal === dateString && !i.jamKembali);
+                let imkTerakhir = [...state.imk].reverse().find(i => i.karyawanId === karyawan.id);
+                let isMasihDiLuar = imkTerakhir && !imkTerakhir.jamKembali;
+                
+                // Validasi: Abaikan jika "gantung" tidak ditutup lebih dari 1.5 hari (36 jam)
+                if (isMasihDiLuar) {
+                    const diffTime = now.getTime() - new Date(imkTerakhir.tanggal).getTime();
+                    if (diffTime / (1000 * 3600 * 24) > 1.5) isMasihDiLuar = false; 
+                }
 
-                if (!imkHariIni) {
+                if (!isMasihDiLuar) {
                     state.imk.push({ id: Date.now(), karyawanId: karyawan.id, tanggal: dateString, jamKeluar: timeString, jamKembali: null, durasi: '-' });
                     saveData(); 
                     window.playSound('imk_keluar'); 
                     showToast('IMK: Izin Keluar', `${karyawan.nama} tercatat KELUAR kantor pukul ${timeString}`);
                 } else {
-                    imkHariIni.jamKembali = timeString;
-                    const [hK, mK] = imkHariIni.jamKeluar.split(':').map(Number); 
-                    const [hB, mB] = timeString.split(':').map(Number);
-                    let diffMins = (hB * 60 + mB) - (hK * 60 + mK); 
+                    imkTerakhir.jamKembali = timeString;
+                    
+                    let tglKeluar = new Date(`${imkTerakhir.tanggal}T${imkTerakhir.jamKeluar}:00`);
+                    let tglKembali = new Date(`${dateString}T${timeString}:00`);
+                    if (tglKembali < tglKeluar) tglKembali.setDate(tglKembali.getDate() + 1); 
+                    
+                    let diffMins = Math.floor((tglKembali - tglKeluar) / 60000); 
                     if(diffMins < 0) diffMins = 0;
-                    imkHariIni.durasi = `${Math.floor(diffMins / 60) > 0 ? Math.floor(diffMins / 60) + ' jam ' : ''}${diffMins % 60} menit`;
+                    imkTerakhir.durasi = `${Math.floor(diffMins / 60) > 0 ? Math.floor(diffMins / 60) + ' jam ' : ''}${diffMins % 60} menit`;
+                    
                     saveData(); 
                     window.playSound('imk_kembali'); 
-                    showToast('IMK: Kembali', `${karyawan.nama} KEMBALI ke kantor. Durasi: ${imkHariIni.durasi}`);
+                    showToast('IMK: Kembali', `${karyawan.nama} KEMBALI ke kantor. Durasi: ${imkTerakhir.durasi}`);
                 }
             } else {
-                // LOGIKA ABSENSI NORMAL
-                let absenHariIni = state.absensi.find(a => a.karyawanId === karyawan.id && a.tanggal === dateString);
+                // LOGIKA ABSENSI NORMAL - SUPPORT SHIFT MALAM LINTAS TANGGAL
                 const isLibur = state.pengaturan.liburNasional?.find(l => l.tanggal === dateString);
                 const shiftKaryawan = state.pengaturan.shifts?.find(s => s.id === karyawan.shiftId) || state.pengaturan.shifts[0];
 
-                if (!absenHariIni) {
-                    let status = isLibur ? 'Hadir (Libur)' : (timeString > (shiftKaryawan?.jamMasuk || '08:00') ? 'Terlambat' : 'Tepat Waktu');
-                    state.absensi.push({ id: Date.now(), karyawanId: karyawan.id, tanggal: dateString, jamMasuk: timeString, jamPulang: null, statusMasuk: status, metode: metode, lat: lat, lng: lng });
-                    saveData(); 
-                    window.playSound('masuk'); 
-                    showToast('Masuk Berhasil', `Selamat bekerja, ${karyawan.nama}! (${status})`);
-                } else if (!absenHariIni.jamPulang) {
-                    absenHariIni.jamPulang = timeString; 
-                    absenHariIni.metodePulang = metode;
+                let absenTerakhir = [...state.absensi].reverse().find(a => a.karyawanId === karyawan.id);
+                let isShiftBelumSelesai = absenTerakhir && !absenTerakhir.jamPulang;
+
+                if (isShiftBelumSelesai) {
+                    const diffTime = now.getTime() - new Date(absenTerakhir.tanggal).getTime();
+                    if (diffTime / (1000 * 3600 * 24) > 1.5) isShiftBelumSelesai = false; // Terlalu lama (lupa absen pulang kemarin lusa)
+                }
+
+                if (isShiftBelumSelesai) {
+                    // TERCATAT SEBAGAI JAM PULANG SHIFT (Bisa Beda Tanggal)
+                    absenTerakhir.jamPulang = timeString; 
+                    absenTerakhir.metodePulang = metode;
                     saveData(); 
                     window.playSound('pulang'); 
                     showToast('Pulang Berhasil', `Hati-hati di jalan, ${karyawan.nama}!`);
                 } else { 
-                    window.playSound('error'); 
-                    showToast('Informasi', `${karyawan.nama} sudah merampungkan absen hari ini.`, 'warning'); 
+                    let absenHariIni = state.absensi.find(a => a.karyawanId === karyawan.id && a.tanggal === dateString);
+                    if (!absenHariIni) {
+                        let status = isLibur ? 'Hadir (Libur)' : (timeString > (shiftKaryawan?.jamMasuk || '08:00') ? 'Terlambat' : 'Tepat Waktu');
+                        state.absensi.push({ id: Date.now(), karyawanId: karyawan.id, tanggal: dateString, jamMasuk: timeString, jamPulang: null, statusMasuk: status, metode: metode, lat: lat, lng: lng });
+                        saveData(); 
+                        window.playSound('masuk'); 
+                        showToast('Masuk Berhasil', `Selamat bekerja, ${karyawan.nama}! (${status})`);
+                    } else {
+                        window.playSound('error'); 
+                        showToast('Informasi', `${karyawan.nama} sudah merampungkan absen hari ini.`, 'warning'); 
+                    }
                 }
             }
 
@@ -989,23 +1011,27 @@
             const tb = document.getElementById('tg_body'); tb.innerHTML = '';
             
             state.karyawan.forEach(k => {
-                // Cari profil shift karyawan
                 const shift = state.pengaturan.shifts?.find(s => s.id === k.shiftId) || state.pengaturan.shifts[0];
-                
                 const ab = state.absensi.filter(a => a.karyawanId === k.id && a.tanggal.startsWith(bln)); 
-                const h = ab.length; // Total Hadir
-                const t = ab.filter(a => a.statusMasuk === 'Terlambat').length; // Total Telat
+                const h = ab.length; 
+                const t = ab.filter(a => a.statusMasuk === 'Terlambat').length; 
                 
-                let hTunjangan = 0; // Total hari yang valid dapat tunjangan
-                let pAwal = 0;      // Pulang lebih awal / Lupa absen pulang
+                let hTunjangan = 0; 
+                let pAwal = 0;      
+                const isNightShift = shift.jamPulang < shift.jamMasuk;
                 
                 ab.forEach(a => {
-                    // Validasi: Harus punya Jam Pulang DAN Jam Pulang harus lebih atau sama dengan jam shift
-                    if (a.jamPulang && a.jamPulang >= shift.jamPulang) {
-                        hTunjangan++;
-                    } else {
-                        pAwal++;
+                    let isTepatPulang = false;
+                    if (a.jamPulang) {
+                        if (isNightShift) {
+                            // Untuk Shift malam, absen pulang jam 06:00 pagi dianggap valid
+                            if (a.jamPulang <= "15:00" && a.jamPulang >= shift.jamPulang) isTepatPulang = true;
+                        } else {
+                            // Shift normal
+                            if (a.jamPulang >= shift.jamPulang) isTepatPulang = true;
+                        }
                     }
+                    if (isTepatPulang) hTunjangan++; else pAwal++;
                 });
                 
                 const tunj = hTunjangan * state.pengaturan.tunjanganHadir; 
@@ -1026,9 +1052,18 @@
                 
                 let hTunjangan = 0;
                 let pAwal = 0;
+                const isNightShift = shift.jamPulang < shift.jamMasuk;
+                
                 ab.forEach(a => {
-                    if (a.jamPulang && a.jamPulang >= shift.jamPulang) hTunjangan++;
-                    else pAwal++;
+                    let isTepatPulang = false;
+                    if (a.jamPulang) {
+                        if (isNightShift) {
+                            if (a.jamPulang <= "15:00" && a.jamPulang >= shift.jamPulang) isTepatPulang = true;
+                        } else {
+                            if (a.jamPulang >= shift.jamPulang) isTepatPulang = true;
+                        }
+                    }
+                    if (isTepatPulang) hTunjangan++; else pAwal++;
                 });
 
                 const tunj = hTunjangan * state.pengaturan.tunjanganHadir; 
