@@ -1010,6 +1010,8 @@
             const bln = document.getElementById('bulanGaji').value; document.getElementById('gajiResult').style.display='block'; document.getElementById('btnExp').style.display='flex';
             const tb = document.getElementById('tg_body'); tb.innerHTML = '';
             
+            const now = new Date(); // Ambil waktu sekarang untuk memvalidasi apakah karyawan sedang bekerja hari ini
+            
             state.karyawan.forEach(k => {
                 const shift = state.pengaturan.shifts?.find(s => s.id === k.shiftId) || state.pengaturan.shifts[0];
                 const ab = state.absensi.filter(a => a.karyawanId === k.id && a.tanggal.startsWith(bln)); 
@@ -1021,14 +1023,24 @@
                 const isNightShift = shift.jamPulang < shift.jamMasuk;
                 
                 ab.forEach(a => {
+                    // 1. CEK STATUS AKTIF: Karyawan belum pulang hari ini (masih bekerja)
+                    if (!a.jamPulang) {
+                        let tglMasuk = new Date(`${a.tanggal}T${a.jamMasuk}:00`);
+                        let diffHours = (now.getTime() - tglMasuk.getTime()) / (1000 * 3600);
+                        if (diffHours < 24) return; // Jika belum 24 jam dari waktu dia masuk, JANGAN divonis Pulang Awal! (Abaikan iterasi ini)
+                    }
+
                     let isTepatPulang = false;
                     if (a.jamPulang) {
                         if (isNightShift) {
-                            // Untuk Shift malam, absen pulang jam 06:00 pagi dianggap valid
-                            if (a.jamPulang <= "15:00" && a.jamPulang >= shift.jamPulang) isTepatPulang = true;
+                            // 2. LOGIKA SHIFT MALAM (Cth: 22:00 - 05:00)
+                            // Karyawan sah dapat tunjangan jika pulang SETELAH jam 05:00, dan SEBELUM jam masuk shift selanjutnya (22:00).
+                            if (a.jamPulang >= shift.jamPulang && a.jamPulang < shift.jamMasuk) isTepatPulang = true;
                         } else {
-                            // Shift normal
-                            if (a.jamPulang >= shift.jamPulang) isTepatPulang = true;
+                            // 3. LOGIKA SHIFT NORMAL (Cth: 07:35 - 15:30)
+                            // Karyawan sah dapat tunjangan jika pulang LEBIH DARI/SAMA DENGAN 15:30.
+                            // Atau jika ia overtime sampai ganti hari (jam pulang < jam masuk).
+                            if (a.jamPulang >= shift.jamPulang || a.jamPulang < shift.jamMasuk) isTepatPulang = true;
                         }
                     }
                     if (isTepatPulang) hTunjangan++; else pAwal++;
@@ -1044,6 +1056,8 @@
 
         window.eksporGaji = function() {
             const bln = document.getElementById('bulanGaji').value; if(!bln) return;
+            const now = new Date(); // Ambil waktu realtime
+            
             const data = state.karyawan.map(k => {
                 const shift = state.pengaturan.shifts?.find(s => s.id === k.shiftId) || state.pengaturan.shifts[0];
                 const ab = state.absensi.filter(a => a.karyawanId === k.id && a.tanggal.startsWith(bln)); 
@@ -1055,12 +1069,19 @@
                 const isNightShift = shift.jamPulang < shift.jamMasuk;
                 
                 ab.forEach(a => {
+                    // Cegah status Pulang Awal untuk absen hari ini (karyawan masih di kantor)
+                    if (!a.jamPulang) {
+                        let tglMasuk = new Date(`${a.tanggal}T${a.jamMasuk}:00`);
+                        let diffHours = (now.getTime() - tglMasuk.getTime()) / (1000 * 3600);
+                        if (diffHours < 24) return;
+                    }
+
                     let isTepatPulang = false;
                     if (a.jamPulang) {
                         if (isNightShift) {
-                            if (a.jamPulang <= "15:00" && a.jamPulang >= shift.jamPulang) isTepatPulang = true;
+                            if (a.jamPulang >= shift.jamPulang && a.jamPulang < shift.jamMasuk) isTepatPulang = true;
                         } else {
-                            if (a.jamPulang >= shift.jamPulang) isTepatPulang = true;
+                            if (a.jamPulang >= shift.jamPulang || a.jamPulang < shift.jamMasuk) isTepatPulang = true;
                         }
                     }
                     if (isTepatPulang) hTunjangan++; else pAwal++;
