@@ -830,7 +830,7 @@
         }
 
         function getKaryawanHTML() {
-            return `<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4"><div><h1 class="text-3xl font-bold text-slate-800">Database Karyawan</h1></div><div class="flex flex-wrap gap-2"><label class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-xl font-bold text-sm shadow cursor-pointer transition flex items-center"><i class="fas fa-file-import mr-2"></i> Import Excel<input type="file" accept=".xlsx, .xls" class="hidden" onchange="window.importKaryawan(event)"></label><button onclick="window.eksporKaryawan()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-3 rounded-xl font-bold text-sm shadow transition flex items-center"><i class="fas fa-file-export mr-2"></i> Ekspor Excel</button><button onclick="window.bukaModalKaryawan()" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-3 rounded-xl font-bold text-sm shadow transition flex items-center"><i class="fas fa-plus mr-2"></i> Tambah Manual</button></div></div><div class="bg-white rounded-2xl border overflow-x-auto shadow-sm"><table class="min-w-full text-sm text-left"><thead class="bg-slate-50 text-slate-500 uppercase text-xs border-b"><tr><th class="py-4 px-6">Identitas</th><th class="py-4 px-6">Jabatan & Shift</th><th class="py-4 px-6 text-right">Gaji Pokok</th><th class="py-4 px-6 text-center">Tindakan</th></tr></thead><tbody id="tabelKaryawanBody" class="divide-y"></tbody></table></div>
+            return `<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4"><div><h1 class="text-3xl font-bold text-slate-800">Database Karyawan</h1></div><div class="flex flex-wrap gap-2"><button onclick="window.bukaModalImport()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-xl font-bold text-sm shadow transition flex items-center"><i class="fas fa-file-import mr-2"></i> Import Excel</button><button onclick="window.eksporKaryawan()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-3 rounded-xl font-bold text-sm shadow transition flex items-center"><i class="fas fa-file-export mr-2"></i> Ekspor Excel</button><button onclick="window.bukaModalKaryawan()" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-3 rounded-xl font-bold text-sm shadow transition flex items-center"><i class="fas fa-plus mr-2"></i> Tambah Manual</button></div></div><div class="bg-white rounded-2xl border overflow-x-auto shadow-sm"><table class="min-w-full text-sm text-left"><thead class="bg-slate-50 text-slate-500 uppercase text-xs border-b"><tr><th class="py-4 px-6">Identitas</th><th class="py-4 px-6">Jabatan & Shift</th><th class="py-4 px-6 text-right">Gaji Pokok</th><th class="py-4 px-6 text-center">Tindakan</th></tr></thead><tbody id="tabelKaryawanBody" class="divide-y"></tbody></table></div>
                 <div id="modalKaryawan" class="fixed inset-0 bg-slate-900 bg-opacity-60 hidden z-[100] flex justify-center items-center p-4"><div class="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[95vh] flex flex-col"><div class="px-8 py-5 border-b flex justify-between"><h3 class="font-bold text-xl">Form Karyawan Lengkap</h3><button onclick="document.getElementById('modalKaryawan').classList.add('hidden')"><i class="fas fa-times"></i></button></div><div class="p-8 overflow-y-auto flex-1 bg-slate-50 custom-scrollbar"><form id="formKaryawan" class="grid grid-cols-1 md:grid-cols-3 gap-6"><input type="hidden" id="fk_id">
                 
                 <div class="col-span-1 md:col-span-3 border-b pb-2"><h4 class="font-bold text-slate-700"><i class="fas fa-user-circle mr-2 text-emerald-500"></i>Data Pribadi</h4></div>
@@ -866,7 +866,32 @@
                 <div><label class="block text-xs font-bold text-slate-500 mb-2">Tanggal Keluar</label><input type="date" id="fk_tgl_keluar" class="w-full border rounded-xl p-3 outline-none"></div>
                 <div class="col-span-1 md:col-span-2"><label class="block text-xs font-bold text-slate-500 mb-2">Alasan Keluar</label><input type="text" id="fk_alasan_keluar" class="w-full border rounded-xl p-3 outline-none" placeholder="Isi alasan berhenti (jika ada)"></div>
                 
-                </form></div><div class="px-8 py-5 border-t flex justify-end gap-3"><button onclick="window.simpanKaryawan()" class="bg-emerald-600 text-white px-6 py-2.5 rounded-xl font-bold">Simpan</button></div></div></div>`;
+                </form></div><div class="px-8 py-5 border-t flex justify-end gap-3"><button onclick="window.simpanKaryawan()" class="bg-emerald-600 text-white px-6 py-2.5 rounded-xl font-bold">Simpan</button></div></div></div>
+                
+                <!-- MODAL IMPORT EXCEL -->
+                <div id="modalImportKaryawan" class="fixed inset-0 bg-slate-900 bg-opacity-60 hidden z-[150] flex justify-center items-center p-4 backdrop-blur-sm transition-opacity duration-300">
+                    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all">
+                        <div class="px-6 py-5 border-b bg-slate-50 flex justify-between items-center">
+                            <h3 class="font-bold text-xl text-slate-800"><i class="fas fa-file-import text-blue-600 mr-2"></i> Import Data</h3>
+                            <button onclick="window.tutupModalImport()" class="text-slate-400 hover:text-red-500 transition"><i class="fas fa-times text-xl"></i></button>
+                        </div>
+                        <div class="p-8 text-center space-y-6">
+                            <p class="text-sm text-slate-500 leading-relaxed">Gunakan format Excel standar sistem agar data dapat terbaca. Unduh template di bawah ini jika Anda belum memilikinya.</p>
+                            <button onclick="window.downloadTemplateExcel()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3.5 rounded-xl transition shadow-lg flex items-center justify-center">
+                                <i class="fas fa-download mr-2"></i> 1. Unduh Template Excel
+                            </button>
+                            <div class="relative flex items-center">
+                                <div class="flex-grow border-t border-slate-200"></div>
+                                <span class="flex-shrink-0 mx-4 text-slate-400 text-xs font-bold uppercase tracking-wider">Lalu</span>
+                                <div class="flex-grow border-t border-slate-200"></div>
+                            </div>
+                            <label class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl transition shadow-lg flex items-center justify-center cursor-pointer">
+                                <i class="fas fa-upload mr-2"></i> 2. Upload File Excel
+                                <input type="file" accept=".xlsx, .xls" class="hidden" onchange="window.importKaryawan(event)">
+                            </label>
+                        </div>
+                    </div>
+                </div>`;
         }
         function renderKaryawanTable() {
             const tbody = document.getElementById('tabelKaryawanBody'); if(!tbody) return; tbody.innerHTML = '';
@@ -1042,10 +1067,58 @@
                     });
                     
                     saveData(); window.renderMainContent(); showToast('Berhasil', `${count} Karyawan diimpor!`);
+                    if(window.tutupModalImport) window.tutupModalImport();
                     event.target.value = ''; // Mengosongkan file input agar bisa di-upload ulang jika mau
                 } catch (error) { showToast('Error', 'Format Excel gagal dibaca', 'error'); }
             };
             reader.readAsArrayBuffer(file);
+        };
+
+        window.bukaModalImport = function() {
+            document.getElementById('modalImportKaryawan').classList.remove('hidden');
+        };
+
+        window.tutupModalImport = function() {
+            document.getElementById('modalImportKaryawan').classList.add('hidden');
+        };
+
+        window.downloadTemplateExcel = function() {
+            // Contoh baris pertama (Template) yang sudah terisi format baku
+            const dataTemplate = [{
+                "ID_QR (Wajib)": "KRY-2026-001",
+                "NIP": "199001012020121001",
+                "Nama Lengkap": "Jhon Doe",
+                "Jenis Kelamin": "Laki-laki",
+                "Tempat Lahir": "Jakarta",
+                "Tanggal Lahir": "1990-01-01",
+                "Agama": "Islam",
+                "Alamat": "Jl. Kemerdekaan No. 1",
+                "Email": "jhon.doe@email.com",
+                "No. WhatsApp": "081234567890",
+                "NIK KTP": "3171234567890001",
+                "Pendidikan Terakhir": "S1 Manajemen",
+                "Status Karyawan": "Tetap",
+                "ID Jabatan": state.jabatan[0] ? state.jabatan[0].id : "",
+                "ID Shift": state.pengaturan.shifts[0] ? state.pengaturan.shifts[0].id : "",
+                "Gaji Pokok": 5000000,
+                "No BPJS": "0001234567890",
+                "Tgl Bergabung": "2020-01-01",
+                "Tgl Diangkat Tetap": "2021-01-01",
+                "Kontrak Mulai": "",
+                "Kontrak Selesai": "",
+                "Tgl Keluar": "",
+                "Alasan Keluar": ""
+            }];
+            
+            try {
+                const ws = XLSX.utils.json_to_sheet(dataTemplate);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Template_Karyawan");
+                XLSX.writeFile(wb, "Template_Import_Karyawan.xlsx");
+                showToast('Sukses', 'Template Excel diunduh');
+            } catch(e) { 
+                showToast('Gagal', 'Terjadi kesalahan pembuatan template', 'error'); 
+            }
         };
 
         function getJabatanHTML() { return `<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4"><div><h1 class="text-3xl font-bold">Struktur Jabatan</h1></div><button onclick="window.bukaModalJabatan()" class="bg-indigo-600 text-white px-5 py-3 rounded-xl font-bold shadow text-sm"><i class="fas fa-plus mr-2"></i>Tambah Jabatan</button></div><div class="bg-white rounded-2xl border overflow-hidden max-w-3xl shadow-sm"><table class="w-full text-sm text-left"><thead class="bg-slate-50 border-b text-xs text-slate-500 uppercase"><tr><th class="py-4 px-6">Nama Jabatan</th><th class="py-4 px-6 text-center">Anggota</th><th class="py-4 px-6 text-center">Aksi</th></tr></thead><tbody id="tabelJabatanBody" class="divide-y"></tbody></table></div><div id="modalJabatan" class="fixed inset-0 bg-slate-900 bg-opacity-60 hidden z-[100] flex justify-center items-center p-4"><div class="bg-white rounded-3xl w-full max-w-md p-6"><h3 class="font-bold text-lg mb-4">Jabatan</h3><input type="hidden" id="fj_id"><label class="block text-xs font-bold mb-2">Nama Jabatan</label><input type="text" id="fj_nama" class="w-full border rounded-xl p-3"><div class="mt-6 flex justify-end gap-2"><button onclick="document.getElementById('modalJabatan').classList.add('hidden')" class="px-4 py-2 bg-slate-100 rounded-lg font-bold">Batal</button><button onclick="window.simpanJabatan()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg font-bold">Simpan</button></div></div></div>`; }
