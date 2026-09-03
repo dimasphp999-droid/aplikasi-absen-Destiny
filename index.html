@@ -830,29 +830,222 @@
         }
 
         function getKaryawanHTML() {
-            return `<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4"><div><h1 class="text-3xl font-bold text-slate-800">Database Karyawan</h1></div><button onclick="window.bukaModalKaryawan()" class="bg-emerald-600 text-white px-5 py-3 rounded-xl font-bold text-sm shadow"><i class="fas fa-plus mr-2"></i>Tambah Karyawan</button></div><div class="bg-white rounded-2xl border overflow-x-auto shadow-sm"><table class="min-w-full text-sm text-left"><thead class="bg-slate-50 text-slate-500 uppercase text-xs border-b"><tr><th class="py-4 px-6">Identitas</th><th class="py-4 px-6">Jabatan & Shift</th><th class="py-4 px-6 text-right">Gaji Pokok</th><th class="py-4 px-6 text-center">Tindakan</th></tr></thead><tbody id="tabelKaryawanBody" class="divide-y"></tbody></table></div>
-                <div id="modalKaryawan" class="fixed inset-0 bg-slate-900 bg-opacity-60 hidden z-[100] flex justify-center items-center p-4"><div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col"><div class="px-8 py-5 border-b flex justify-between"><h3 class="font-bold text-xl">Form Karyawan</h3><button onclick="document.getElementById('modalKaryawan').classList.add('hidden')"><i class="fas fa-times"></i></button></div><div class="p-8 overflow-y-auto flex-1 bg-slate-50"><form id="formKaryawan" class="grid grid-cols-1 sm:grid-cols-2 gap-6"><input type="hidden" id="fk_id"><div class="sm:col-span-2"><label class="block text-xs font-bold text-slate-500 mb-2">Nama</label><input type="text" id="fk_nama" required class="w-full border rounded-xl p-3 outline-none"></div><div><label class="block text-xs font-bold text-slate-500 mb-2">ID Karyawan</label><input type="text" id="fk_nik" required class="w-full bg-slate-100 border rounded-xl p-3 outline-none font-mono"></div><div><label class="block text-xs font-bold text-slate-500 mb-2">NIK KTP</label><input type="text" id="fk_ktp" class="w-full border rounded-xl p-3 outline-none"></div><div><label class="block text-xs font-bold text-slate-500 mb-2">No. WhatsApp</label><input type="tel" id="fk_wa" class="w-full border rounded-xl p-3 outline-none"></div><div><label class="block text-xs font-bold text-slate-500 mb-2">Gaji Pokok (Rp)</label><input type="number" id="fk_gaji" required class="w-full border rounded-xl p-3 outline-none"></div><div><label class="block text-xs font-bold text-slate-500 mb-2">Jabatan</label><select id="fk_jabatan" required class="w-full border rounded-xl p-3 outline-none"></select></div><div><label class="block text-xs font-bold text-slate-500 mb-2">Shift Kerja</label><select id="fk_shift" required class="w-full border rounded-xl p-3 outline-none"></select></div></form></div><div class="px-8 py-5 border-t flex justify-end gap-3"><button onclick="window.simpanKaryawan()" class="bg-emerald-600 text-white px-6 py-2.5 rounded-xl font-bold">Simpan</button></div></div></div>`;
+            return `<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4"><div><h1 class="text-3xl font-bold text-slate-800">Database Karyawan</h1></div><div class="flex flex-wrap gap-2"><label class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-xl font-bold text-sm shadow cursor-pointer transition flex items-center"><i class="fas fa-file-import mr-2"></i> Import Excel<input type="file" accept=".xlsx, .xls" class="hidden" onchange="window.importKaryawan(event)"></label><button onclick="window.eksporKaryawan()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-3 rounded-xl font-bold text-sm shadow transition flex items-center"><i class="fas fa-file-export mr-2"></i> Ekspor Excel</button><button onclick="window.bukaModalKaryawan()" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-3 rounded-xl font-bold text-sm shadow transition flex items-center"><i class="fas fa-plus mr-2"></i> Tambah Manual</button></div></div><div class="bg-white rounded-2xl border overflow-x-auto shadow-sm"><table class="min-w-full text-sm text-left"><thead class="bg-slate-50 text-slate-500 uppercase text-xs border-b"><tr><th class="py-4 px-6">Identitas</th><th class="py-4 px-6">Jabatan & Shift</th><th class="py-4 px-6 text-right">Gaji Pokok</th><th class="py-4 px-6 text-center">Tindakan</th></tr></thead><tbody id="tabelKaryawanBody" class="divide-y"></tbody></table></div>
+                <div id="modalKaryawan" class="fixed inset-0 bg-slate-900 bg-opacity-60 hidden z-[100] flex justify-center items-center p-4"><div class="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[95vh] flex flex-col"><div class="px-8 py-5 border-b flex justify-between"><h3 class="font-bold text-xl">Form Karyawan Lengkap</h3><button onclick="document.getElementById('modalKaryawan').classList.add('hidden')"><i class="fas fa-times"></i></button></div><div class="p-8 overflow-y-auto flex-1 bg-slate-50 custom-scrollbar"><form id="formKaryawan" class="grid grid-cols-1 md:grid-cols-3 gap-6"><input type="hidden" id="fk_id">
+                
+                <div class="col-span-1 md:col-span-3 border-b pb-2"><h4 class="font-bold text-slate-700"><i class="fas fa-user-circle mr-2 text-emerald-500"></i>Data Pribadi</h4></div>
+                <div><label class="block text-xs font-bold text-slate-500 mb-2">Nama Lengkap</label><input type="text" id="fk_nama" required class="w-full border rounded-xl p-3 outline-none"></div>
+                <div><label class="block text-xs font-bold text-slate-500 mb-2">Jenis Kelamin</label><select id="fk_jk" class="w-full border rounded-xl p-3 outline-none"><option value="">-- Pilih --</option><option value="Laki-laki">Laki-laki</option><option value="Perempuan">Perempuan</option></select></div>
+                <div><label class="block text-xs font-bold text-slate-500 mb-2">Agama</label><input type="text" id="fk_agama" class="w-full border rounded-xl p-3 outline-none"></div>
+                <div><label class="block text-xs font-bold text-slate-500 mb-2">Tempat Lahir</label><input type="text" id="fk_tempat_lahir" class="w-full border rounded-xl p-3 outline-none"></div>
+                <div><label class="block text-xs font-bold text-slate-500 mb-2">Tanggal Lahir</label><input type="date" id="fk_tgl_lahir" class="w-full border rounded-xl p-3 outline-none"></div>
+                <div><label class="block text-xs font-bold text-slate-500 mb-2">Pendidikan Terakhir</label><input type="text" id="fk_pendidikan" class="w-full border rounded-xl p-3 outline-none"></div>
+                
+                <div class="col-span-1 md:col-span-3 border-b pb-2 mt-2"><h4 class="font-bold text-slate-700"><i class="fas fa-id-card mr-2 text-indigo-500"></i>Data Kontak & Identitas</h4></div>
+                <div><label class="block text-xs font-bold text-slate-500 mb-2">NIK KTP</label><input type="text" id="fk_ktp" class="w-full border rounded-xl p-3 outline-none"></div>
+                <div><label class="block text-xs font-bold text-slate-500 mb-2">No. WhatsApp</label><input type="tel" id="fk_wa" class="w-full border rounded-xl p-3 outline-none"></div>
+                <div><label class="block text-xs font-bold text-slate-500 mb-2">Email</label><input type="email" id="fk_email" class="w-full border rounded-xl p-3 outline-none"></div>
+                <div class="col-span-1 md:col-span-3"><label class="block text-xs font-bold text-slate-500 mb-2">Alamat Domisili</label><textarea id="fk_alamat" rows="2" class="w-full border rounded-xl p-3 outline-none"></textarea></div>
+
+                <div class="col-span-1 md:col-span-3 border-b pb-2 mt-2"><h4 class="font-bold text-slate-700"><i class="fas fa-briefcase mr-2 text-amber-500"></i>Data Kepegawaian</h4></div>
+                <div><label class="block text-xs font-bold text-slate-500 mb-2">ID Karyawan (QR Internal)</label><input type="text" id="fk_nik" required class="w-full bg-slate-100 border rounded-xl p-3 outline-none font-mono"></div>
+                <div><label class="block text-xs font-bold text-slate-500 mb-2">Nomor Induk Pegawai (NIP)</label><input type="text" id="fk_nip" class="w-full border rounded-xl p-3 outline-none"></div>
+                <div><label class="block text-xs font-bold text-slate-500 mb-2">Status Karyawan</label><select id="fk_status_karyawan" class="w-full border rounded-xl p-3 outline-none"><option value="">-- Pilih --</option><option value="Tetap">Tetap</option><option value="Kontrak">Kontrak</option><option value="Kontrak Tetap">Kontrak Tetap</option></select></div>
+                <div><label class="block text-xs font-bold text-slate-500 mb-2">Jabatan</label><select id="fk_jabatan" required class="w-full border rounded-xl p-3 outline-none"></select></div>
+                <div><label class="block text-xs font-bold text-slate-500 mb-2">Shift Kerja</label><select id="fk_shift" required class="w-full border rounded-xl p-3 outline-none"></select></div>
+                <div><label class="block text-xs font-bold text-slate-500 mb-2">Gaji Pokok (Rp)</label><input type="number" id="fk_gaji" required class="w-full border rounded-xl p-3 outline-none"></div>
+                
+                <div class="col-span-1 md:col-span-3 border-b pb-2 mt-2"><h4 class="font-bold text-slate-700"><i class="fas fa-file-contract mr-2 text-blue-500"></i>Kontrak & BPJS</h4></div>
+                <div><label class="block text-xs font-bold text-slate-500 mb-2">No. BPJS (Kes & TK)</label><input type="text" id="fk_bpjs" class="w-full border rounded-xl p-3 outline-none"></div>
+                <div><label class="block text-xs font-bold text-slate-500 mb-2">Tanggal Bergabung</label><input type="date" id="fk_tgl_gabung" class="w-full border rounded-xl p-3 outline-none"></div>
+                <div><label class="block text-xs font-bold text-slate-500 mb-2">Tgl Diangkat Tetap</label><input type="date" id="fk_tgl_diangkat" class="w-full border rounded-xl p-3 outline-none"></div>
+                <div><label class="block text-xs font-bold text-slate-500 mb-2">Mulai Kontrak</label><input type="date" id="fk_kontrak_mulai" class="w-full border rounded-xl p-3 outline-none"></div>
+                <div><label class="block text-xs font-bold text-slate-500 mb-2">Selesai Kontrak</label><input type="date" id="fk_kontrak_selesai" class="w-full border rounded-xl p-3 outline-none"></div>
+                
+                <div class="col-span-1 md:col-span-3 border-b pb-2 mt-2"><h4 class="font-bold text-slate-700"><i class="fas fa-sign-out-alt mr-2 text-red-500"></i>Resign / Keluar</h4></div>
+                <div><label class="block text-xs font-bold text-slate-500 mb-2">Tanggal Keluar</label><input type="date" id="fk_tgl_keluar" class="w-full border rounded-xl p-3 outline-none"></div>
+                <div class="col-span-1 md:col-span-2"><label class="block text-xs font-bold text-slate-500 mb-2">Alasan Keluar</label><input type="text" id="fk_alasan_keluar" class="w-full border rounded-xl p-3 outline-none" placeholder="Isi alasan berhenti (jika ada)"></div>
+                
+                </form></div><div class="px-8 py-5 border-t flex justify-end gap-3"><button onclick="window.simpanKaryawan()" class="bg-emerald-600 text-white px-6 py-2.5 rounded-xl font-bold">Simpan</button></div></div></div>`;
         }
         function renderKaryawanTable() {
             const tbody = document.getElementById('tabelKaryawanBody'); if(!tbody) return; tbody.innerHTML = '';
             state.karyawan.forEach(k => {
                 const jab = state.jabatan.find(j => j.id == k.jabatanId)?.nama || '-'; const shf = state.pengaturan.shifts.find(s => s.id == k.shiftId)?.nama || state.pengaturan.shifts[0]?.nama;
-                tbody.innerHTML += `<tr class="hover:bg-slate-50"><td class="py-4 px-6 font-bold text-slate-800">${k.nama}<br><span class="text-xs text-slate-500 font-normal font-mono bg-slate-100 px-1 rounded border">${k.nik}</span><div class="text-xs text-slate-400 mt-1">NIK: ${k.noKtp || '-'}</div><div class="text-xs text-emerald-600 mt-1"><i class="fab fa-whatsapp mr-1"></i><a href="https://wa.me/${formatWANumber(k.noWa)}" target="_blank">${k.noWa || '-'}</a></div></td><td class="py-4 px-6"><span class="bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs px-2 py-1 rounded font-bold block mb-1 w-max">${jab}</span><span class="text-xs text-slate-500"><i class="fas fa-clock mr-1"></i>${shf}</span></td><td class="py-4 px-6 text-right font-bold text-slate-700">${formatRupiah(k.gajiPokok)}</td><td class="py-4 px-6 text-center space-x-1 whitespace-nowrap"><button onclick="window.tampilkanQR('${k.nik}', '${k.nama}')" class="text-emerald-600 bg-emerald-50 p-2 rounded-lg"><i class="fas fa-qrcode"></i></button> <button onclick="window.bukaModalKaryawan(${k.id})" class="text-blue-600 bg-blue-50 p-2 rounded-lg"><i class="fas fa-edit"></i></button> <button onclick="window.confirmDelete('karyawan', ${k.id})" class="text-red-600 bg-red-50 p-2 rounded-lg"><i class="fas fa-trash"></i></button></td></tr>`;
+                const statusBadge = k.statusKaryawan ? `<span class="bg-blue-50 text-blue-700 border border-blue-200 text-[10px] px-2 py-0.5 rounded font-bold ml-1">${k.statusKaryawan}</span>` : '';
+                const tglKeluarBadge = k.tanggalKeluar ? `<span class="bg-red-50 text-red-700 border border-red-200 text-[10px] px-2 py-0.5 rounded font-bold block w-max mt-1">Resign: ${formatDateID(k.tanggalKeluar)}</span>` : '';
+                
+                tbody.innerHTML += `<tr class="hover:bg-slate-50"><td class="py-4 px-6 font-bold text-slate-800">${k.nama}${statusBadge}<br><span class="text-xs text-slate-500 font-normal font-mono bg-slate-100 px-1 rounded border mr-1">${k.nik}</span><span class="text-xs text-slate-400 font-normal mt-1">NIP: ${k.nip || '-'}</span><div class="text-xs text-emerald-600 mt-1"><i class="fab fa-whatsapp mr-1"></i><a href="https://wa.me/${formatWANumber(k.noWa)}" target="_blank">${k.noWa || '-'}</a></div>${tglKeluarBadge}</td><td class="py-4 px-6"><span class="bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs px-2 py-1 rounded font-bold block mb-1 w-max">${jab}</span><span class="text-xs text-slate-500 block mb-1"><i class="fas fa-clock mr-1"></i>${shf}</span>${k.kontrakSelesai ? `<span class="text-[10px] text-amber-600 font-bold block"><i class="fas fa-file-signature mr-1"></i>s.d ${formatDateID(k.kontrakSelesai)}</span>` : ''}</td><td class="py-4 px-6 text-right font-bold text-slate-700">${formatRupiah(k.gajiPokok)}</td><td class="py-4 px-6 text-center space-x-1 whitespace-nowrap"><button onclick="window.tampilkanQR('${k.nik}', '${k.nama}')" class="text-emerald-600 bg-emerald-50 hover:bg-emerald-500 hover:text-white transition p-2 rounded-lg"><i class="fas fa-qrcode"></i></button> <button onclick="window.bukaModalKaryawan(${k.id})" class="text-blue-600 bg-blue-50 hover:bg-blue-500 hover:text-white transition p-2 rounded-lg"><i class="fas fa-edit"></i></button> <button onclick="window.confirmDelete('karyawan', ${k.id})" class="text-red-600 bg-red-50 hover:bg-red-500 hover:text-white transition p-2 rounded-lg"><i class="fas fa-trash"></i></button></td></tr>`;
             });
         }
         window.bukaModalKaryawan = function(id = null) {
             document.getElementById('fk_jabatan').innerHTML = '<option value="">-- Pilih --</option>' + state.jabatan.map(j => `<option value="${j.id}">${j.nama}</option>`).join('');
             document.getElementById('fk_shift').innerHTML = state.pengaturan.shifts.map(s => `<option value="${s.id}">${s.nama} (${s.jamMasuk})</option>`).join('');
-            if (id) { const k = state.karyawan.find(x => x.id === id); document.getElementById('fk_id').value = k.id; document.getElementById('fk_nama').value = k.nama; document.getElementById('fk_nik').value = k.nik; document.getElementById('fk_ktp').value = k.noKtp || ''; document.getElementById('fk_wa').value = k.noWa || ''; document.getElementById('fk_jabatan').value = k.jabatanId; document.getElementById('fk_shift').value = k.shiftId || state.pengaturan.shifts[0].id; document.getElementById('fk_gaji').value = k.gajiPokok; } 
-            else { document.getElementById('formKaryawan').reset(); document.getElementById('fk_id').value = ''; document.getElementById('fk_nik').value = `KRY-${new Date().toISOString().slice(0,7).replace('-','')}-${String(state.karyawan.length+1).padStart(3,'0')}`; }
+            if (id) { 
+                const k = state.karyawan.find(x => x.id === id); 
+                document.getElementById('fk_id').value = k.id; 
+                document.getElementById('fk_nama').value = k.nama; 
+                document.getElementById('fk_nik').value = k.nik; 
+                document.getElementById('fk_ktp').value = k.noKtp || ''; 
+                document.getElementById('fk_wa').value = k.noWa || ''; 
+                document.getElementById('fk_jabatan').value = k.jabatanId; 
+                document.getElementById('fk_shift').value = k.shiftId || state.pengaturan.shifts[0].id; 
+                document.getElementById('fk_gaji').value = k.gajiPokok; 
+                
+                // Fields Baru
+                document.getElementById('fk_status_karyawan').value = k.statusKaryawan || '';
+                document.getElementById('fk_nip').value = k.nip || '';
+                document.getElementById('fk_jk').value = k.jenisKelamin || '';
+                document.getElementById('fk_tempat_lahir').value = k.tempatLahir || '';
+                document.getElementById('fk_tgl_lahir').value = k.tanggalLahir || '';
+                document.getElementById('fk_agama').value = k.agama || '';
+                document.getElementById('fk_alamat').value = k.alamat || '';
+                document.getElementById('fk_email').value = k.email || '';
+                document.getElementById('fk_pendidikan').value = k.pendidikanTerakhir || '';
+                document.getElementById('fk_bpjs').value = k.bpjs || '';
+                document.getElementById('fk_tgl_gabung').value = k.tanggalBergabung || '';
+                document.getElementById('fk_kontrak_mulai').value = k.kontrakMulai || '';
+                document.getElementById('fk_kontrak_selesai').value = k.kontrakSelesai || '';
+                document.getElementById('fk_tgl_keluar').value = k.tanggalKeluar || '';
+                document.getElementById('fk_alasan_keluar').value = k.alasanKeluar || '';
+                document.getElementById('fk_tgl_diangkat').value = k.tanggalDiangkat || '';
+            } 
+            else { 
+                document.getElementById('formKaryawan').reset(); 
+                document.getElementById('fk_id').value = ''; 
+                document.getElementById('fk_nik').value = `KRY-${new Date().toISOString().slice(0,7).replace('-','')}-${String(state.karyawan.length+1).padStart(3,'0')}`; 
+            }
             document.getElementById('modalKaryawan').classList.remove('hidden');
         };
         window.simpanKaryawan = function() {
-            const data = { nama: document.getElementById('fk_nama').value, nik: document.getElementById('fk_nik').value, noKtp: document.getElementById('fk_ktp').value, noWa: document.getElementById('fk_wa').value, jabatanId: document.getElementById('fk_jabatan').value, shiftId: document.getElementById('fk_shift').value, gajiPokok: parseFloat(document.getElementById('fk_gaji').value) };
-            if(!data.nama || !data.jabatanId || isNaN(data.gajiPokok)) return showToast('Error', 'Data wajib belum diisi', 'error');
+            const data = { 
+                nama: document.getElementById('fk_nama').value, 
+                nik: document.getElementById('fk_nik').value, 
+                noKtp: document.getElementById('fk_ktp').value, 
+                noWa: document.getElementById('fk_wa').value, 
+                jabatanId: document.getElementById('fk_jabatan').value, 
+                shiftId: document.getElementById('fk_shift').value, 
+                gajiPokok: parseFloat(document.getElementById('fk_gaji').value),
+
+                statusKaryawan: document.getElementById('fk_status_karyawan').value,
+                nip: document.getElementById('fk_nip').value,
+                jenisKelamin: document.getElementById('fk_jk').value,
+                tempatLahir: document.getElementById('fk_tempat_lahir').value,
+                tanggalLahir: document.getElementById('fk_tgl_lahir').value,
+                agama: document.getElementById('fk_agama').value,
+                alamat: document.getElementById('fk_alamat').value,
+                email: document.getElementById('fk_email').value,
+                pendidikanTerakhir: document.getElementById('fk_pendidikan').value,
+                bpjs: document.getElementById('fk_bpjs').value,
+                tanggalBergabung: document.getElementById('fk_tgl_gabung').value,
+                kontrakMulai: document.getElementById('fk_kontrak_mulai').value,
+                kontrakSelesai: document.getElementById('fk_kontrak_selesai').value,
+                tanggalKeluar: document.getElementById('fk_tgl_keluar').value,
+                alasanKeluar: document.getElementById('fk_alasan_keluar').value,
+                tanggalDiangkat: document.getElementById('fk_tgl_diangkat').value
+            };
+            if(!data.nama || !data.jabatanId || isNaN(data.gajiPokok)) return showToast('Error', 'Nama, Jabatan, Shift, dan Gaji wajib diisi!', 'error');
             const id = document.getElementById('fk_id').value;
             if (id) { const idx = state.karyawan.findIndex(k => k.id == parseInt(id, 10)); state.karyawan[idx] = { ...state.karyawan[idx], ...data }; } else { data.id = Date.now(); state.karyawan.push(data); }
             saveData(); document.getElementById('modalKaryawan').classList.add('hidden'); window.renderMainContent(); showToast('Tersimpan', 'Data Karyawan Diperbarui');
+        };
+
+        window.eksporKaryawan = function() {
+            if(!state.karyawan || state.karyawan.length === 0) return showToast('Kosong', 'Tidak ada data untuk diekspor', 'warning');
+            const data = state.karyawan.map(k => ({
+                "ID_QR (Wajib)": k.nik || '',
+                "NIP": k.nip || '',
+                "Nama Lengkap": k.nama || '',
+                "Jenis Kelamin": k.jenisKelamin || '',
+                "Tempat Lahir": k.tempatLahir || '',
+                "Tanggal Lahir": k.tanggalLahir || '',
+                "Agama": k.agama || '',
+                "Alamat": k.alamat || '',
+                "Email": k.email || '',
+                "No. WhatsApp": k.noWa || '',
+                "NIK KTP": k.noKtp || '',
+                "Pendidikan Terakhir": k.pendidikanTerakhir || '',
+                "Status Karyawan": k.statusKaryawan || '',
+                "ID Jabatan": k.jabatanId || '',
+                "ID Shift": k.shiftId || '',
+                "Gaji Pokok": k.gajiPokok || 0,
+                "No BPJS": k.bpjs || '',
+                "Tgl Bergabung": k.tanggalBergabung || '',
+                "Tgl Diangkat Tetap": k.tanggalDiangkat || '',
+                "Kontrak Mulai": k.kontrakMulai || '',
+                "Kontrak Selesai": k.kontrakSelesai || '',
+                "Tgl Keluar": k.tanggalKeluar || '',
+                "Alasan Keluar": k.alasanKeluar || ''
+            }));
+            try {
+                const ws = XLSX.utils.json_to_sheet(data);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Database Karyawan");
+                XLSX.writeFile(wb, `Database_Karyawan_${Date.now()}.xlsx`);
+                showToast('Berhasil', 'Excel Karyawan diunduh');
+            } catch(e) { showToast('Gagal', 'Terjadi kesalahan ekspor', 'error'); }
+        };
+
+        window.importKaryawan = function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                    
+                    if(jsonData.length === 0) return showToast('Peringatan', 'File Excel kosong!', 'warning');
+                    
+                    let count = 0;
+                    jsonData.forEach(row => {
+                        const nik = row["ID_QR (Wajib)"] || row["NIK"] || row["ID Karyawan"];
+                        if(!nik) return; 
+                        
+                        const newKaryawan = {
+                            nik: nik,
+                            nip: row["NIP"] || '',
+                            nama: row["Nama Lengkap"] || row["Nama"] || 'Tanpa Nama',
+                            jenisKelamin: row["Jenis Kelamin"] || '',
+                            tempatLahir: row["Tempat Lahir"] || '',
+                            tanggalLahir: row["Tanggal Lahir"] || '',
+                            agama: row["Agama"] || '',
+                            alamat: row["Alamat"] || '',
+                            email: row["Email"] || '',
+                            noWa: String(row["No. WhatsApp"] || row["No WA"] || ''),
+                            noKtp: String(row["NIK KTP"] || row["KTP"] || ''),
+                            pendidikanTerakhir: row["Pendidikan Terakhir"] || '',
+                            statusKaryawan: row["Status Karyawan"] || '',
+                            jabatanId: row["ID Jabatan"] || (state.jabatan[0] ? state.jabatan[0].id : ''),
+                            shiftId: row["ID Shift"] || (state.pengaturan.shifts[0] ? state.pengaturan.shifts[0].id : ''),
+                            gajiPokok: parseFloat(row["Gaji Pokok"]) || 0,
+                            bpjs: String(row["No BPJS"] || ''),
+                            tanggalBergabung: row["Tgl Bergabung"] || '',
+                            tanggalDiangkat: row["Tgl Diangkat Tetap"] || '',
+                            kontrakMulai: row["Kontrak Mulai"] || '',
+                            kontrakSelesai: row["Kontrak Selesai"] || '',
+                            tanggalKeluar: row["Tgl Keluar"] || '',
+                            alasanKeluar: row["Alasan Keluar"] || ''
+                        };
+
+                        // Sistem mendeteksi NIK yang sama untuk Update data, atau tambah karyawan baru jika belum ada
+                        const existingIdx = state.karyawan.findIndex(k => k.nik === nik);
+                        if (existingIdx >= 0) {
+                            state.karyawan[existingIdx] = { ...state.karyawan[existingIdx], ...newKaryawan };
+                        } else {
+                            newKaryawan.id = Date.now() + count;
+                            state.karyawan.push(newKaryawan);
+                        }
+                        count++;
+                    });
+                    
+                    saveData(); window.renderMainContent(); showToast('Berhasil', `${count} Karyawan diimpor!`);
+                    event.target.value = ''; // Mengosongkan file input agar bisa di-upload ulang jika mau
+                } catch (error) { showToast('Error', 'Format Excel gagal dibaca', 'error'); }
+            };
+            reader.readAsArrayBuffer(file);
         };
 
         function getJabatanHTML() { return `<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4"><div><h1 class="text-3xl font-bold">Struktur Jabatan</h1></div><button onclick="window.bukaModalJabatan()" class="bg-indigo-600 text-white px-5 py-3 rounded-xl font-bold shadow text-sm"><i class="fas fa-plus mr-2"></i>Tambah Jabatan</button></div><div class="bg-white rounded-2xl border overflow-hidden max-w-3xl shadow-sm"><table class="w-full text-sm text-left"><thead class="bg-slate-50 border-b text-xs text-slate-500 uppercase"><tr><th class="py-4 px-6">Nama Jabatan</th><th class="py-4 px-6 text-center">Anggota</th><th class="py-4 px-6 text-center">Aksi</th></tr></thead><tbody id="tabelJabatanBody" class="divide-y"></tbody></table></div><div id="modalJabatan" class="fixed inset-0 bg-slate-900 bg-opacity-60 hidden z-[100] flex justify-center items-center p-4"><div class="bg-white rounded-3xl w-full max-w-md p-6"><h3 class="font-bold text-lg mb-4">Jabatan</h3><input type="hidden" id="fj_id"><label class="block text-xs font-bold mb-2">Nama Jabatan</label><input type="text" id="fj_nama" class="w-full border rounded-xl p-3"><div class="mt-6 flex justify-end gap-2"><button onclick="document.getElementById('modalJabatan').classList.add('hidden')" class="px-4 py-2 bg-slate-100 rounded-lg font-bold">Batal</button><button onclick="window.simpanJabatan()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg font-bold">Simpan</button></div></div></div>`; }
