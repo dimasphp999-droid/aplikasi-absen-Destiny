@@ -1276,7 +1276,7 @@
             const bln = document.getElementById('bulanGaji').value; document.getElementById('gajiResult').style.display='block'; document.getElementById('btnExp').style.display='flex';
             const tb = document.getElementById('tg_body'); tb.innerHTML = '';
             
-            const now = new Date(); // Ambil waktu sekarang untuk memvalidasi apakah karyawan sedang bekerja hari ini
+            const now = new Date(); // Ambil waktu sekarang
             
             state.karyawan.forEach(k => {
                 const shift = state.pengaturan.shifts?.find(s => s.id === k.shiftId) || state.pengaturan.shifts[0];
@@ -1284,36 +1284,52 @@
                 const h = ab.length; 
                 const t = ab.filter(a => a.statusMasuk === 'Terlambat').length; 
                 
-                let hTunjangan = 0; 
+                let hTunjangan = 0; // Hari yang valid dapat tunjangan
                 let pAwal = 0;      
                 const isNightShift = shift.jamPulang < shift.jamMasuk;
                 
                 ab.forEach(a => {
-                    // 1. CEK STATUS AKTIF: Karyawan belum pulang hari ini (masih bekerja)
+                    // 1. Cek apakah hari ini dia telat
+                    const isTelat = (a.statusMasuk === 'Terlambat');
+                    
+                    let isPulangAwal = false;
+                    let sudahPulang = false;
+
+                    // 2. Cek apakah dia pulang awal / lupa absen
                     if (!a.jamPulang) {
                         let tglMasuk = new Date(`${a.tanggal}T${a.jamMasuk}:00`);
                         let diffHours = (now.getTime() - tglMasuk.getTime()) / (1000 * 3600);
-                        if (diffHours < 24) return; // Jika belum 24 jam dari waktu dia masuk, JANGAN divonis Pulang Awal! (Abaikan iterasi ini)
-                    }
-
-                    let isTepatPulang = false;
-                    if (a.jamPulang) {
+                        // Jika sudah lebih 24 jam belum absen pulang, divonis pulang awal/lupa absen
+                        if (diffHours >= 24) isPulangAwal = true; 
+                    } else {
+                        sudahPulang = true;
                         if (isNightShift) {
-                            // 2. LOGIKA SHIFT MALAM (Cth: 22:00 - 05:00)
-                            // Karyawan sah dapat tunjangan jika pulang SETELAH jam 05:00, dan SEBELUM jam masuk shift selanjutnya (22:00).
-                            if (a.jamPulang >= shift.jamPulang && a.jamPulang < shift.jamMasuk) isTepatPulang = true;
+                            // Valid shift malam jika jam pulang di antara jam pulang shift s.d sebelum jam masuk shift (misal 05:00 - 21:59)
+                            if (a.jamPulang >= shift.jamPulang && a.jamPulang < shift.jamMasuk) {
+                                // Tepat waktu
+                            } else {
+                                isPulangAwal = true;
+                            }
                         } else {
-                            // 3. LOGIKA SHIFT NORMAL (Cth: 07:35 - 15:30)
-                            // Karyawan sah dapat tunjangan jika pulang LEBIH DARI/SAMA DENGAN 15:30.
-                            // Atau jika ia overtime sampai ganti hari (jam pulang < jam masuk).
-                            if (a.jamPulang >= shift.jamPulang || a.jamPulang < shift.jamMasuk) isTepatPulang = true;
+                            // Valid shift normal jika jam pulang >= jam pulang shift ATAU overtime sampai ganti hari (< jam masuk)
+                            if (a.jamPulang >= shift.jamPulang || a.jamPulang < shift.jamMasuk) {
+                                // Tepat waktu
+                            } else {
+                                isPulangAwal = true;
+                            }
                         }
                     }
-                    if (isTepatPulang) hTunjangan++; else pAwal++;
+
+                    if (isPulangAwal) pAwal++;
+
+                    // 3. ATURAN MUTLAK TUNJANGAN: Harus sudah pulang, TIDAK TELAT, dan TIDAK PULANG AWAL
+                    if (sudahPulang && !isTelat && !isPulangAwal) {
+                        hTunjangan++;
+                    }
                 });
                 
-                const tunj = hTunjangan * state.pengaturan.tunjanganHadir; 
-                const den = t * state.pengaturan.dendaTelat; 
+                const tunj = hTunjangan * (state.pengaturan.tunjanganHadir || 0); 
+                const den = t * (state.pengaturan.dendaTelat || 0); 
                 let tot = k.gajiPokok + tunj - den; if (tot < 0) tot = 0;
                 
                 tb.innerHTML += `<tr><td class="py-4 px-6"><b>${k.nama}</b><br><span class="text-xs text-slate-500">${k.nik}</span></td><td class="py-4 px-6 text-center"><span class="text-emerald-600 font-bold">${h} Hadir</span><br><span class="text-xs ${t>0?'text-red-500':'text-slate-400'}">${t} Telat</span><br><span class="text-xs ${pAwal>0?'text-amber-500':'text-slate-400'}">${pAwal} Pulang Awal</span></td><td class="py-4 px-6 text-right">${formatRupiah(k.gajiPokok)}</td><td class="py-4 px-6 text-right"><div class="text-emerald-600 text-xs">+ ${formatRupiah(tunj)} <span class="text-[9px] text-slate-400">(${hTunjangan}x valid)</span></div><div class="text-red-500 text-xs">- ${formatRupiah(den)}</div></td><td class="py-4 px-6 text-right bg-slate-50 font-bold border-l">${formatRupiah(tot)}</td></tr>`;
@@ -1322,7 +1338,7 @@
 
         window.eksporGaji = function() {
             const bln = document.getElementById('bulanGaji').value; if(!bln) return;
-            const now = new Date(); // Ambil waktu realtime
+            const now = new Date();
             
             const data = state.karyawan.map(k => {
                 const shift = state.pengaturan.shifts?.find(s => s.id === k.shiftId) || state.pengaturan.shifts[0];
@@ -1335,35 +1351,39 @@
                 const isNightShift = shift.jamPulang < shift.jamMasuk;
                 
                 ab.forEach(a => {
-                    // Cegah status Pulang Awal untuk absen hari ini (karyawan masih di kantor)
+                    const isTelat = (a.statusMasuk === 'Terlambat');
+                    let isPulangAwal = false;
+                    let sudahPulang = false;
+
                     if (!a.jamPulang) {
                         let tglMasuk = new Date(`${a.tanggal}T${a.jamMasuk}:00`);
                         let diffHours = (now.getTime() - tglMasuk.getTime()) / (1000 * 3600);
-                        if (diffHours < 24) return;
-                    }
-
-                    let isTepatPulang = false;
-                    if (a.jamPulang) {
+                        if (diffHours >= 24) isPulangAwal = true;
+                    } else {
+                        sudahPulang = true;
                         if (isNightShift) {
-                            if (a.jamPulang >= shift.jamPulang && a.jamPulang < shift.jamMasuk) isTepatPulang = true;
+                            if (a.jamPulang >= shift.jamPulang && a.jamPulang < shift.jamMasuk) {
+                            } else isPulangAwal = true;
                         } else {
-                            if (a.jamPulang >= shift.jamPulang || a.jamPulang < shift.jamMasuk) isTepatPulang = true;
+                            if (a.jamPulang >= shift.jamPulang || a.jamPulang < shift.jamMasuk) {
+                            } else isPulangAwal = true;
                         }
                     }
-                    if (isTepatPulang) hTunjangan++; else pAwal++;
+                    if (isPulangAwal) pAwal++;
+                    if (sudahPulang && !isTelat && !isPulangAwal) hTunjangan++;
                 });
 
-                const tunj = hTunjangan * state.pengaturan.tunjanganHadir; 
-                const den = t * state.pengaturan.dendaTelat;
+                const tunj = hTunjangan * (state.pengaturan.tunjanganHadir || 0); 
+                const den = t * (state.pengaturan.dendaTelat || 0);
                 
                 return { 
                     "NIK": k.nik, 
                     "Nama": k.nama, 
                     "Bulan": bln, 
                     "Hadir Total": h, 
-                    "Tepat Pulang": hTunjangan, 
+                    "Telat": t,
                     "Pulang Awal / Lupa": pAwal, 
-                    "Telat": t, 
+                    "Tepat Waktu & Valid (Hari)": hTunjangan, 
                     "Gaji Pokok": k.gajiPokok, 
                     "Tunjangan Hadir": tunj, 
                     "Denda": den, 
