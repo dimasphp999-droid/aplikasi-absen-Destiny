@@ -1,0 +1,11 @@
+{
+  "name": "Destiny Institute HR System",
+  "description": "Sistem Informasi Manajemen HR dan Absensi Real-Time Destiny Institute dengan QR Code scanner dan slip gaji.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

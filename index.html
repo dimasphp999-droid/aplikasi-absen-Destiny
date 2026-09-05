@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Destiny Institute - Sistem HR (Real-Time Ready)</title>
+    <title>Destiny Institute HR System</title>
+    <meta name="description" content="Sistem Informasi Manajemen HR dan Absensi Real-Time Destiny Institute dengan QR Code scanner dan slip gaji.">
+    <meta property="og:title" content="Destiny Institute HR System">
+    <meta property="og:description" content="Sistem Informasi Manajemen HR dan Absensi Real-Time Destiny Institute dengan QR Code scanner dan slip gaji.">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
@@ -431,7 +434,17 @@
 
         function loadData() {
             if (isFirebaseConnected) {
+                // Safety fallback timer to prevent blank screen if Firebase is unreachable
+                const timeoutId = setTimeout(() => {
+                    if (isInitialLoad) {
+                        fallbackLocalLoad();
+                        isInitialLoad = false;
+                        window.render();
+                    }
+                }, 1200);
+
                 firebase.database().ref('hr_system_data').on('value', (snapshot) => {
+                    clearTimeout(timeoutId);
                     const data = snapshot.val();
                     if (data) { 
                         // Preserve current UI state
@@ -445,6 +458,11 @@
                     } 
                     else fallbackLocalLoad();
                     
+                    if (isInitialLoad) { isInitialLoad = false; window.render(); }
+                }, (error) => {
+                    console.warn("Firebase fetch error, falling back to local:", error);
+                    clearTimeout(timeoutId);
+                    fallbackLocalLoad();
                     if (isInitialLoad) { isInitialLoad = false; window.render(); }
                 });
             } else { 
