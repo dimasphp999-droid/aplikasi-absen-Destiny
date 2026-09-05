@@ -980,12 +980,51 @@
                 <div><label class="block text-xs font-bold text-slate-500 mb-2">Shift Kerja</label><select id="fk_shift" required class="w-full border rounded-xl p-3 outline-none"></select></div>
                 <div><label class="block text-xs font-bold text-slate-500 mb-2">Gaji Pokok (Rp)</label><input type="number" id="fk_gaji" required class="w-full border rounded-xl p-3 outline-none"></div>
                 
-                <div class="col-span-1 md:col-span-3 border-b pb-2 mt-2"><h4 class="font-bold text-slate-700"><i class="fas fa-file-contract mr-2 text-blue-500"></i>Kontrak & BPJS</h4></div>
-                <div><label class="block text-xs font-bold text-slate-500 mb-2">No. BPJS (Kes & TK)</label><input type="text" id="fk_bpjs" class="w-full border rounded-xl p-3 outline-none"></div>
+                <!-- BAGIAN KONTRAK KERJA -->
+                <div class="col-span-1 md:col-span-3 border-b pb-2 mt-2"><h4 class="font-bold text-slate-700"><i class="fas fa-file-signature mr-2 text-blue-500"></i>Kontrak Kerja</h4></div>
                 <div><label class="block text-xs font-bold text-slate-500 mb-2">Tanggal Bergabung</label><input type="date" id="fk_tgl_gabung" class="w-full border rounded-xl p-3 outline-none"></div>
                 <div><label class="block text-xs font-bold text-slate-500 mb-2">Tgl Diangkat Tetap</label><input type="date" id="fk_tgl_diangkat" class="w-full border rounded-xl p-3 outline-none"></div>
                 <div><label class="block text-xs font-bold text-slate-500 mb-2">Mulai Kontrak</label><input type="date" id="fk_kontrak_mulai" class="w-full border rounded-xl p-3 outline-none"></div>
                 <div><label class="block text-xs font-bold text-slate-500 mb-2">Selesai Kontrak</label><input type="date" id="fk_kontrak_selesai" class="w-full border rounded-xl p-3 outline-none"></div>
+                
+                <!-- BAGIAN BPJS (DIPISAH: KESEHATAN & KETENAGAKERJAAN) -->
+                <div class="col-span-1 md:col-span-3 border-b pb-2 mt-2"><h4 class="font-bold text-slate-700"><i class="fas fa-shield-alt mr-2 text-emerald-600"></i>Data BPJS & Jaminan Sosial</h4></div>
+                
+                <!-- BPJS KESEHATAN -->
+                <div class="col-span-1 md:col-span-3 bg-emerald-50/70 border border-emerald-200 rounded-2xl p-4">
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center text-xs shadow-sm"><i class="fas fa-heart-pulse"></i></span>
+                        <h5 class="font-bold text-emerald-900 text-sm">BPJS Kesehatan</h5>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 mb-2">Nomor BPJS Kesehatan</label>
+                            <input type="text" id="fk_bpjs_kesehatan" class="w-full bg-white border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-emerald-500 text-sm" placeholder="Contoh: 0001234567890">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 mb-2">Masa Berlaku BPJS Kesehatan</label>
+                            <input type="date" id="fk_bpjs_kesehatan_berlaku" class="w-full bg-white border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BPJS TENAGA KERJA -->
+                <div class="col-span-1 md:col-span-3 bg-teal-50/70 border border-teal-200 rounded-2xl p-4">
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="w-7 h-7 rounded-lg bg-teal-600 text-white flex items-center justify-center text-xs shadow-sm"><i class="fas fa-briefcase"></i></span>
+                        <h5 class="font-bold text-teal-900 text-sm">BPJS Tenaga Kerja (Ketenagakerjaan)</h5>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 mb-2">Nomor BPJS Tenaga Kerja</label>
+                            <input type="text" id="fk_bpjs_tk" class="w-full bg-white border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-teal-500 text-sm" placeholder="Contoh: 12345678901">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 mb-2">Masa Berlaku BPJS Tenaga Kerja</label>
+                            <input type="date" id="fk_bpjs_tk_berlaku" class="w-full bg-white border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-teal-500 text-sm">
+                        </div>
+                    </div>
+                </div>
                 
                 <div class="col-span-1 md:col-span-3 border-b pb-2 mt-2"><h4 class="font-bold text-slate-700"><i class="fas fa-sign-out-alt mr-2 text-red-500"></i>Resign / Keluar</h4></div>
                 <div><label class="block text-xs font-bold text-slate-500 mb-2">Tanggal Keluar</label><input type="date" id="fk_tgl_keluar" class="w-full border rounded-xl p-3 outline-none"></div>
@@ -1025,7 +1064,17 @@
                 const statusBadge = k.statusKaryawan ? `<span class="bg-blue-50 text-blue-700 border border-blue-200 text-[10px] px-2 py-0.5 rounded font-bold ml-1">${k.statusKaryawan}</span>` : '';
                 const tglKeluarBadge = k.tanggalKeluar ? `<span class="bg-red-50 text-red-700 border border-red-200 text-[10px] px-2 py-0.5 rounded font-bold block w-max mt-1">Resign: ${formatDateID(k.tanggalKeluar)}</span>` : '';
                 
-                tbody.innerHTML += `<tr class="hover:bg-slate-50"><td class="py-4 px-6 font-bold text-slate-800">${k.nama}${statusBadge}<br><span class="text-xs text-slate-500 font-normal font-mono bg-slate-100 px-1 rounded border mr-1">${k.nik}</span><span class="text-xs text-slate-400 font-normal mt-1">NIP: ${k.nip || '-'}</span><div class="text-xs text-emerald-600 mt-1"><i class="fab fa-whatsapp mr-1"></i><a href="https://wa.me/${formatWANumber(k.noWa)}" target="_blank">${k.noWa || '-'}</a></div>${tglKeluarBadge}</td><td class="py-4 px-6"><span class="bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs px-2 py-1 rounded font-bold block mb-1 w-max">${jab}</span><span class="text-xs text-slate-500 block mb-1"><i class="fas fa-clock mr-1"></i>${shf}</span>${k.kontrakSelesai ? `<span class="text-[10px] text-amber-600 font-bold block"><i class="fas fa-file-signature mr-1"></i>s.d ${formatDateID(k.kontrakSelesai)}</span>` : ''}</td><td class="py-4 px-6 text-right font-bold text-slate-700">${formatRupiah(k.gajiPokok)}</td><td class="py-4 px-6 text-center space-x-1 whitespace-nowrap"><button onclick="window.tampilkanQR('${k.nik}', '${k.nama}')" class="text-emerald-600 bg-emerald-50 hover:bg-emerald-500 hover:text-white transition p-2 rounded-lg"><i class="fas fa-qrcode"></i></button> <button onclick="window.bukaModalKaryawan(${k.id})" class="text-blue-600 bg-blue-50 hover:bg-blue-500 hover:text-white transition p-2 rounded-lg"><i class="fas fa-edit"></i></button> <button onclick="window.confirmDelete('karyawan', ${k.id})" class="text-red-600 bg-red-50 hover:bg-red-500 hover:text-white transition p-2 rounded-lg"><i class="fas fa-trash"></i></button></td></tr>`;
+                const kesNo = k.bpjsKesehatan || k.bpjs;
+                const tkNo = k.bpjsKetenagakerjaan || k.bpjsTk;
+                let bpjsBadges = '';
+                if (kesNo || tkNo) {
+                    bpjsBadges = `<div class="flex flex-wrap gap-1 mt-1.5">
+                        ${kesNo ? `<span class="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] px-1.5 py-0.5 rounded font-medium inline-flex items-center" title="BPJS Kesehatan: ${kesNo}${k.bpjsKesehatanMasaBerlaku ? ' | Berlaku s.d ' + formatDateID(k.bpjsKesehatanMasaBerlaku) : ''}"><i class="fas fa-heart-pulse mr-1 text-[9px] text-emerald-600"></i>Kes${k.bpjsKesehatanMasaBerlaku ? ': ' + formatDateID(k.bpjsKesehatanMasaBerlaku) : ''}</span>` : ''}
+                        ${tkNo ? `<span class="bg-teal-50 text-teal-700 border border-teal-200 text-[10px] px-1.5 py-0.5 rounded font-medium inline-flex items-center" title="BPJS Tenaga Kerja: ${tkNo}${k.bpjsKetenagakerjaanMasaBerlaku ? ' | Berlaku s.d ' + formatDateID(k.bpjsKetenagakerjaanMasaBerlaku) : ''}"><i class="fas fa-briefcase mr-1 text-[9px] text-teal-600"></i>TK${k.bpjsKetenagakerjaanMasaBerlaku ? ': ' + formatDateID(k.bpjsKetenagakerjaanMasaBerlaku) : ''}</span>` : ''}
+                    </div>`;
+                }
+
+                tbody.innerHTML += `<tr class="hover:bg-slate-50"><td class="py-4 px-6 font-bold text-slate-800">${k.nama}${statusBadge}<br><span class="text-xs text-slate-500 font-normal font-mono bg-slate-100 px-1 rounded border mr-1">${k.nik}</span><span class="text-xs text-slate-400 font-normal mt-1">NIP: ${k.nip || '-'}</span><div class="text-xs text-emerald-600 mt-1"><i class="fab fa-whatsapp mr-1"></i><a href="https://wa.me/${formatWANumber(k.noWa)}" target="_blank">${k.noWa || '-'}</a></div>${tglKeluarBadge}</td><td class="py-4 px-6"><span class="bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs px-2 py-1 rounded font-bold block mb-1 w-max">${jab}</span><span class="text-xs text-slate-500 block mb-1"><i class="fas fa-clock mr-1"></i>${shf}</span>${k.kontrakSelesai ? `<span class="text-[10px] text-amber-600 font-bold block mb-0.5"><i class="fas fa-file-signature mr-1"></i>s.d ${formatDateID(k.kontrakSelesai)}</span>` : ''}${bpjsBadges}</td><td class="py-4 px-6 text-right font-bold text-slate-700">${formatRupiah(k.gajiPokok)}</td><td class="py-4 px-6 text-center space-x-1 whitespace-nowrap"><button onclick="window.tampilkanQR('${k.nik}', '${k.nama}')" class="text-emerald-600 bg-emerald-50 hover:bg-emerald-500 hover:text-white transition p-2 rounded-lg" title="Lihat QR Code"><i class="fas fa-qrcode"></i></button> <button onclick="window.bukaModalKaryawan(${k.id})" class="text-blue-600 bg-blue-50 hover:bg-blue-500 hover:text-white transition p-2 rounded-lg" title="Edit Data"><i class="fas fa-edit"></i></button> <button onclick="window.confirmDelete('karyawan', ${k.id})" class="text-red-600 bg-red-50 hover:bg-red-500 hover:text-white transition p-2 rounded-lg" title="Hapus"><i class="fas fa-trash"></i></button></td></tr>`;
             });
         }
         window.bukaModalKaryawan = function(id = null) {
@@ -1052,7 +1101,13 @@
                 document.getElementById('fk_alamat').value = k.alamat || '';
                 document.getElementById('fk_email').value = k.email || '';
                 document.getElementById('fk_pendidikan').value = k.pendidikanTerakhir || '';
-                document.getElementById('fk_bpjs').value = k.bpjs || '';
+                
+                // BPJS dipisah
+                document.getElementById('fk_bpjs_kesehatan').value = k.bpjsKesehatan || k.bpjs || '';
+                document.getElementById('fk_bpjs_kesehatan_berlaku').value = k.bpjsKesehatanMasaBerlaku || '';
+                document.getElementById('fk_bpjs_tk').value = k.bpjsKetenagakerjaan || k.bpjsTk || '';
+                document.getElementById('fk_bpjs_tk_berlaku').value = k.bpjsKetenagakerjaanMasaBerlaku || '';
+
                 document.getElementById('fk_tgl_gabung').value = k.tanggalBergabung || '';
                 document.getElementById('fk_kontrak_mulai').value = k.kontrakMulai || '';
                 document.getElementById('fk_kontrak_selesai').value = k.kontrakSelesai || '';
@@ -1086,7 +1141,14 @@
                 alamat: document.getElementById('fk_alamat').value,
                 email: document.getElementById('fk_email').value,
                 pendidikanTerakhir: document.getElementById('fk_pendidikan').value,
-                bpjs: document.getElementById('fk_bpjs').value,
+                
+                // BPJS dipisah
+                bpjsKesehatan: document.getElementById('fk_bpjs_kesehatan').value.trim(),
+                bpjsKesehatanMasaBerlaku: document.getElementById('fk_bpjs_kesehatan_berlaku').value,
+                bpjsKetenagakerjaan: document.getElementById('fk_bpjs_tk').value.trim(),
+                bpjsKetenagakerjaanMasaBerlaku: document.getElementById('fk_bpjs_tk_berlaku').value,
+                bpjs: document.getElementById('fk_bpjs_kesehatan').value.trim() || document.getElementById('fk_bpjs_tk').value.trim(),
+
                 tanggalBergabung: document.getElementById('fk_tgl_gabung').value,
                 kontrakMulai: document.getElementById('fk_kontrak_mulai').value,
                 kontrakSelesai: document.getElementById('fk_kontrak_selesai').value,
@@ -1119,7 +1181,11 @@
                 "ID Jabatan": k.jabatanId || '',
                 "ID Shift": k.shiftId || '',
                 "Gaji Pokok": k.gajiPokok || 0,
-                "No BPJS": k.bpjs || '',
+                "No BPJS Kesehatan": k.bpjsKesehatan || k.bpjs || '',
+                "Masa Berlaku BPJS Kesehatan": k.bpjsKesehatanMasaBerlaku || '',
+                "No BPJS Tenaga Kerja": k.bpjsKetenagakerjaan || k.bpjsTk || '',
+                "Masa Berlaku BPJS Tenaga Kerja": k.bpjsKetenagakerjaanMasaBerlaku || '',
+                "No BPJS": k.bpjs || k.bpjsKesehatan || '',
                 "Tgl Bergabung": k.tanggalBergabung || '',
                 "Tgl Diangkat Tetap": k.tanggalDiangkat || '',
                 "Kontrak Mulai": k.kontrakMulai || '',
@@ -1171,7 +1237,11 @@
                             jabatanId: row["ID Jabatan"] || (state.jabatan[0] ? state.jabatan[0].id : ''),
                             shiftId: row["ID Shift"] || (state.pengaturan.shifts[0] ? state.pengaturan.shifts[0].id : ''),
                             gajiPokok: parseFloat(row["Gaji Pokok"]) || 0,
-                            bpjs: String(row["No BPJS"] || ''),
+                            bpjsKesehatan: String(row["No BPJS Kesehatan"] || row["BPJS Kesehatan"] || row["No BPJS"] || ''),
+                            bpjsKesehatanMasaBerlaku: row["Masa Berlaku BPJS Kesehatan"] || row["Masa Berlaku BPJS Kes"] || '',
+                            bpjsKetenagakerjaan: String(row["No BPJS Tenaga Kerja"] || row["No BPJS Ketenagakerjaan"] || row["BPJS Tenaga Kerja"] || row["BPJS TK"] || ''),
+                            bpjsKetenagakerjaanMasaBerlaku: row["Masa Berlaku BPJS Tenaga Kerja"] || row["Masa Berlaku BPJS Ketenagakerjaan"] || row["Masa Berlaku BPJS TK"] || '',
+                            bpjs: String(row["No BPJS Kesehatan"] || row["No BPJS"] || row["No BPJS Tenaga Kerja"] || ''),
                             tanggalBergabung: row["Tgl Bergabung"] || '',
                             tanggalDiangkat: row["Tgl Diangkat Tetap"] || '',
                             kontrakMulai: row["Kontrak Mulai"] || '',
@@ -1226,6 +1296,10 @@
                 "ID Jabatan": state.jabatan[0] ? state.jabatan[0].id : "",
                 "ID Shift": state.pengaturan.shifts[0] ? state.pengaturan.shifts[0].id : "",
                 "Gaji Pokok": 5000000,
+                "No BPJS Kesehatan": "0001234567890",
+                "Masa Berlaku BPJS Kesehatan": "2028-12-31",
+                "No BPJS Tenaga Kerja": "12345678901",
+                "Masa Berlaku BPJS Tenaga Kerja": "2028-12-31",
                 "No BPJS": "0001234567890",
                 "Tgl Bergabung": "2020-01-01",
                 "Tgl Diangkat Tetap": "2021-01-01",
