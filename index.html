@@ -244,6 +244,198 @@
         </div>
     </div>
 
+    <!-- MODAL FORM KARYAWAN (GLOBAL) -->
+    <div id="modalKaryawan" class="fixed inset-0 bg-slate-900 bg-opacity-60 hidden z-[100] flex justify-center items-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[95vh] flex flex-col">
+            <div class="px-8 py-5 border-b flex justify-between">
+                <h3 class="font-bold text-xl">Form Karyawan Lengkap</h3>
+                <button onclick="document.getElementById('modalKaryawan').classList.add('hidden')"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-8 overflow-y-auto flex-1 bg-slate-50 custom-scrollbar">
+                <form id="formKaryawan" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <input type="hidden" id="fk_id">
+                    
+                    <div class="col-span-1 md:col-span-3 border-b pb-2"><h4 class="font-bold text-slate-700"><i class="fas fa-user-circle mr-2 text-emerald-500"></i>Data Pribadi</h4></div>
+                    <div><label class="block text-xs font-bold text-slate-500 mb-2">Nama Lengkap</label><input type="text" id="fk_nama" required class="w-full border rounded-xl p-3 outline-none"></div>
+                    <div><label class="block text-xs font-bold text-slate-500 mb-2">Jenis Kelamin</label><select id="fk_jk" class="w-full border rounded-xl p-3 outline-none"><option value="">-- Pilih --</option><option value="Laki-laki">Laki-laki</option><option value="Perempuan">Perempuan</option></select></div>
+                    <div><label class="block text-xs font-bold text-slate-500 mb-2">Agama</label><input type="text" id="fk_agama" class="w-full border rounded-xl p-3 outline-none"></div>
+                    <div><label class="block text-xs font-bold text-slate-500 mb-2">Tempat Lahir</label><input type="text" id="fk_tempat_lahir" class="w-full border rounded-xl p-3 outline-none"></div>
+                    <div><label class="block text-xs font-bold text-slate-500 mb-2">Tanggal Lahir</label><input type="date" id="fk_tgl_lahir" class="w-full border rounded-xl p-3 outline-none"></div>
+                    <div><label class="block text-xs font-bold text-slate-500 mb-2">Pendidikan Terakhir</label><input type="text" id="fk_pendidikan" class="w-full border rounded-xl p-3 outline-none"></div>
+                    
+                    <div class="col-span-1 md:col-span-3 border-b pb-2 mt-2"><h4 class="font-bold text-slate-700"><i class="fas fa-id-card mr-2 text-indigo-500"></i>Data Kontak & Identitas</h4></div>
+                    <div><label class="block text-xs font-bold text-slate-500 mb-2">NIK KTP</label><input type="text" id="fk_ktp" class="w-full border rounded-xl p-3 outline-none"></div>
+                    <div><label class="block text-xs font-bold text-slate-500 mb-2">No. WhatsApp</label><input type="tel" id="fk_wa" class="w-full border rounded-xl p-3 outline-none"></div>
+                    <div><label class="block text-xs font-bold text-slate-500 mb-2">Email</label><input type="email" id="fk_email" class="w-full border rounded-xl p-3 outline-none"></div>
+                    <div class="col-span-1 md:col-span-3"><label class="block text-xs font-bold text-slate-500 mb-2">Alamat Domisili</label><textarea id="fk_alamat" rows="2" class="w-full border rounded-xl p-3 outline-none"></textarea></div>
+
+                    <div class="col-span-1 md:col-span-3 border-b pb-2 mt-2"><h4 class="font-bold text-slate-700"><i class="fas fa-briefcase mr-2 text-amber-500"></i>Data Kepegawaian</h4></div>
+                    <div><label class="block text-xs font-bold text-slate-500 mb-2">ID Karyawan (QR Internal)</label><input type="text" id="fk_nik" required class="w-full bg-slate-100 border rounded-xl p-3 outline-none font-mono"></div>
+                    <div><label class="block text-xs font-bold text-slate-500 mb-2">Nomor Induk Pegawai (NIP)</label><input type="text" id="fk_nip" class="w-full border rounded-xl p-3 outline-none"></div>
+                    <div><label class="block text-xs font-bold text-slate-500 mb-2">Status Karyawan</label><select id="fk_status_karyawan" class="w-full border rounded-xl p-3 outline-none"><option value="">-- Pilih --</option><option value="Tetap">Tetap</option><option value="Kontrak">Kontrak</option><option value="Kontrak Tetap">Kontrak Tetap</option></select></div>
+                    <div><label class="block text-xs font-bold text-slate-500 mb-2">Jabatan</label><select id="fk_jabatan" required class="w-full border rounded-xl p-3 outline-none"></select></div>
+                    <div><label class="block text-xs font-bold text-slate-500 mb-2">Shift Kerja</label><select id="fk_shift" required class="w-full border rounded-xl p-3 outline-none"></select></div>
+                    <div><label class="block text-xs font-bold text-slate-500 mb-2">Gaji Pokok (Rp)</label><input type="number" id="fk_gaji" required class="w-full border rounded-xl p-3 outline-none"></div>
+                    
+                    <!-- BAGIAN KONTRAK KERJA -->
+                    <div class="col-span-1 md:col-span-3 border-b pb-2 mt-2"><h4 class="font-bold text-slate-700"><i class="fas fa-file-signature mr-2 text-blue-500"></i>Kontrak Kerja</h4></div>
+                    <div><label class="block text-xs font-bold text-slate-500 mb-2">Tanggal Bergabung</label><input type="date" id="fk_tgl_gabung" class="w-full border rounded-xl p-3 outline-none"></div>
+                    <div><label class="block text-xs font-bold text-slate-500 mb-2">Tgl Diangkat Tetap</label><input type="date" id="fk_tgl_diangkat" class="w-full border rounded-xl p-3 outline-none"></div>
+                    <div><label class="block text-xs font-bold text-slate-500 mb-2">Mulai Kontrak</label><input type="date" id="fk_kontrak_mulai" class="w-full border rounded-xl p-3 outline-none"></div>
+                    <div><label class="block text-xs font-bold text-slate-500 mb-2">Selesai Kontrak</label><input type="date" id="fk_kontrak_selesai" class="w-full border rounded-xl p-3 outline-none"></div>
+                    
+                    <!-- BAGIAN BPJS (DIPISAH: KESEHATAN & KETENAGAKERJAAN) -->
+                    <div class="col-span-1 md:col-span-3 border-b pb-2 mt-2"><h4 class="font-bold text-slate-700"><i class="fas fa-shield-alt mr-2 text-emerald-600"></i>Data BPJS & Jaminan Sosial</h4></div>
+                    
+                    <!-- BPJS KESEHATAN -->
+                    <div class="col-span-1 md:col-span-3 bg-emerald-50/70 border border-emerald-200 rounded-2xl p-4">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center text-xs shadow-sm"><i class="fas fa-heart-pulse"></i></span>
+                            <h5 class="font-bold text-emerald-900 text-sm">BPJS Kesehatan</h5>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 mb-2">Nomor BPJS Kesehatan</label>
+                                <input type="text" id="fk_bpjs_kesehatan" class="w-full bg-white border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-emerald-500 text-sm" placeholder="Contoh: 0001234567890">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 mb-2">Masa Berlaku BPJS Kesehatan</label>
+                                <input type="date" id="fk_bpjs_kesehatan_berlaku" class="w-full bg-white border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- BPJS TENAGA KERJA -->
+                    <div class="col-span-1 md:col-span-3 bg-teal-50/70 border border-teal-200 rounded-2xl p-4">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="w-7 h-7 rounded-lg bg-teal-600 text-white flex items-center justify-center text-xs shadow-sm"><i class="fas fa-briefcase"></i></span>
+                            <h5 class="font-bold text-teal-900 text-sm">BPJS Tenaga Kerja (Ketenagakerjaan)</h5>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 mb-2">Nomor BPJS Tenaga Kerja</label>
+                                <input type="text" id="fk_bpjs_tk" class="w-full bg-white border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-teal-500 text-sm" placeholder="Contoh: 12345678901">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-600 mb-2">Masa Berlaku BPJS Tenaga Kerja</label>
+                                <input type="date" id="fk_bpjs_tk_berlaku" class="w-full bg-white border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-teal-500 text-sm">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-span-1 md:col-span-3 border-b pb-2 mt-2"><h4 class="font-bold text-slate-700"><i class="fas fa-sign-out-alt mr-2 text-red-500"></i>Resign / Keluar</h4></div>
+                    <div><label class="block text-xs font-bold text-slate-500 mb-2">Tanggal Keluar</label><input type="date" id="fk_tgl_keluar" class="w-full border rounded-xl p-3 outline-none"></div>
+                    <div class="col-span-1 md:col-span-2"><label class="block text-xs font-bold text-slate-500 mb-2">Alasan Keluar</label><input type="text" id="fk_alasan_keluar" class="w-full border rounded-xl p-3 outline-none" placeholder="Isi alasan berhenti (jika ada)"></div>
+                </form>
+            </div>
+            <div class="px-8 py-5 border-t flex justify-end gap-3">
+                <button onclick="document.getElementById('modalKaryawan').classList.add('hidden')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-6 py-2.5 rounded-xl font-bold transition">Batal</button>
+                <button onclick="window.simpanKaryawan()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-xl font-bold transition shadow">Simpan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DETAIL PROFIL KARYAWAN (GLOBAL) -->
+    <div id="modalDetailKaryawan" onclick="if(event.target === this) window.tutupModalDetailKaryawan()" class="fixed inset-0 bg-slate-900/60 hidden z-[110] flex justify-center items-center p-4 backdrop-blur-xs transition-all duration-200">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-3xl max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <!-- HEADER -->
+            <div class="px-6 py-4 bg-slate-900 text-white flex justify-between items-center">
+                <div class="flex items-center space-x-2.5">
+                    <span class="w-8 h-8 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-sm font-bold"><i class="fas fa-id-badge"></i></span>
+                    <h3 class="font-bold text-base">Profil Lengkap Karyawan</h3>
+                </div>
+                <button onclick="window.tutupModalDetailKaryawan()" class="text-slate-400 hover:text-white transition w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-800"><i class="fas fa-times"></i></button>
+            </div>
+
+            <!-- BODY CONTENT (SCROLLABLE) -->
+            <div class="p-6 overflow-y-auto flex-1 bg-slate-50 space-y-5 custom-scrollbar" id="contentDetailKaryawan">
+                <!-- Dynamically populated -->
+            </div>
+
+            <!-- FOOTER -->
+            <div class="px-6 py-4 border-t bg-white flex flex-wrap justify-between items-center gap-3">
+                <div class="flex items-center space-x-2 text-xs text-slate-500">
+                    <i class="fas fa-circle-info text-indigo-500"></i>
+                    <span>Informasi terdaftar resmi di sistem HRD</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button onclick="window.tutupModalDetailKaryawan()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-xl text-xs font-bold transition">Tutup</button>
+                    <button id="btnEditDariDetail" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition shadow flex items-center">
+                        <i class="fas fa-edit mr-1.5"></i> Edit Data
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- MODAL IMPORT EXCEL (GLOBAL) -->
+    <div id="modalImportKaryawan" class="fixed inset-0 bg-slate-900 bg-opacity-60 hidden z-[150] flex justify-center items-center p-4 backdrop-blur-sm transition-opacity duration-300">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all">
+            <div class="px-6 py-5 border-b bg-slate-50 flex justify-between items-center">
+                <h3 class="font-bold text-xl text-slate-800"><i class="fas fa-file-import text-blue-600 mr-2"></i> Import Data</h3>
+                <button onclick="window.tutupModalImport()" class="text-slate-400 hover:text-red-500 transition"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            <div class="p-8 text-center space-y-6">
+                <p class="text-sm text-slate-500 leading-relaxed">Gunakan format Excel standar sistem agar data dapat terbaca. Unduh template di bawah ini jika Anda belum memilikinya.</p>
+                <button onclick="window.downloadTemplateExcel()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3.5 rounded-xl transition shadow-lg flex items-center justify-center">
+                    <i class="fas fa-download mr-2"></i> 1. Unduh Template Excel
+                </button>
+                <div class="relative flex items-center">
+                    <div class="flex-grow border-t border-slate-200"></div>
+                    <span class="flex-shrink-0 mx-4 text-slate-400 text-xs font-bold uppercase tracking-wider">Lalu</span>
+                    <div class="flex-grow border-t border-slate-200"></div>
+                </div>
+                <label class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl transition shadow-lg flex items-center justify-center cursor-pointer">
+                    <i class="fas fa-upload mr-2"></i> 2. Upload File Excel
+                    <input type="file" accept=".xlsx, .xls" class="hidden" onchange="window.importKaryawan(event)">
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL ABSENSI MANUAL (GLOBAL) -->
+    <div id="modalAbsensiManual" class="fixed inset-0 bg-slate-900 bg-opacity-60 hidden z-[100] flex justify-center items-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md">
+            <div class="px-6 py-5 border-b flex justify-between">
+                <h3 class="font-bold text-xl">Form Absensi Manual</h3>
+                <button onclick="window.tutupModalAbsensi()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 bg-slate-50 space-y-4">
+                <input type="hidden" id="fa_id">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-2">Karyawan</label>
+                    <select id="fa_karyawan" required class="w-full border rounded-xl p-3 outline-none"></select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-2">Tanggal</label>
+                    <input type="date" id="fa_tanggal" required class="w-full border rounded-xl p-3 outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-2">Jam Masuk</label>
+                        <input type="time" id="fa_masuk" required class="w-full border rounded-xl p-3 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-2">Jam Pulang</label>
+                        <input type="time" id="fa_pulang" class="w-full border rounded-xl p-3 outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-2">Status Kehadiran</label>
+                    <select id="fa_status" required class="w-full border rounded-xl p-3 outline-none">
+                        <option value="Tepat Waktu">Tepat Waktu</option>
+                        <option value="Terlambat">Terlambat</option>
+                        <option value="Hadir (Libur)">Hadir (Libur)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="px-6 py-5 border-t flex justify-end gap-3">
+                <button onclick="window.tutupModalAbsensi()" class="bg-slate-100 text-slate-700 px-6 py-2.5 rounded-xl font-bold">Batal</button>
+                <button onclick="window.simpanAbsensi()" class="bg-indigo-600 hover:bg-indigo-700 transition text-white px-6 py-2.5 rounded-xl font-bold shadow">Simpan</button>
+            </div>
+        </div>
+    </div>
+
     <!-- MAIN APP CONTAINER -->
     <div id="appContainer" class="w-full h-full min-h-screen"></div>
 
@@ -923,6 +1115,7 @@
 
         window.renderMainContent = function() {
             const area = document.getElementById('mainContentArea');
+            if (!area) return;
             if(state.currentView === 'dashboard') area.innerHTML = getDashboardHTML();
             else if(state.currentView === 'karyawan') { area.innerHTML = getKaryawanHTML(); renderKaryawanTable(); }
             else if(state.currentView === 'jabatan') { area.innerHTML = getJabatanHTML(); renderJabatanTable(); }
@@ -935,127 +1128,645 @@
         };
 
         function getDashboardHTML() {
-            const dateToday = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
-            const absenHariIni = state.absensi.filter(a => a.tanggal === dateToday);
-            const hadir = absenHariIni.length; const telat = absenHariIni.filter(a => a.statusMasuk === 'Terlambat').length;
-            const cutiMenunggu = (state.cuti || []).filter(c => c.status === 'Menunggu').length;
-            const isLibur = state.pengaturan.liburNasional?.find(l => l.tanggal === dateToday);
+            const now = new Date();
+            const dateToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            const hour = now.getHours();
+            let salam = 'Selamat Pagi';
+            if (hour >= 11 && hour < 15) salam = 'Selamat Siang';
+            else if (hour >= 15 && hour < 18) salam = 'Selamat Sore';
+            else if (hour >= 18 || hour < 4) salam = 'Selamat Malam';
+
+            const semuaKaryawan = state.karyawan || [];
+            const aktifPegawai = semuaKaryawan.filter(k => !k.tanggalKeluar || k.tanggalKeluar > dateToday);
+            const totalAktif = aktifPegawai.length;
+            const tetapCount = aktifPegawai.filter(k => k.statusKaryawan === 'Tetap' || (!k.statusKaryawan && !k.kontrakSelesai)).length;
+            const kontrakCount = aktifPegawai.filter(k => k.statusKaryawan === 'Kontrak' || k.kontrakSelesai).length;
+            const resignCount = semuaKaryawan.length - totalAktif;
+
+            const absenHariIni = (state.absensi || []).filter(a => a.tanggal === dateToday);
+            const hadir = absenHariIni.length;
+            const telat = absenHariIni.filter(a => a.statusMasuk === 'Terlambat').length;
+            const tepatWaktu = absenHariIni.filter(a => a.statusMasuk === 'Tepat Waktu').length;
+            const belumHadir = Math.max(0, totalAktif - hadir);
+            const persenHadir = totalAktif > 0 ? Math.min(100, Math.round((hadir / totalAktif) * 100)) : 0;
+            const dendaHariIni = telat * (state.pengaturan?.dendaTelat || 0);
+            const persenDisiplin = hadir > 0 ? Math.round((tepatWaktu / hadir) * 100) : 100;
+
+            const cutiMenunggu = (state.cuti || []).filter(c => c.status === 'Menunggu');
+            const cutiHariIni = (state.cuti || []).filter(c => c.status === 'Disetujui' && c.mulai <= dateToday && c.selesai >= dateToday);
             
+            const imkHariIni = (state.imk || []).filter(i => i.tanggal === dateToday);
+            const imkSedangKeluar = imkHariIni.filter(i => !i.jamKembali);
+
+            const isLibur = state.pengaturan?.liburNasional?.find(l => l.tanggal === dateToday);
+
+            // DETEKSI KEPATUHAN BPJS
+            const bpjsKesCount = aktifPegawai.filter(k => k.bpjsKesehatan || k.bpjs).length;
+            const bpjsTkCount = aktifPegawai.filter(k => k.bpjsKetenagakerjaan || k.bpjsTk).length;
+            const bpjsKesPct = totalAktif > 0 ? Math.round((bpjsKesCount / totalAktif) * 100) : 0;
+            const bpjsTkPct = totalAktif > 0 ? Math.round((bpjsTkCount / totalAktif) * 100) : 0;
+
+            // DETEKSI PERINGATAN DINI (KONTRAK & BPJS 30 HARI KE DEPAN)
+            const warningItems = [];
+            const hariIniMs = new Date(dateToday).getTime();
+
+            aktifPegawai.forEach(k => {
+                // 1. Kontrak Selesai
+                if (k.kontrakSelesai) {
+                    const tExp = new Date(k.kontrakSelesai).getTime();
+                    const diffHari = Math.ceil((tExp - hariIniMs) / (24 * 60 * 60 * 1000));
+                    if (diffHari <= 30) {
+                        warningItems.push({
+                            karyawan: k,
+                            kategori: 'Kontrak Kerja',
+                            icon: 'fa-file-signature',
+                            warna: 'amber',
+                            tanggal: k.kontrakSelesai,
+                            sisaHari: diffHari,
+                            isExpired: diffHari < 0
+                        });
+                    }
+                }
+                // 2. BPJS Kesehatan
+                const bpjsKesBerlaku = k.bpjsKesehatanMasaBerlaku;
+                if (bpjsKesBerlaku) {
+                    const tExp = new Date(bpjsKesBerlaku).getTime();
+                    const diffHari = Math.ceil((tExp - hariIniMs) / (24 * 60 * 60 * 1000));
+                    if (diffHari <= 30) {
+                        warningItems.push({
+                            karyawan: k,
+                            kategori: 'BPJS Kesehatan',
+                            icon: 'fa-heart-pulse',
+                            warna: 'emerald',
+                            tanggal: bpjsKesBerlaku,
+                            sisaHari: diffHari,
+                            isExpired: diffHari < 0
+                        });
+                    }
+                }
+                // 3. BPJS Tenaga Kerja
+                const bpjsTkBerlaku = k.bpjsKetenagakerjaanMasaBerlaku;
+                if (bpjsTkBerlaku) {
+                    const tExp = new Date(bpjsTkBerlaku).getTime();
+                    const diffHari = Math.ceil((tExp - hariIniMs) / (24 * 60 * 60 * 1000));
+                    if (diffHari <= 30) {
+                        warningItems.push({
+                            karyawan: k,
+                            kategori: 'BPJS Tenaga Kerja',
+                            icon: 'fa-briefcase',
+                            warna: 'teal',
+                            tanggal: bpjsTkBerlaku,
+                            sisaHari: diffHari,
+                            isExpired: diffHari < 0
+                        });
+                    }
+                }
+            });
+
+            // Urutkan peringatan: yang sudah expired atau paling cepat habis di atas
+            warningItems.sort((a, b) => a.sisaHari - b.sisaHari);
+
+            // ANALISIS TREN KEHADIRAN 7 HARI TERAKHIR
+            const tren7Hari = [];
+            let totalHadir7Hari = 0;
+            let totalTelat7Hari = 0;
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                const dStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                const dayName = d.toLocaleDateString('id-ID', { weekday: 'short' });
+                const dayNum = d.getDate();
+                const absHari = (state.absensi || []).filter(a => a.tanggal === dStr);
+                const countHadir = absHari.length;
+                const countTelat = absHari.filter(a => a.statusMasuk === 'Terlambat').length;
+                const countTepat = absHari.filter(a => a.statusMasuk === 'Tepat Waktu').length;
+                totalHadir7Hari += countHadir;
+                totalTelat7Hari += countTelat;
+                tren7Hari.push({
+                    tanggal: dStr,
+                    label: `${dayName}, ${dayNum}`,
+                    countHadir,
+                    countTelat,
+                    countTepat,
+                    isToday: i === 0
+                });
+            }
+            const maxTren = Math.max(1, totalAktif, ...tren7Hari.map(t => t.countHadir));
+
+            // DISTRIBUSI JABATAN
+            const listJabatan = (state.jabatan || []).map(j => {
+                const count = aktifPegawai.filter(k => k.jabatanId == j.id).length;
+                const pct = totalAktif > 0 ? Math.round((count / totalAktif) * 100) : 0;
+                return { ...j, count, pct };
+            }).sort((a, b) => b.count - a.count);
+
             let html = `
-                <div class="mb-8 flex justify-between items-start">
-                    <div><h1 class="text-3xl font-bold text-slate-800">Halo, Admin!</h1><p class="text-slate-500 mt-1">Ringkasan aktivitas presensi hari ini.</p></div>
-                    <div class="relative z-50">
-                        <button id="bellButton" onclick="window.toggleNotifDropdown(event)" class="relative p-3.5 bg-white rounded-xl shadow-sm border border-slate-200 hover:bg-slate-50 transition flex items-center justify-center"><i class="fas fa-bell ${cutiMenunggu > 0 ? 'text-amber-500' : 'text-slate-600'} text-xl"></i>${cutiMenunggu > 0 ? `<span class="absolute top-2 right-2 flex h-3 w-3"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span></span><span class="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-full">${cutiMenunggu}</span>` : ''}</button>
-                        <div id="notifDropdown" class="hidden absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden"><div class="bg-slate-800 p-4 flex justify-between items-center"><h3 class="font-bold text-white text-sm">Notifikasi</h3><span class="bg-slate-700 text-slate-300 text-[10px] font-bold px-2 py-1 rounded-full">${formatDateID(dateToday)}</span></div><div class="max-h-80 overflow-y-auto">${cutiMenunggu > 0 ? `<div onclick="window.setView('cuti')" class="p-4 border-b border-slate-50 hover:bg-amber-50 cursor-pointer flex gap-3"><div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-500 shrink-0"><i class="fas fa-envelope-open-text"></i></div><div><p class="text-sm font-bold text-slate-800">Cuti / Izin</p><p class="text-xs text-slate-500 mt-0.5">Ada <b>${cutiMenunggu}</b> pengajuan tertunda.</p></div></div>` : '<div class="p-4 text-center text-sm text-slate-500">Tidak ada pengajuan cuti baru.</div>'}</div></div>
+                <!-- HEADER DASHBOARD DENGAN STATS REAL-TIME & NOTIFIKASI -->
+                <div class="mb-8 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                    <div>
+                        <div class="flex items-center gap-3">
+                            <h1 class="text-3xl font-bold text-slate-800 tracking-tight">${salam}, Admin!</h1>
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${isFirebaseConnected ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}">
+                                <span class="w-2 h-2 rounded-full mr-1.5 ${isFirebaseConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}"></span>
+                                ${isFirebaseConnected ? 'Cloud Sync' : 'Local Storage'}
+                            </span>
+                        </div>
+                        <p class="text-slate-500 mt-1 text-sm">Pusat kendali SDM, monitoring ketepatan presensi, dan manajemen kepatuhan pegawai.</p>
                     </div>
-                </div>`;
-            if (isLibur) html += `<div class="bg-rose-50 border border-rose-200 p-5 rounded-2xl mb-8 flex items-center shadow-sm"><i class="fas fa-gift text-3xl text-rose-500 mr-4"></i><div><h3 class="font-bold text-rose-800">Hari Libur Nasional: ${isLibur.keterangan}</h3></div></div>`;
-            html += `<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-8"><div class="bg-white p-6 rounded-2xl border flex justify-between items-center shadow-sm"><div class="text-slate-500 text-xs font-bold uppercase">Total Pegawai<div class="text-3xl text-slate-800 mt-1">${state.karyawan.length}</div></div><i class="fas fa-users text-3xl text-slate-200"></i></div><div class="bg-white p-6 rounded-2xl border flex justify-between items-center shadow-sm"><div class="text-slate-500 text-xs font-bold uppercase">Hadir Hari Ini<div class="text-3xl text-slate-800 mt-1">${hadir}</div></div><i class="fas fa-user-check text-3xl text-emerald-200"></i></div><div class="bg-white p-6 rounded-2xl border flex justify-between items-center shadow-sm"><div class="text-slate-500 text-xs font-bold uppercase">Terlambat<div class="text-3xl text-slate-800 mt-1">${telat}</div></div><i class="fas fa-user-clock text-3xl text-amber-200"></i></div><div class="bg-white p-6 rounded-2xl border flex justify-between items-center shadow-sm"><div class="text-slate-500 text-xs font-bold uppercase">Jabatan<div class="text-3xl text-slate-800 mt-1">${state.jabatan.length}</div></div><i class="fas fa-user-tie text-3xl text-blue-200"></i></div></div>`;
+
+                    <div class="flex flex-wrap items-center gap-3 self-stretch lg:self-auto">
+                        <!-- WAKTU & TANGGAL REALTIME -->
+                        <div class="flex items-center space-x-2 bg-white border border-slate-200 px-4 py-2.5 rounded-2xl shadow-sm text-xs font-medium text-slate-700">
+                            <i class="fas fa-clock text-emerald-600 text-sm"></i>
+                            <span class="currentTimeDisplay font-mono font-bold text-sm text-slate-800">00:00:00</span>
+                            <span class="text-slate-300">|</span>
+                            <span class="currentDateDisplay text-slate-600 font-medium">${formatDateID(dateToday)}</span>
+                        </div>
+
+                        ${totalAktif === 0 ? `
+                            <!-- TOMBOL LOAD DEMO JIKA KOSONG -->
+                            <button onclick="window.muatDataSempelBanyak()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold px-3 py-2.5 rounded-2xl transition flex items-center shadow-sm">
+                                <i class="fas fa-database mr-1.5"></i> Muat Data Demo
+                            </button>
+                        ` : ''}
+
+                        <!-- TOMBOL NOTIFIKASI DROP DOWN -->
+                        <div class="relative z-50">
+                            <button id="bellButton" onclick="window.toggleNotifDropdown(event)" class="relative p-3 bg-white rounded-2xl shadow-sm border border-slate-200 hover:bg-slate-50 transition flex items-center justify-center">
+                                <i class="fas fa-bell ${cutiMenunggu.length > 0 || warningItems.length > 0 ? 'text-amber-500' : 'text-slate-600'} text-lg"></i>
+                                ${(cutiMenunggu.length + warningItems.length) > 0 ? `
+                                    <span class="absolute top-2 right-2 flex h-2.5 w-2.5">
+                                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                                        <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span>
+                                    </span>
+                                    <span class="absolute -top-1.5 -right-1.5 bg-rose-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">${cutiMenunggu.length + warningItems.length}</span>
+                                ` : ''}
+                            </button>
+
+                            <div id="notifDropdown" class="hidden absolute right-0 mt-3 w-88 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+                                <div class="bg-slate-900 p-4 flex justify-between items-center text-white">
+                                    <h3 class="font-bold text-sm flex items-center"><i class="fas fa-bell mr-2 text-amber-400"></i>Pemberitahuan Sistem</h3>
+                                    <span class="bg-slate-800 text-slate-300 text-[10px] font-bold px-2 py-0.5 rounded-full">${cutiMenunggu.length + warningItems.length} Baru</span>
+                                </div>
+                                <div class="max-h-80 overflow-y-auto divide-y divide-slate-100">
+                                    ${cutiMenunggu.length > 0 ? `
+                                        <div onclick="window.setView('cuti')" class="p-3.5 hover:bg-amber-50 cursor-pointer flex gap-3 transition">
+                                            <div class="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600 shrink-0"><i class="fas fa-envelope-open-text text-sm"></i></div>
+                                            <div class="flex-1">
+                                                <p class="text-xs font-bold text-slate-800">Persetujuan Cuti / Izin</p>
+                                                <p class="text-[11px] text-slate-500 mt-0.5">Ada <b>${cutiMenunggu.length}</b> permohonan butuh persetujuan Anda.</p>
+                                            </div>
+                                        </div>
+                                    ` : ''}
+                                    ${warningItems.length > 0 ? `
+                                        <div onclick="window.setView('karyawan')" class="p-3.5 hover:bg-rose-50 cursor-pointer flex gap-3 transition">
+                                            <div class="w-9 h-9 rounded-xl bg-rose-100 flex items-center justify-center text-rose-600 shrink-0"><i class="fas fa-triangle-exclamation text-sm"></i></div>
+                                            <div class="flex-1">
+                                                <p class="text-xs font-bold text-slate-800">Kontrak & BPJS Jatuh Tempo</p>
+                                                <p class="text-[11px] text-slate-500 mt-0.5">Ada <b>${warningItems.length}</b> dokumen mendekati / melewati masa berlaku.</p>
+                                            </div>
+                                        </div>
+                                    ` : ''}
+                                    ${cutiMenunggu.length === 0 && warningItems.length === 0 ? `
+                                        <div class="p-6 text-center text-xs text-slate-500">
+                                            <i class="fas fa-check-circle text-emerald-500 text-2xl mb-2 block"></i>
+                                            Semua operasional & dokumen up-to-date.
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // BANNER HARI LIBUR NASIONAL
+            if (isLibur) {
+                html += `
+                    <div class="bg-rose-50 border border-rose-200 p-4 rounded-2xl mb-8 flex items-center justify-between shadow-sm">
+                        <div class="flex items-center space-x-3">
+                            <span class="w-10 h-10 rounded-xl bg-rose-500 text-white flex items-center justify-center text-lg shadow-sm"><i class="fas fa-calendar-day"></i></span>
+                            <div>
+                                <h4 class="font-bold text-rose-900 text-sm">Hari Ini Libur Nasional: ${isLibur.keterangan}</h4>
+                                <p class="text-xs text-rose-700 mt-0.5">Presensi tetap dapat dicatat jika terdapat jadwal piket / lembur institusi.</p>
+                            </div>
+                        </div>
+                        <button onclick="window.setView('pengaturan')" class="text-xs font-bold text-rose-800 bg-rose-100 hover:bg-rose-200 px-3 py-1.5 rounded-lg transition">Jadwal Libur</button>
+                    </div>
+                `;
+            }
+
+            // KARTU STATISTIK UTAMA (4 METRIK KOMPREHENSIF)
+            html += `
+                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
+                    <!-- 1. TOTAL KARYAWAN -->
+                    <div id="statCardKaryawan" onclick="window.setView('karyawan')" class="bg-white p-5 rounded-2xl border border-slate-200 hover:border-indigo-300 hover:shadow-md transition cursor-pointer shadow-sm group">
+                        <div class="flex justify-between items-start mb-3">
+                            <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Karyawan Aktif</span>
+                            <span class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-sm group-hover:bg-indigo-600 group-hover:text-white transition"><i class="fas fa-users"></i></span>
+                        </div>
+                        <div class="flex items-baseline space-x-2">
+                            <span class="text-3xl font-extrabold text-slate-800">${totalAktif}</span>
+                            <span class="text-xs text-slate-400 font-medium">Orang</span>
+                        </div>
+                        <div class="mt-3 pt-3 border-t border-slate-100 flex justify-between text-xs text-slate-500">
+                            <span><b class="text-slate-700">${tetapCount}</b> Tetap</span>
+                            <span>&bull;</span>
+                            <span><b class="text-slate-700">${kontrakCount}</b> Kontrak</span>
+                            ${resignCount > 0 ? `<span>&bull;</span><span class="text-slate-400">${resignCount} Resign</span>` : ''}
+                        </div>
+                    </div>
+
+                    <!-- 2. KEHADIRAN HARI INI DENGAN PROGRESS -->
+                    <div id="statCardHadir" onclick="window.setView('absensi')" class="bg-white p-5 rounded-2xl border border-slate-200 hover:border-emerald-300 hover:shadow-md transition cursor-pointer shadow-sm group">
+                        <div class="flex justify-between items-start mb-3">
+                            <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Kehadiran Hari Ini</span>
+                            <span class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-sm group-hover:bg-emerald-600 group-hover:text-white transition"><i class="fas fa-user-check"></i></span>
+                        </div>
+                        <div class="flex items-baseline space-x-2">
+                            <span class="text-3xl font-extrabold text-slate-800">${hadir}</span>
+                            <span class="text-xs text-slate-400 font-medium">/ ${totalAktif} Pegawai</span>
+                        </div>
+                        <div class="w-full bg-slate-100 rounded-full h-2 mt-3 overflow-hidden">
+                            <div class="bg-emerald-500 h-2 rounded-full transition-all duration-500" style="width: ${persenHadir}%;"></div>
+                        </div>
+                        <div class="mt-2.5 flex justify-between text-xs text-slate-500">
+                            <span class="font-bold text-emerald-600">${persenHadir}% Terabsen</span>
+                            <span class="text-slate-500">${belumHadir} Belum Absen</span>
+                        </div>
+                    </div>
+
+                    <!-- 3. KETEPATAN WAKTU & KETERLAMBATAN -->
+                    <div id="statCardTelat" onclick="window.setView('absensi')" class="bg-white p-5 rounded-2xl border border-slate-200 hover:border-amber-300 hover:shadow-md transition cursor-pointer shadow-sm group">
+                        <div class="flex justify-between items-start mb-3">
+                            <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Ketepatan Waktu</span>
+                            <span class="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-sm group-hover:bg-amber-600 group-hover:text-white transition"><i class="fas fa-user-clock"></i></span>
+                        </div>
+                        <div class="flex items-baseline space-x-2">
+                            <span class="text-3xl font-extrabold text-slate-800">${tepatWaktu}</span>
+                            <span class="text-xs font-bold text-emerald-600">Tepat Waktu</span>
+                        </div>
+                        <div class="mt-3 pt-3 border-t border-slate-100 flex justify-between text-xs">
+                            <span class="${telat > 0 ? 'text-rose-600 font-bold' : 'text-slate-500'}"><i class="fas fa-exclamation-circle mr-1"></i>${telat} Terlambat</span>
+                            ${dendaHariIni > 0 ? `<span class="text-rose-600 font-semibold">${formatRupiah(dendaHariIni)}</span>` : `<span class="text-emerald-600 font-medium">${persenDisiplin}% Disiplin</span>`}
+                        </div>
+                    </div>
+
+                    <!-- 4. IZIN, CUTI & IMK AKTIF -->
+                    <div id="statCardCuti" onclick="window.setView('cuti')" class="bg-white p-5 rounded-2xl border border-slate-200 hover:border-blue-300 hover:shadow-md transition cursor-pointer shadow-sm group">
+                        <div class="flex justify-between items-start mb-3">
+                            <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Izin & IMK Sedang Keluar</span>
+                            <span class="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-sm group-hover:bg-blue-600 group-hover:text-white transition"><i class="fas fa-running"></i></span>
+                        </div>
+                        <div class="flex items-baseline space-x-2">
+                            <span class="text-3xl font-extrabold text-slate-800">${cutiMenunggu.length + imkSedangKeluar.length + cutiHariIni.length}</span>
+                            <span class="text-xs text-slate-400 font-medium">Status Khusus</span>
+                        </div>
+                        <div class="mt-3 pt-3 border-t border-slate-100 flex justify-between text-xs text-slate-500">
+                            <span class="${cutiMenunggu.length > 0 ? 'text-amber-600 font-bold' : ''}">${cutiMenunggu.length} ACC Cuti</span>
+                            <span>&bull;</span>
+                            <span class="${imkSedangKeluar.length > 0 ? 'text-blue-600 font-bold' : ''}">${imkSedangKeluar.length} IMK di Luar</span>
+                            <span>&bull;</span>
+                            <span>${cutiHariIni.length} Cuti</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // BARIS AKSI CEPAT ADMIN
+            html += `
+                <div class="bg-white rounded-2xl border border-slate-200 p-4 mb-8 shadow-sm">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 pb-3 border-b border-slate-100">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-bold"><i class="fas fa-bolt"></i></span>
+                            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-700">Aksi Cepat Admin</h3>
+                        </div>
+                        <span class="text-[11px] text-slate-400">Pintas navigasi ke modul utama sistem</span>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                        <button id="quickActionKaryawan" onclick="window.bukaModalKaryawan()" class="flex items-center space-x-2.5 p-3 rounded-xl border border-slate-200 hover:bg-indigo-50 hover:border-indigo-300 text-slate-700 hover:text-indigo-700 transition text-xs font-semibold shadow-2xs">
+                            <i class="fas fa-user-plus text-indigo-600 text-base"></i>
+                            <span>+ Karyawan</span>
+                        </button>
+                        <button id="quickActionAbsensi" onclick="window.bukaModalAbsensi()" class="flex items-center space-x-2.5 p-3 rounded-xl border border-slate-200 hover:bg-slate-100 hover:border-slate-300 text-slate-700 transition text-xs font-semibold shadow-2xs">
+                            <i class="fas fa-clipboard-check text-slate-600 text-base"></i>
+                            <span>+ Presensi</span>
+                        </button>
+                        <button id="quickActionCuti" onclick="window.setView('cuti')" class="flex items-center space-x-2.5 p-3 rounded-xl border border-slate-200 hover:bg-amber-50 hover:border-amber-300 text-slate-700 hover:text-amber-700 transition text-xs font-semibold shadow-2xs">
+                            <i class="fas fa-envelope-open-text text-amber-600 text-base"></i>
+                            <span>Kelola Cuti</span>
+                        </button>
+                        <button id="quickActionGaji" onclick="window.setView('gaji')" class="flex items-center space-x-2.5 p-3 rounded-xl border border-slate-200 hover:bg-emerald-50 hover:border-emerald-300 text-slate-700 hover:text-emerald-700 transition text-xs font-semibold shadow-2xs">
+                            <i class="fas fa-file-invoice-dollar text-emerald-600 text-base"></i>
+                            <span>Hitung Gaji</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            // SECTION ANALITIK: TREN KEHADIRAN 7 HARI + KEPATUHAN BPJS & DOKUMEN
+            html += `
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                    <!-- TREN KEHADIRAN 7 HARI TERAKHIR (2 KOLOM) -->
+                    <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-sm flex flex-col justify-between">
+                        <div>
+                            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6 pb-4 border-b border-slate-100">
+                                <div>
+                                    <h3 class="font-bold text-slate-800 text-sm uppercase tracking-wider flex items-center">
+                                        <i class="fas fa-chart-column mr-2 text-indigo-500"></i>Tren Kehadiran 7 Hari Terakhir
+                                    </h3>
+                                    <p class="text-xs text-slate-500 mt-0.5">Visualisasi kehadiran tepat waktu vs terlambat sepekan ini.</p>
+                                </div>
+                                <div class="flex items-center gap-4 text-xs">
+                                    <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-sm bg-emerald-500 mr-1.5"></span>Tepat Waktu</span>
+                                    <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-sm bg-amber-500 mr-1.5"></span>Terlambat</span>
+                                </div>
+                            </div>
+
+                            <!-- CHART BATANG 7 HARI -->
+                            <div class="grid grid-cols-7 gap-2 sm:gap-4 items-end h-44 pt-4 px-2">
+                                ${tren7Hari.map(t => {
+                                    const pct = maxTren > 0 ? Math.min(100, Math.round((t.countHadir / maxTren) * 100)) : 0;
+                                    const tepatPct = t.countHadir > 0 ? (t.countTepat / t.countHadir) * 100 : 0;
+                                    const telatPct = t.countHadir > 0 ? (t.countTelat / t.countHadir) * 100 : 0;
+                                    return `
+                                        <div class="flex flex-col items-center h-full justify-end group relative">
+                                            <!-- TOOLTIP POPUP SAAT HOVER -->
+                                            <div class="opacity-0 group-hover:opacity-100 transition-opacity absolute -top-12 bg-slate-900 text-white text-[10px] rounded-lg py-1 px-2 pointer-events-none shadow-lg z-20 whitespace-nowrap">
+                                                <b>${t.label}</b>: ${t.countHadir} Hadir (${t.countTepat} tepat, ${t.countTelat} telat)
+                                            </div>
+
+                                            <div class="text-[10px] font-bold text-slate-600 mb-1.5">${t.countHadir}</div>
+                                            
+                                            <!-- BATANG BAR -->
+                                            <div class="w-full max-w-[36px] bg-slate-100 rounded-t-lg overflow-hidden flex flex-col-reverse transition-all duration-300 hover:opacity-90 ${t.isToday ? 'ring-2 ring-emerald-500/40' : ''}" style="height: ${Math.max(8, pct)}%;">
+                                                <div class="bg-emerald-500 w-full" style="height: ${tepatPct}%;"></div>
+                                                <div class="bg-amber-500 w-full" style="height: ${telatPct}%;"></div>
+                                            </div>
+
+                                            <div class="mt-2 text-center">
+                                                <span class="text-[10px] font-semibold block ${t.isToday ? 'text-emerald-700 font-bold' : 'text-slate-500'}">${t.label}</span>
+                                                ${t.isToday ? '<span class="inline-block w-1.5 h-1.5 bg-emerald-500 rounded-full mt-0.5"></span>' : ''}
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+
+                        <div class="mt-6 pt-4 border-t border-slate-100 flex flex-wrap justify-between items-center text-xs text-slate-500 gap-2">
+                            <span>Akumulasi sepekan: <b class="text-slate-800">${totalHadir7Hari}</b> Kehadiran, <b class="text-amber-600">${totalTelat7Hari}</b> Terlambat</span>
+                            <button onclick="window.setView('absensi')" class="font-bold text-indigo-600 hover:text-indigo-800 transition">Lihat Log Lengkap &rarr;</button>
+                        </div>
+                    </div>
+
+                    <!-- KEPATUHAN BPJS & STATUS KONTRAK (1 KOLOM) -->
+                    <div class="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-sm flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
+                                <div>
+                                    <h3 class="font-bold text-slate-800 text-sm uppercase tracking-wider flex items-center">
+                                        <i class="fas fa-shield-halved mr-2 text-teal-600"></i>Kepatuhan BPJS & Dokumen
+                                    </h3>
+                                    <p class="text-xs text-slate-500 mt-0.5">Cakupan perlindungan tenaga kerja</p>
+                                </div>
+                                <button onclick="window.setView('karyawan')" class="text-xs font-bold text-teal-600 hover:underline">Kelola</button>
+                            </div>
+
+                            <div class="space-y-4">
+                                <!-- BPJS KESEHATAN -->
+                                <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-100">
+                                    <div class="flex justify-between items-center text-xs mb-1.5">
+                                        <span class="font-bold text-slate-700 flex items-center">
+                                            <i class="fas fa-heart-pulse text-emerald-600 mr-1.5"></i>BPJS Kesehatan
+                                        </span>
+                                        <span class="font-bold text-emerald-700">${bpjsKesCount}/${totalAktif} (${bpjsKesPct}%)</span>
+                                    </div>
+                                    <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                                        <div class="bg-emerald-500 h-2 rounded-full transition-all duration-500" style="width: ${bpjsKesPct}%;"></div>
+                                    </div>
+                                    <p class="text-[10px] text-slate-400 mt-1.5">${totalAktif - bpjsKesCount > 0 ? `${totalAktif - bpjsKesCount} pegawai belum diinput nomor BPJS Kes` : 'Seluruh karyawan aktif terdaftar'}</p>
+                                </div>
+
+                                <!-- BPJS KETENAGAKERJAAN -->
+                                <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-100">
+                                    <div class="flex justify-between items-center text-xs mb-1.5">
+                                        <span class="font-bold text-slate-700 flex items-center">
+                                            <i class="fas fa-briefcase text-teal-600 mr-1.5"></i>BPJS Tenaga Kerja
+                                        </span>
+                                        <span class="font-bold text-teal-700">${bpjsTkCount}/${totalAktif} (${bpjsTkPct}%)</span>
+                                    </div>
+                                    <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                                        <div class="bg-teal-600 h-2 rounded-full transition-all duration-500" style="width: ${bpjsTkPct}%;"></div>
+                                    </div>
+                                    <p class="text-[10px] text-slate-400 mt-1.5">${totalAktif - bpjsTkCount > 0 ? `${totalAktif - bpjsTkCount} pegawai belum diinput nomor BPJS TK` : 'Seluruh karyawan aktif terdaftar'}</p>
+                                </div>
+
+                                <!-- STATUS KONTRAK & TETAP -->
+                                <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-100">
+                                    <div class="flex justify-between items-center text-xs mb-1.5">
+                                        <span class="font-bold text-slate-700 flex items-center">
+                                            <i class="fas fa-file-contract text-indigo-600 mr-1.5"></i>Komposisi Kontrak
+                                        </span>
+                                        <span class="text-xs font-semibold text-slate-600">${tetapCount} Tetap / ${kontrakCount} Kontrak</span>
+                                    </div>
+                                    <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden flex">
+                                        <div class="bg-indigo-600 h-2" style="width: ${totalAktif > 0 ? (tetapCount / totalAktif) * 100 : 0}%;"></div>
+                                        <div class="bg-amber-500 h-2" style="width: ${totalAktif > 0 ? (kontrakCount / totalAktif) * 100 : 0}%;"></div>
+                                    </div>
+                                    <div class="flex justify-between text-[10px] text-slate-500 mt-1.5">
+                                        <span class="text-indigo-700 font-medium">Tetap: ${totalAktif > 0 ? Math.round((tetapCount / totalAktif) * 100) : 0}%</span>
+                                        <span class="text-amber-700 font-medium">Kontrak: ${totalAktif > 0 ? Math.round((kontrakCount / totalAktif) * 100) : 0}%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 pt-3 border-t border-slate-100 text-center">
+                            <span class="text-[11px] text-slate-500">Masa berlaku BPJS dapat dipantau otomatis di sistem</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // PERINGATAN DINI: KONTRAK & BPJS JATUH TEMPO
+            if (warningItems.length > 0) {
+                html += `
+                    <div class="bg-amber-50/80 border border-amber-200 rounded-2xl p-5 mb-8 shadow-sm">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 pb-3 border-b border-amber-200/60">
+                            <div class="flex items-center space-x-3">
+                                <span class="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center text-xs font-bold"><i class="fas fa-triangle-exclamation"></i></span>
+                                <div>
+                                    <h3 class="font-bold text-amber-950 text-sm">Peringatan Jatuh Tempo Kontrak & BPJS (${warningItems.length} Dokumen Perlu Perhatian)</h3>
+                                    <p class="text-xs text-amber-800 mt-0.5">Dokumen berikut mendekati batas akhir (< 30 hari) atau telah melewati masa berlaku.</p>
+                                </div>
+                            </div>
+                            <button onclick="window.setView('karyawan')" class="text-xs font-bold text-amber-900 bg-amber-200/80 hover:bg-amber-300 px-3 py-1.5 rounded-xl transition self-start sm:self-auto">Buka Database</button>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                            ${warningItems.slice(0, 6).map(w => {
+                                const badgeClass = w.isExpired ? 'bg-rose-100 text-rose-700 border-rose-200' : 'bg-amber-100 text-amber-800 border-amber-200';
+                                const badgeText = w.isExpired ? `Expired (${Math.abs(w.sisaHari)} hari lalu)` : `Sisa ${w.sisaHari} hari`;
+                                return `
+                                    <div class="bg-white p-3.5 rounded-xl border border-amber-200/80 flex items-center justify-between shadow-2xs hover:border-amber-400 transition">
+                                        <div class="flex items-center space-x-3 min-w-0">
+                                            <span class="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center text-xs shrink-0"><i class="fas ${w.icon}"></i></span>
+                                            <div class="min-w-0">
+                                                <p class="text-xs font-bold text-slate-800 truncate">${w.karyawan.nama}</p>
+                                                <p class="text-[11px] text-slate-500 truncate">${w.kategori}: ${formatDateID(w.tanggal)}</p>
+                                            </div>
+                                        </div>
+                                        <div class="shrink-0 text-right ml-2">
+                                            <span class="inline-block text-[10px] font-bold px-2 py-0.5 rounded-md border ${badgeClass}">${badgeText}</span>
+                                            <button onclick="window.bukaModalKaryawan(${w.karyawan.id})" class="block text-[10px] text-blue-600 font-bold mt-1 hover:underline text-right w-full">Edit Data</button>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            } else {
+                html += `
+                    <div class="bg-emerald-50/60 border border-emerald-200/80 rounded-2xl p-4 mb-8 flex items-center justify-between shadow-2xs">
+                        <div class="flex items-center space-x-3">
+                            <span class="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-xs shadow-2xs"><i class="fas fa-shield-check"></i></span>
+                            <div>
+                                <h4 class="text-xs font-bold text-emerald-950">Status Kontrak & BPJS Pegawai Aman</h4>
+                                <p class="text-[11px] text-emerald-700 mt-0.5">Tidak ada kontrak kerja maupun masa berlaku BPJS Kesehatan / Ketenagakerjaan yang kadaluarsa dalam 30 hari ke depan.</p>
+                            </div>
+                        </div>
+                        <button onclick="window.setView('karyawan')" class="text-xs font-bold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 px-3 py-1.5 rounded-xl transition hidden sm:inline-block">Cek Database</button>
+                    </div>
+                `;
+            }
+
+            // RINGKASAN STRUKTUR TIM & STATUS OPERASIONAL
+            html += `
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- DISTRIBUSI PER JABATAN -->
+                    <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-center mb-3 pb-2 border-b border-slate-100">
+                                <h4 class="font-bold text-slate-800 text-xs uppercase tracking-wider flex items-center">
+                                    <i class="fas fa-user-tie mr-2 text-indigo-500"></i>Distribusi Jabatan
+                                </h4>
+                                <button onclick="window.setView('jabatan')" class="text-[11px] font-bold text-indigo-600 hover:underline">Kelola</button>
+                            </div>
+
+                            <div class="space-y-3">
+                                ${listJabatan.slice(0, 5).map(j => `
+                                    <div>
+                                        <div class="flex justify-between text-xs mb-1">
+                                            <span class="font-semibold text-slate-700 truncate">${j.nama}</span>
+                                            <span class="text-slate-500 font-medium">${j.count} Orang (${j.pct}%)</span>
+                                        </div>
+                                        <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                                            <div class="bg-indigo-500 h-1.5 rounded-full" style="width: ${j.pct}%;"></div>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                                ${listJabatan.length === 0 ? '<p class="text-xs text-slate-400 italic py-4 text-center">Belum ada struktur jabatan.</p>' : ''}
+                            </div>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-slate-100 text-right">
+                            <span class="text-[11px] text-slate-400">Total: ${listJabatan.length} Jabatan</span>
+                        </div>
+                    </div>
+
+                    <!-- STATUS KELUAR SEMENTARA (IMK) -->
+                    <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-center mb-3 pb-2 border-b border-slate-100">
+                                <h4 class="font-bold text-slate-800 text-xs uppercase tracking-wider flex items-center">
+                                    <i class="fas fa-running mr-2 text-blue-500"></i>Izin Keluar Sementara (IMK)
+                                </h4>
+                                <button onclick="window.setView('imk')" class="text-[11px] font-bold text-blue-600 hover:underline">Riwayat</button>
+                            </div>
+
+                            ${imkSedangKeluar.length > 0 ? `
+                                <div class="space-y-2">
+                                    ${imkSedangKeluar.map(i => {
+                                        const k = semuaKaryawan.find(x => x.id === i.karyawanId);
+                                        return `
+                                            <div class="p-2.5 rounded-xl bg-blue-50/70 border border-blue-100 flex items-center justify-between text-xs">
+                                                <div>
+                                                    <span class="font-bold text-slate-800 block">${k ? k.nama : 'Pegawai'}</span>
+                                                    <span class="text-[11px] text-slate-500">Keluar: <b>${i.jamKeluar}</b> &bull; ${i.keperluan || 'Izin dinas/pribadi'}</span>
+                                                </div>
+                                                <span class="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">Di Luar</span>
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            ` : `
+                                <div class="p-6 bg-slate-50 rounded-xl text-center text-xs text-slate-500 my-auto">
+                                    <i class="fas fa-check-circle text-emerald-500 text-xl block mb-2"></i>
+                                    Semua pegawai berada di dalam area institusi.
+                                </div>
+                            `}
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-slate-100 text-right">
+                            <span class="text-[11px] text-slate-400">${imkHariIni.length} IMK tercatat hari ini</span>
+                        </div>
+                    </div>
+
+                    <!-- PEGAWAI SEDANG CUTI & SHIFT -->
+                    <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-center mb-3 pb-2 border-b border-slate-100">
+                                <h4 class="font-bold text-slate-800 text-xs uppercase tracking-wider flex items-center">
+                                    <i class="fas fa-calendar-check mr-2 text-emerald-500"></i>Cuti & Shift Hari Ini
+                                </h4>
+                                <button onclick="window.setView('cuti')" class="text-[11px] font-bold text-emerald-600 hover:underline">Kelola</button>
+                            </div>
+
+                            ${cutiHariIni.length > 0 ? `
+                                <div class="mb-3 space-y-2">
+                                    <span class="text-[10px] font-bold uppercase text-slate-400">Pegawai Cuti / Izin Hari Ini:</span>
+                                    ${cutiHariIni.map(c => {
+                                        const k = semuaKaryawan.find(x => x.id === c.karyawanId);
+                                        return `
+                                            <div class="p-2 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-between text-xs">
+                                                <div>
+                                                    <span class="font-bold text-slate-800 block">${k ? k.nama : 'Pegawai'}</span>
+                                                    <span class="text-[11px] text-slate-500">${c.jenis} (${formatDateID(c.mulai)} s.d ${formatDateID(c.selesai)})</span>
+                                                </div>
+                                                <span class="bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">Cuti</span>
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            ` : ''}
+
+                            <div class="space-y-2">
+                                <span class="text-[10px] font-bold uppercase text-slate-400">Jadwal Shift:</span>
+                                ${(state.pengaturan?.shifts || []).slice(0, 3).map(s => `
+                                    <div class="p-2.5 bg-slate-50 rounded-xl flex items-center justify-between text-xs border border-slate-100">
+                                        <div>
+                                            <p class="font-bold text-slate-700">${s.nama}</p>
+                                            <p class="text-[11px] text-slate-400 mt-0.5">${s.jamMasuk} - ${s.jamPulang}</p>
+                                        </div>
+                                        <span class="text-[10px] font-bold bg-white text-slate-600 border border-slate-200 px-2 py-0.5 rounded-md">
+                                            ${aktifPegawai.filter(k => k.shiftId === s.id).length} Pegawai
+                                        </span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        <div class="mt-4 pt-3 border-t border-slate-100 text-right">
+                            <span class="text-[11px] text-slate-400">${(state.pengaturan?.shifts || []).length} Shift Terkonfigurasi</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+
             return html;
         }
 
         function getKaryawanHTML() {
-            return `<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4"><div><h1 class="text-3xl font-bold text-slate-800">Database Karyawan</h1></div><div class="flex flex-wrap gap-2"><button onclick="window.bukaModalImport()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-xl font-bold text-sm shadow transition flex items-center"><i class="fas fa-file-import mr-2"></i> Import Excel</button><button onclick="window.eksporKaryawan()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-3 rounded-xl font-bold text-sm shadow transition flex items-center"><i class="fas fa-file-export mr-2"></i> Ekspor Excel</button><button onclick="window.bukaModalKaryawan()" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-3 rounded-xl font-bold text-sm shadow transition flex items-center"><i class="fas fa-plus mr-2"></i> Tambah Manual</button></div></div><div class="bg-white rounded-2xl border overflow-x-auto shadow-sm"><table class="min-w-full text-sm text-left"><thead class="bg-slate-50 text-slate-500 uppercase text-xs border-b"><tr><th class="py-4 px-6">Identitas</th><th class="py-4 px-6">Jabatan & Shift</th><th class="py-4 px-6 text-right">Gaji Pokok</th><th class="py-4 px-6 text-center">Tindakan</th></tr></thead><tbody id="tabelKaryawanBody" class="divide-y"></tbody></table></div>
-                <div id="modalKaryawan" class="fixed inset-0 bg-slate-900 bg-opacity-60 hidden z-[100] flex justify-center items-center p-4"><div class="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[95vh] flex flex-col"><div class="px-8 py-5 border-b flex justify-between"><h3 class="font-bold text-xl">Form Karyawan Lengkap</h3><button onclick="document.getElementById('modalKaryawan').classList.add('hidden')"><i class="fas fa-times"></i></button></div><div class="p-8 overflow-y-auto flex-1 bg-slate-50 custom-scrollbar"><form id="formKaryawan" class="grid grid-cols-1 md:grid-cols-3 gap-6"><input type="hidden" id="fk_id">
-                
-                <div class="col-span-1 md:col-span-3 border-b pb-2"><h4 class="font-bold text-slate-700"><i class="fas fa-user-circle mr-2 text-emerald-500"></i>Data Pribadi</h4></div>
-                <div><label class="block text-xs font-bold text-slate-500 mb-2">Nama Lengkap</label><input type="text" id="fk_nama" required class="w-full border rounded-xl p-3 outline-none"></div>
-                <div><label class="block text-xs font-bold text-slate-500 mb-2">Jenis Kelamin</label><select id="fk_jk" class="w-full border rounded-xl p-3 outline-none"><option value="">-- Pilih --</option><option value="Laki-laki">Laki-laki</option><option value="Perempuan">Perempuan</option></select></div>
-                <div><label class="block text-xs font-bold text-slate-500 mb-2">Agama</label><input type="text" id="fk_agama" class="w-full border rounded-xl p-3 outline-none"></div>
-                <div><label class="block text-xs font-bold text-slate-500 mb-2">Tempat Lahir</label><input type="text" id="fk_tempat_lahir" class="w-full border rounded-xl p-3 outline-none"></div>
-                <div><label class="block text-xs font-bold text-slate-500 mb-2">Tanggal Lahir</label><input type="date" id="fk_tgl_lahir" class="w-full border rounded-xl p-3 outline-none"></div>
-                <div><label class="block text-xs font-bold text-slate-500 mb-2">Pendidikan Terakhir</label><input type="text" id="fk_pendidikan" class="w-full border rounded-xl p-3 outline-none"></div>
-                
-                <div class="col-span-1 md:col-span-3 border-b pb-2 mt-2"><h4 class="font-bold text-slate-700"><i class="fas fa-id-card mr-2 text-indigo-500"></i>Data Kontak & Identitas</h4></div>
-                <div><label class="block text-xs font-bold text-slate-500 mb-2">NIK KTP</label><input type="text" id="fk_ktp" class="w-full border rounded-xl p-3 outline-none"></div>
-                <div><label class="block text-xs font-bold text-slate-500 mb-2">No. WhatsApp</label><input type="tel" id="fk_wa" class="w-full border rounded-xl p-3 outline-none"></div>
-                <div><label class="block text-xs font-bold text-slate-500 mb-2">Email</label><input type="email" id="fk_email" class="w-full border rounded-xl p-3 outline-none"></div>
-                <div class="col-span-1 md:col-span-3"><label class="block text-xs font-bold text-slate-500 mb-2">Alamat Domisili</label><textarea id="fk_alamat" rows="2" class="w-full border rounded-xl p-3 outline-none"></textarea></div>
-
-                <div class="col-span-1 md:col-span-3 border-b pb-2 mt-2"><h4 class="font-bold text-slate-700"><i class="fas fa-briefcase mr-2 text-amber-500"></i>Data Kepegawaian</h4></div>
-                <div><label class="block text-xs font-bold text-slate-500 mb-2">ID Karyawan (QR Internal)</label><input type="text" id="fk_nik" required class="w-full bg-slate-100 border rounded-xl p-3 outline-none font-mono"></div>
-                <div><label class="block text-xs font-bold text-slate-500 mb-2">Nomor Induk Pegawai (NIP)</label><input type="text" id="fk_nip" class="w-full border rounded-xl p-3 outline-none"></div>
-                <div><label class="block text-xs font-bold text-slate-500 mb-2">Status Karyawan</label><select id="fk_status_karyawan" class="w-full border rounded-xl p-3 outline-none"><option value="">-- Pilih --</option><option value="Tetap">Tetap</option><option value="Kontrak">Kontrak</option><option value="Kontrak Tetap">Kontrak Tetap</option></select></div>
-                <div><label class="block text-xs font-bold text-slate-500 mb-2">Jabatan</label><select id="fk_jabatan" required class="w-full border rounded-xl p-3 outline-none"></select></div>
-                <div><label class="block text-xs font-bold text-slate-500 mb-2">Shift Kerja</label><select id="fk_shift" required class="w-full border rounded-xl p-3 outline-none"></select></div>
-                <div><label class="block text-xs font-bold text-slate-500 mb-2">Gaji Pokok (Rp)</label><input type="number" id="fk_gaji" required class="w-full border rounded-xl p-3 outline-none"></div>
-                
-                <!-- BAGIAN KONTRAK KERJA -->
-                <div class="col-span-1 md:col-span-3 border-b pb-2 mt-2"><h4 class="font-bold text-slate-700"><i class="fas fa-file-signature mr-2 text-blue-500"></i>Kontrak Kerja</h4></div>
-                <div><label class="block text-xs font-bold text-slate-500 mb-2">Tanggal Bergabung</label><input type="date" id="fk_tgl_gabung" class="w-full border rounded-xl p-3 outline-none"></div>
-                <div><label class="block text-xs font-bold text-slate-500 mb-2">Tgl Diangkat Tetap</label><input type="date" id="fk_tgl_diangkat" class="w-full border rounded-xl p-3 outline-none"></div>
-                <div><label class="block text-xs font-bold text-slate-500 mb-2">Mulai Kontrak</label><input type="date" id="fk_kontrak_mulai" class="w-full border rounded-xl p-3 outline-none"></div>
-                <div><label class="block text-xs font-bold text-slate-500 mb-2">Selesai Kontrak</label><input type="date" id="fk_kontrak_selesai" class="w-full border rounded-xl p-3 outline-none"></div>
-                
-                <!-- BAGIAN BPJS (DIPISAH: KESEHATAN & KETENAGAKERJAAN) -->
-                <div class="col-span-1 md:col-span-3 border-b pb-2 mt-2"><h4 class="font-bold text-slate-700"><i class="fas fa-shield-alt mr-2 text-emerald-600"></i>Data BPJS & Jaminan Sosial</h4></div>
-                
-                <!-- BPJS KESEHATAN -->
-                <div class="col-span-1 md:col-span-3 bg-emerald-50/70 border border-emerald-200 rounded-2xl p-4">
-                    <div class="flex items-center gap-2 mb-3">
-                        <span class="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center text-xs shadow-sm"><i class="fas fa-heart-pulse"></i></span>
-                        <h5 class="font-bold text-emerald-900 text-sm">BPJS Kesehatan</h5>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs font-bold text-slate-600 mb-2">Nomor BPJS Kesehatan</label>
-                            <input type="text" id="fk_bpjs_kesehatan" class="w-full bg-white border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-emerald-500 text-sm" placeholder="Contoh: 0001234567890">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-600 mb-2">Masa Berlaku BPJS Kesehatan</label>
-                            <input type="date" id="fk_bpjs_kesehatan_berlaku" class="w-full bg-white border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- BPJS TENAGA KERJA -->
-                <div class="col-span-1 md:col-span-3 bg-teal-50/70 border border-teal-200 rounded-2xl p-4">
-                    <div class="flex items-center gap-2 mb-3">
-                        <span class="w-7 h-7 rounded-lg bg-teal-600 text-white flex items-center justify-center text-xs shadow-sm"><i class="fas fa-briefcase"></i></span>
-                        <h5 class="font-bold text-teal-900 text-sm">BPJS Tenaga Kerja (Ketenagakerjaan)</h5>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs font-bold text-slate-600 mb-2">Nomor BPJS Tenaga Kerja</label>
-                            <input type="text" id="fk_bpjs_tk" class="w-full bg-white border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-teal-500 text-sm" placeholder="Contoh: 12345678901">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-600 mb-2">Masa Berlaku BPJS Tenaga Kerja</label>
-                            <input type="date" id="fk_bpjs_tk_berlaku" class="w-full bg-white border border-slate-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-teal-500 text-sm">
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="col-span-1 md:col-span-3 border-b pb-2 mt-2"><h4 class="font-bold text-slate-700"><i class="fas fa-sign-out-alt mr-2 text-red-500"></i>Resign / Keluar</h4></div>
-                <div><label class="block text-xs font-bold text-slate-500 mb-2">Tanggal Keluar</label><input type="date" id="fk_tgl_keluar" class="w-full border rounded-xl p-3 outline-none"></div>
-                <div class="col-span-1 md:col-span-2"><label class="block text-xs font-bold text-slate-500 mb-2">Alasan Keluar</label><input type="text" id="fk_alasan_keluar" class="w-full border rounded-xl p-3 outline-none" placeholder="Isi alasan berhenti (jika ada)"></div>
-                
-                </form></div><div class="px-8 py-5 border-t flex justify-end gap-3"><button onclick="window.simpanKaryawan()" class="bg-emerald-600 text-white px-6 py-2.5 rounded-xl font-bold">Simpan</button></div></div></div>
-                
-                <!-- MODAL IMPORT EXCEL -->
-                <div id="modalImportKaryawan" class="fixed inset-0 bg-slate-900 bg-opacity-60 hidden z-[150] flex justify-center items-center p-4 backdrop-blur-sm transition-opacity duration-300">
-                    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all">
-                        <div class="px-6 py-5 border-b bg-slate-50 flex justify-between items-center">
-                            <h3 class="font-bold text-xl text-slate-800"><i class="fas fa-file-import text-blue-600 mr-2"></i> Import Data</h3>
-                            <button onclick="window.tutupModalImport()" class="text-slate-400 hover:text-red-500 transition"><i class="fas fa-times text-xl"></i></button>
-                        </div>
-                        <div class="p-8 text-center space-y-6">
-                            <p class="text-sm text-slate-500 leading-relaxed">Gunakan format Excel standar sistem agar data dapat terbaca. Unduh template di bawah ini jika Anda belum memilikinya.</p>
-                            <button onclick="window.downloadTemplateExcel()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3.5 rounded-xl transition shadow-lg flex items-center justify-center">
-                                <i class="fas fa-download mr-2"></i> 1. Unduh Template Excel
-                            </button>
-                            <div class="relative flex items-center">
-                                <div class="flex-grow border-t border-slate-200"></div>
-                                <span class="flex-shrink-0 mx-4 text-slate-400 text-xs font-bold uppercase tracking-wider">Lalu</span>
-                                <div class="flex-grow border-t border-slate-200"></div>
-                            </div>
-                            <label class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl transition shadow-lg flex items-center justify-center cursor-pointer">
-                                <i class="fas fa-upload mr-2"></i> 2. Upload File Excel
-                                <input type="file" accept=".xlsx, .xls" class="hidden" onchange="window.importKaryawan(event)">
-                            </label>
-                        </div>
-                    </div>
-                </div>`;
+            return `<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4"><div><h1 class="text-3xl font-bold text-slate-800">Database Karyawan</h1></div><div class="flex flex-wrap gap-2"><button onclick="window.bukaModalImport()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-xl font-bold text-sm shadow transition flex items-center"><i class="fas fa-file-import mr-2"></i> Import Excel</button><button onclick="window.eksporKaryawan()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-3 rounded-xl font-bold text-sm shadow transition flex items-center"><i class="fas fa-file-export mr-2"></i> Ekspor Excel</button><button onclick="window.bukaModalKaryawan()" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-3 rounded-xl font-bold text-sm shadow transition flex items-center"><i class="fas fa-plus mr-2"></i> Tambah Manual</button></div></div><div class="bg-white rounded-2xl border overflow-x-auto shadow-sm"><table class="min-w-full text-sm text-left"><thead class="bg-slate-50 text-slate-500 uppercase text-xs border-b"><tr><th class="py-4 px-6">Identitas</th><th class="py-4 px-6">Jabatan & Shift</th><th class="py-4 px-6 text-right">Gaji Pokok</th><th class="py-4 px-6 text-center">Tindakan</th></tr></thead><tbody id="tabelKaryawanBody" class="divide-y"></tbody></table></div>`;
         }
         function renderKaryawanTable() {
             const tbody = document.getElementById('tabelKaryawanBody'); if(!tbody) return; tbody.innerHTML = '';
@@ -1074,21 +1785,238 @@
                     </div>`;
                 }
 
-                tbody.innerHTML += `<tr class="hover:bg-slate-50"><td class="py-4 px-6 font-bold text-slate-800">${k.nama}${statusBadge}<br><span class="text-xs text-slate-500 font-normal font-mono bg-slate-100 px-1 rounded border mr-1">${k.nik}</span><span class="text-xs text-slate-400 font-normal mt-1">NIP: ${k.nip || '-'}</span><div class="text-xs text-emerald-600 mt-1"><i class="fab fa-whatsapp mr-1"></i><a href="https://wa.me/${formatWANumber(k.noWa)}" target="_blank">${k.noWa || '-'}</a></div>${tglKeluarBadge}</td><td class="py-4 px-6"><span class="bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs px-2 py-1 rounded font-bold block mb-1 w-max">${jab}</span><span class="text-xs text-slate-500 block mb-1"><i class="fas fa-clock mr-1"></i>${shf}</span>${k.kontrakSelesai ? `<span class="text-[10px] text-amber-600 font-bold block mb-0.5"><i class="fas fa-file-signature mr-1"></i>s.d ${formatDateID(k.kontrakSelesai)}</span>` : ''}${bpjsBadges}</td><td class="py-4 px-6 text-right font-bold text-slate-700">${formatRupiah(k.gajiPokok)}</td><td class="py-4 px-6 text-center space-x-1 whitespace-nowrap"><button onclick="window.tampilkanQR('${k.nik}', '${k.nama}')" class="text-emerald-600 bg-emerald-50 hover:bg-emerald-500 hover:text-white transition p-2 rounded-lg" title="Lihat QR Code"><i class="fas fa-qrcode"></i></button> <button onclick="window.bukaModalKaryawan(${k.id})" class="text-blue-600 bg-blue-50 hover:bg-blue-500 hover:text-white transition p-2 rounded-lg" title="Edit Data"><i class="fas fa-edit"></i></button> <button onclick="window.confirmDelete('karyawan', ${k.id})" class="text-red-600 bg-red-50 hover:bg-red-500 hover:text-white transition p-2 rounded-lg" title="Hapus"><i class="fas fa-trash"></i></button></td></tr>`;
+                tbody.innerHTML += `<tr class="hover:bg-slate-50"><td class="py-4 px-6 font-bold text-slate-800">${k.nama}${statusBadge}<br><span class="text-xs text-slate-500 font-normal font-mono bg-slate-100 px-1 rounded border mr-1">${k.nik}</span><span class="text-xs text-slate-400 font-normal mt-1">NIP: ${k.nip || '-'}</span><div class="text-xs text-emerald-600 mt-1"><i class="fab fa-whatsapp mr-1"></i><a href="https://wa.me/${formatWANumber(k.noWa)}" target="_blank">${k.noWa || '-'}</a></div>${tglKeluarBadge}</td><td class="py-4 px-6"><span class="bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs px-2 py-1 rounded font-bold block mb-1 w-max">${jab}</span><span class="text-xs text-slate-500 block mb-1"><i class="fas fa-clock mr-1"></i>${shf}</span>${k.kontrakSelesai ? `<span class="text-[10px] text-amber-600 font-bold block mb-0.5"><i class="fas fa-file-signature mr-1"></i>s.d ${formatDateID(k.kontrakSelesai)}</span>` : ''}${bpjsBadges}</td><td class="py-4 px-6 text-right font-bold text-slate-700">${formatRupiah(k.gajiPokok)}</td><td class="py-4 px-6 text-center space-x-1 whitespace-nowrap"><button onclick="window.lihatDetailKaryawan(${k.id})" class="text-indigo-600 bg-indigo-50 hover:bg-indigo-600 hover:text-white transition p-2 rounded-lg" title="Lihat Profil Pegawai"><i class="fas fa-eye"></i></button> <button onclick="window.tampilkanQR('${k.nik}', '${k.nama}')" class="text-emerald-600 bg-emerald-50 hover:bg-emerald-500 hover:text-white transition p-2 rounded-lg" title="Lihat QR Code"><i class="fas fa-qrcode"></i></button> <button onclick="window.bukaModalKaryawan(${k.id})" class="text-blue-600 bg-blue-50 hover:bg-blue-500 hover:text-white transition p-2 rounded-lg" title="Edit Data"><i class="fas fa-edit"></i></button> <button onclick="window.confirmDelete('karyawan', ${k.id})" class="text-red-600 bg-red-50 hover:bg-red-500 hover:text-white transition p-2 rounded-lg" title="Hapus"><i class="fas fa-trash"></i></button></td></tr>`;
             });
         }
+        window.lihatDetailKaryawan = function(id) {
+            const k = (state.karyawan || []).find(x => x.id === id);
+            if (!k) return showToast('Peringatan', 'Data karyawan tidak ditemukan', 'warning');
+
+            const jab = (state.jabatan || []).find(j => j.id == k.jabatanId)?.nama || '-';
+            const shf = (state.pengaturan?.shifts || []).find(s => s.id == k.shiftId);
+            const shiftNama = shf ? `${shf.nama} (${shf.jamMasuk} - ${shf.jamPulang})` : '-';
+
+            const kesNo = k.bpjsKesehatan || k.bpjs;
+            const tkNo = k.bpjsKetenagakerjaan || k.bpjsTk;
+
+            let statusKontrakInfo = '';
+            if (k.kontrakSelesai) {
+                const msSelesai = new Date(k.kontrakSelesai).getTime();
+                const msNow = new Date().getTime();
+                const diffHari = Math.ceil((msSelesai - msNow) / (1000 * 60 * 60 * 24));
+                if (diffHari < 0) {
+                    statusKontrakInfo = `<span class="bg-rose-100 text-rose-700 border border-rose-200 text-[10px] font-bold px-2 py-0.5 rounded ml-1">Expired (${Math.abs(diffHari)} hari lalu)</span>`;
+                } else if (diffHari <= 30) {
+                    statusKontrakInfo = `<span class="bg-amber-100 text-amber-800 border border-amber-200 text-[10px] font-bold px-2 py-0.5 rounded ml-1">Sisa ${diffHari} hari</span>`;
+                } else {
+                    statusKontrakInfo = `<span class="bg-emerald-100 text-emerald-800 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded ml-1">Aktif (${diffHari} hari)</span>`;
+                }
+            }
+
+            const container = document.getElementById('contentDetailKaryawan');
+            if (!container) return;
+
+            container.innerHTML = `
+                <!-- PROFILE HERO CARD -->
+                <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-600 to-indigo-400 text-white flex items-center justify-center text-xl font-bold shadow-md shrink-0">
+                            ${k.nama ? k.nama.charAt(0).toUpperCase() : 'P'}
+                        </div>
+                        <div>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <h4 class="text-xl font-bold text-slate-800">${k.nama}</h4>
+                                <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold ${k.tanggalKeluar ? 'bg-rose-100 text-rose-700 border border-rose-200' : 'bg-emerald-100 text-emerald-700 border border-emerald-200'}">
+                                    ${k.tanggalKeluar ? 'Resign / Keluar' : (k.statusKaryawan || 'Aktif')}
+                                </span>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-1 flex flex-wrap items-center gap-2">
+                                <span class="font-mono bg-slate-100 px-1.5 py-0.5 rounded border text-slate-700 font-semibold">${k.nik}</span>
+                                <span>&bull;</span>
+                                <span>NIP: <b class="text-slate-700">${k.nip || '-'}</b></span>
+                                <span>&bull;</span>
+                                <span class="text-indigo-600 font-bold">${jab}</span>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 w-full sm:w-auto justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+                        <button onclick="window.tampilkanQR('${k.nik}', '${k.nama}')" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-bold px-3 py-2 rounded-xl transition flex items-center shadow-2xs">
+                            <i class="fas fa-qrcode mr-1.5"></i> QR Absen
+                        </button>
+                        ${k.noWa ? `
+                            <a href="https://wa.me/${formatWANumber(k.noWa)}" target="_blank" class="bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200 text-xs font-bold px-3 py-2 rounded-xl transition flex items-center shadow-2xs">
+                                <i class="fab fa-whatsapp mr-1.5 text-sm"></i> Chat WA
+                            </a>
+                        ` : ''}
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- 1. DATA PRIBADI & KONTAK -->
+                    <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs">
+                        <h5 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3 flex items-center pb-2 border-b border-slate-100">
+                            <i class="fas fa-user text-indigo-500 mr-2"></i>Data Pribadi & Kontak
+                        </h5>
+                        <div class="space-y-2.5 text-xs">
+                            <div class="flex justify-between py-1 border-b border-slate-50">
+                                <span class="text-slate-400">NIK KTP:</span>
+                                <span class="font-semibold text-slate-800 font-mono">${k.noKtp || '-'}</span>
+                            </div>
+                            <div class="flex justify-between py-1 border-b border-slate-50">
+                                <span class="text-slate-400">Jenis Kelamin:</span>
+                                <span class="font-semibold text-slate-800">${k.jenisKelamin || '-'}</span>
+                            </div>
+                            <div class="flex justify-between py-1 border-b border-slate-50">
+                                <span class="text-slate-400">Agama:</span>
+                                <span class="font-semibold text-slate-800">${k.agama || '-'}</span>
+                            </div>
+                            <div class="flex justify-between py-1 border-b border-slate-50">
+                                <span class="text-slate-400">TTL:</span>
+                                <span class="font-semibold text-slate-800 text-right">${k.tempatLahir || '-'}${k.tanggalLahir ? ', ' + formatDateID(k.tanggalLahir) : ''}</span>
+                            </div>
+                            <div class="flex justify-between py-1 border-b border-slate-50">
+                                <span class="text-slate-400">Pendidikan:</span>
+                                <span class="font-semibold text-slate-800">${k.pendidikanTerakhir || '-'}</span>
+                            </div>
+                            <div class="flex justify-between py-1 border-b border-slate-50">
+                                <span class="text-slate-400">No. WhatsApp:</span>
+                                <span class="font-semibold text-slate-800">${k.noWa || '-'}</span>
+                            </div>
+                            <div class="flex justify-between py-1 border-b border-slate-50">
+                                <span class="text-slate-400">Email:</span>
+                                <span class="font-semibold text-slate-800">${k.email || '-'}</span>
+                            </div>
+                            <div class="pt-1">
+                                <span class="text-slate-400 block mb-1">Alamat Domisili:</span>
+                                <p class="font-medium text-slate-700 bg-slate-50 p-2 rounded-xl border border-slate-100">${k.alamat || '-'}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. KEPEGAWAIAN, KONTRAK & GAJI -->
+                    <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs">
+                        <h5 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3 flex items-center pb-2 border-b border-slate-100">
+                            <i class="fas fa-briefcase text-amber-500 mr-2"></i>Kepegawaian & Penggajian
+                        </h5>
+                        <div class="space-y-2.5 text-xs">
+                            <div class="flex justify-between py-1 border-b border-slate-50">
+                                <span class="text-slate-400">Jabatan:</span>
+                                <span class="font-bold text-slate-800">${jab}</span>
+                            </div>
+                            <div class="flex justify-between py-1 border-b border-slate-50">
+                                <span class="text-slate-400">Shift Kerja:</span>
+                                <span class="font-semibold text-slate-800">${shiftNama}</span>
+                            </div>
+                            <div class="flex justify-between py-1 border-b border-slate-50">
+                                <span class="text-slate-400">Gaji Pokok:</span>
+                                <span class="font-bold text-emerald-700 text-sm">${formatRupiah(k.gajiPokok || 0)}</span>
+                            </div>
+                            <div class="flex justify-between py-1 border-b border-slate-50">
+                                <span class="text-slate-400">Tgl Bergabung:</span>
+                                <span class="font-semibold text-slate-800">${k.tanggalBergabung ? formatDateID(k.tanggalBergabung) : '-'}</span>
+                            </div>
+                            ${k.tanggalDiangkat ? `
+                            <div class="flex justify-between py-1 border-b border-slate-50">
+                                <span class="text-slate-400">Diangkat Tetap:</span>
+                                <span class="font-semibold text-indigo-700">${formatDateID(k.tanggalDiangkat)}</span>
+                            </div>` : ''}
+                            <div class="flex justify-between py-1 border-b border-slate-50">
+                                <span class="text-slate-400">Mulai Kontrak:</span>
+                                <span class="font-semibold text-slate-800">${k.kontrakMulai ? formatDateID(k.kontrakMulai) : '-'}</span>
+                            </div>
+                            <div class="flex justify-between py-1 border-b border-slate-50">
+                                <span class="text-slate-400">Selesai Kontrak:</span>
+                                <span class="font-semibold text-slate-800 flex items-center">${k.kontrakSelesai ? formatDateID(k.kontrakSelesai) : '-'} ${statusKontrakInfo}</span>
+                            </div>
+                            ${k.tanggalKeluar ? `
+                            <div class="p-2.5 rounded-xl bg-rose-50 border border-rose-200 mt-2">
+                                <div class="flex justify-between font-bold text-rose-800">
+                                    <span>Status Resign:</span>
+                                    <span>${formatDateID(k.tanggalKeluar)}</span>
+                                </div>
+                                <p class="text-rose-700 mt-1">Alasan: ${k.alasanKeluar || '-'}</p>
+                            </div>` : ''}
+                        </div>
+                    </div>
+
+                    <!-- 3. BPJS & JAMINAN SOSIAL -->
+                    <div class="col-span-1 md:col-span-2 bg-white rounded-2xl p-4 border border-slate-200 shadow-xs">
+                        <h5 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3 flex items-center pb-2 border-b border-slate-100">
+                            <i class="fas fa-shield-halved text-teal-600 mr-2"></i>Jaminan Sosial & Kepatuhan BPJS
+                        </h5>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <!-- BPJS KES -->
+                            <div class="p-3.5 rounded-xl bg-emerald-50/60 border border-emerald-200">
+                                <div class="flex items-center justify-between mb-1.5">
+                                    <span class="font-bold text-xs text-emerald-900 flex items-center">
+                                        <i class="fas fa-heart-pulse text-emerald-600 mr-1.5"></i> BPJS Kesehatan
+                                    </span>
+                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-md ${kesNo ? 'bg-emerald-200 text-emerald-800' : 'bg-slate-200 text-slate-600'}">
+                                        ${kesNo ? 'Terdaftar' : 'Belum Ada'}
+                                    </span>
+                                </div>
+                                <p class="font-mono text-xs font-semibold text-slate-800">${kesNo || 'Nomor belum diinput'}</p>
+                                <p class="text-[11px] text-slate-500 mt-1">
+                                    Masa Berlaku: <b class="text-slate-700">${k.bpjsKesehatanMasaBerlaku ? formatDateID(k.bpjsKesehatanMasaBerlaku) : 'Tidak diset'}</b>
+                                </p>
+                            </div>
+
+                            <!-- BPJS TK -->
+                            <div class="p-3.5 rounded-xl bg-teal-50/60 border border-teal-200">
+                                <div class="flex items-center justify-between mb-1.5">
+                                    <span class="font-bold text-xs text-teal-900 flex items-center">
+                                        <i class="fas fa-briefcase text-teal-600 mr-1.5"></i> BPJS Ketenagakerjaan
+                                    </span>
+                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-md ${tkNo ? 'bg-teal-200 text-teal-800' : 'bg-slate-200 text-slate-600'}">
+                                        ${tkNo ? 'Terdaftar' : 'Belum Ada'}
+                                    </span>
+                                </div>
+                                <p class="font-mono text-xs font-semibold text-slate-800">${tkNo || 'Nomor belum diinput'}</p>
+                                <p class="text-[11px] text-slate-500 mt-1">
+                                    Masa Berlaku: <b class="text-slate-700">${k.bpjsKetenagakerjaanMasaBerlaku ? formatDateID(k.bpjsKetenagakerjaanMasaBerlaku) : 'Tidak diset'}</b>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const btnEdit = document.getElementById('btnEditDariDetail');
+            if (btnEdit) {
+                btnEdit.onclick = function() {
+                    window.tutupModalDetailKaryawan();
+                    window.bukaModalKaryawan(k.id);
+                };
+            }
+
+            const modal = document.getElementById('modalDetailKaryawan');
+            if (modal) modal.classList.remove('hidden');
+        };
+        window.tutupModalDetailKaryawan = function() {
+            const modal = document.getElementById('modalDetailKaryawan');
+            if (modal) modal.classList.add('hidden');
+        };
         window.bukaModalKaryawan = function(id = null) {
-            document.getElementById('fk_jabatan').innerHTML = '<option value="">-- Pilih --</option>' + state.jabatan.map(j => `<option value="${j.id}">${j.nama}</option>`).join('');
-            document.getElementById('fk_shift').innerHTML = state.pengaturan.shifts.map(s => `<option value="${s.id}">${s.nama} (${s.jamMasuk})</option>`).join('');
+            const fkJabatan = document.getElementById('fk_jabatan');
+            const fkShift = document.getElementById('fk_shift');
+            if (fkJabatan) {
+                fkJabatan.innerHTML = '<option value="">-- Pilih --</option>' + (state.jabatan || []).map(j => `<option value="${j.id}">${j.nama}</option>`).join('');
+            }
+            if (fkShift) {
+                fkShift.innerHTML = (state.pengaturan?.shifts || []).map(s => `<option value="${s.id}">${s.nama} (${s.jamMasuk})</option>`).join('');
+            }
+            const modal = document.getElementById('modalKaryawan');
+            if (!modal) return;
             if (id) { 
                 const k = state.karyawan.find(x => x.id === id); 
+                if (!k) return;
                 document.getElementById('fk_id').value = k.id; 
                 document.getElementById('fk_nama').value = k.nama; 
                 document.getElementById('fk_nik').value = k.nik; 
                 document.getElementById('fk_ktp').value = k.noKtp || ''; 
                 document.getElementById('fk_wa').value = k.noWa || ''; 
-                document.getElementById('fk_jabatan').value = k.jabatanId; 
-                document.getElementById('fk_shift').value = k.shiftId || state.pengaturan.shifts[0].id; 
+                if (fkJabatan) document.getElementById('fk_jabatan').value = k.jabatanId; 
+                if (fkShift) document.getElementById('fk_shift').value = k.shiftId || (state.pengaturan?.shifts?.[0]?.id || ''); 
                 document.getElementById('fk_gaji').value = k.gajiPokok; 
                 
                 // Fields Baru
@@ -1116,11 +2044,12 @@
                 document.getElementById('fk_tgl_diangkat').value = k.tanggalDiangkat || '';
             } 
             else { 
-                document.getElementById('formKaryawan').reset(); 
+                const form = document.getElementById('formKaryawan');
+                if (form) form.reset(); 
                 document.getElementById('fk_id').value = ''; 
-                document.getElementById('fk_nik').value = `KRY-${new Date().toISOString().slice(0,7).replace('-','')}-${String(state.karyawan.length+1).padStart(3,'0')}`; 
+                document.getElementById('fk_nik').value = `KRY-${new Date().toISOString().slice(0,7).replace('-','')}-${String((state.karyawan || []).length+1).padStart(3,'0')}`; 
             }
-            document.getElementById('modalKaryawan').classList.remove('hidden');
+            modal.classList.remove('hidden');
         };
         window.simpanKaryawan = function() {
             const data = { 
@@ -1328,8 +2257,7 @@
         window.bukaModalJabatan = function(id = null) { if(id) { const j = state.jabatan.find(x => x.id === id); document.getElementById('fj_id').value = j.id; document.getElementById('fj_nama').value = j.nama; } else { document.getElementById('fj_id').value = ''; document.getElementById('fj_nama').value = ''; } document.getElementById('modalJabatan').classList.remove('hidden'); };
         window.simpanJabatan = function() { const id = document.getElementById('fj_id').value; const nama = document.getElementById('fj_nama').value; if(!nama) return; if(id) { const idx = state.jabatan.findIndex(j => j.id == parseInt(id, 10)); state.jabatan[idx].nama = nama; } else { state.jabatan.push({ id: Date.now(), nama }); } saveData(); document.getElementById('modalJabatan').classList.add('hidden'); window.renderMainContent(); };
 
-        function getAbsensiHTML() { return `<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4"><div><h1 class="text-3xl font-bold text-slate-800">Riwayat Kehadiran</h1></div><div class="flex flex-wrap gap-2"><button onclick="window.bukaModalAbsensi()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-3 rounded-xl shadow text-sm transition"><i class="fas fa-plus mr-2"></i>Tambah Manual</button><button onclick="window.bukaModalHapusTanggal('absensi')" class="bg-amber-500 hover:bg-amber-600 text-white font-semibold px-4 py-3 rounded-xl shadow text-sm transition"><i class="fas fa-calendar-times mr-2"></i>Hapus via Tanggal</button><button onclick="window.confirmDelete('semua_absensi', 'all')" class="bg-red-500 hover:bg-red-600 text-white font-semibold px-4 py-3 rounded-xl shadow text-sm transition"><i class="fas fa-trash-alt mr-2"></i>Kosongkan</button></div></div><div class="bg-white rounded-2xl border overflow-x-auto shadow-sm"><table class="min-w-full text-sm text-left"><thead class="bg-slate-50 border-b text-xs text-slate-500 uppercase"><tr><th class="py-4 px-6">Tgl</th><th class="py-4 px-6">Karyawan</th><th class="py-4 px-6">Masuk</th><th class="py-4 px-6">Pulang</th><th class="py-4 px-6">Metode</th><th class="py-4 px-6">Status</th><th class="py-4 px-6 text-center">Aksi</th></tr></thead><tbody id="tabelAbsensiBody" class="divide-y"></tbody></table></div>
-        <div id="modalAbsensiManual" class="fixed inset-0 bg-slate-900 bg-opacity-60 hidden z-[100] flex justify-center items-center p-4"><div class="bg-white rounded-3xl shadow-2xl w-full max-w-md"><div class="px-6 py-5 border-b flex justify-between"><h3 class="font-bold text-xl">Form Absensi Manual</h3><button onclick="window.tutupModalAbsensi()"><i class="fas fa-times"></i></button></div><div class="p-6 bg-slate-50 space-y-4"><input type="hidden" id="fa_id"><div><label class="block text-xs font-bold text-slate-500 mb-2">Karyawan</label><select id="fa_karyawan" required class="w-full border rounded-xl p-3 outline-none"></select></div><div><label class="block text-xs font-bold text-slate-500 mb-2">Tanggal</label><input type="date" id="fa_tanggal" required class="w-full border rounded-xl p-3 outline-none"></div><div class="grid grid-cols-2 gap-4"><div><label class="block text-xs font-bold text-slate-500 mb-2">Jam Masuk</label><input type="time" id="fa_masuk" required class="w-full border rounded-xl p-3 outline-none"></div><div><label class="block text-xs font-bold text-slate-500 mb-2">Jam Pulang</label><input type="time" id="fa_pulang" class="w-full border rounded-xl p-3 outline-none"></div></div><div><label class="block text-xs font-bold text-slate-500 mb-2">Status Kehadiran</label><select id="fa_status" required class="w-full border rounded-xl p-3 outline-none"><option value="Tepat Waktu">Tepat Waktu</option><option value="Terlambat">Terlambat</option><option value="Hadir (Libur)">Hadir (Libur)</option></select></div></div><div class="px-6 py-5 border-t flex justify-end gap-3"><button onclick="window.tutupModalAbsensi()" class="bg-slate-100 text-slate-700 px-6 py-2.5 rounded-xl font-bold">Batal</button><button onclick="window.simpanAbsensi()" class="bg-indigo-600 hover:bg-indigo-700 transition text-white px-6 py-2.5 rounded-xl font-bold shadow">Simpan</button></div></div></div>`; }
+        function getAbsensiHTML() { return `<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4"><div><h1 class="text-3xl font-bold text-slate-800">Riwayat Kehadiran</h1></div><div class="flex flex-wrap gap-2"><button onclick="window.bukaModalAbsensi()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-3 rounded-xl shadow text-sm transition"><i class="fas fa-plus mr-2"></i>Tambah Manual</button><button onclick="window.bukaModalHapusTanggal('absensi')" class="bg-amber-500 hover:bg-amber-600 text-white font-semibold px-4 py-3 rounded-xl shadow text-sm transition"><i class="fas fa-calendar-times mr-2"></i>Hapus via Tanggal</button><button onclick="window.confirmDelete('semua_absensi', 'all')" class="bg-red-500 hover:bg-red-600 text-white font-semibold px-4 py-3 rounded-xl shadow text-sm transition"><i class="fas fa-trash-alt mr-2"></i>Kosongkan</button></div></div><div class="bg-white rounded-2xl border overflow-x-auto shadow-sm"><table class="min-w-full text-sm text-left"><thead class="bg-slate-50 border-b text-xs text-slate-500 uppercase"><tr><th class="py-4 px-6">Tgl</th><th class="py-4 px-6">Karyawan</th><th class="py-4 px-6">Masuk</th><th class="py-4 px-6">Pulang</th><th class="py-4 px-6">Metode</th><th class="py-4 px-6">Status</th><th class="py-4 px-6 text-center">Aksi</th></tr></thead><tbody id="tabelAbsensiBody" class="divide-y"></tbody></table></div>`; }
         function renderAbsensiTable() {
             const tbody = document.getElementById('tabelAbsensiBody'); if(!tbody) return; tbody.innerHTML = '';
             const sorted = [...state.absensi].sort((a, b) => b.id - a.id);
@@ -1342,9 +2270,15 @@
         }
         
         window.bukaModalAbsensi = function(id = null) {
-            document.getElementById('fa_karyawan').innerHTML = '<option value="">-- Pilih Karyawan --</option>' + state.karyawan.map(k => `<option value="${k.id}">${k.nik} - ${k.nama}</option>`).join('');
+            const faKaryawan = document.getElementById('fa_karyawan');
+            if (faKaryawan) {
+                faKaryawan.innerHTML = '<option value="">-- Pilih Karyawan --</option>' + (state.karyawan || []).map(k => `<option value="${k.id}">${k.nik} - ${k.nama}</option>`).join('');
+            }
+            const modal = document.getElementById('modalAbsensiManual');
+            if (!modal) return;
             if (id) {
                 const a = state.absensi.find(x => x.id === id);
+                if (!a) return;
                 document.getElementById('fa_id').value = a.id;
                 document.getElementById('fa_karyawan').value = a.karyawanId;
                 document.getElementById('fa_tanggal').value = a.tanggal;
@@ -1360,7 +2294,7 @@
                 document.getElementById('fa_pulang').value = '';
                 document.getElementById('fa_status').value = 'Tepat Waktu';
             }
-            document.getElementById('modalAbsensiManual').classList.remove('hidden');
+            modal.classList.remove('hidden');
         };
         
         window.tutupModalAbsensi = function() {
@@ -1424,22 +2358,32 @@
         
         window.bukaModalPengajuanCuti = async function() {
             if(state.karyawan.length === 0) return showToast('Peringatan', 'Belum ada data karyawan.', 'warning');
-            document.getElementById('pc_karyawan').innerHTML = '<option value="">-- Pilih Nama --</option>' + state.karyawan.map(k => `<option value="${k.id}">${k.nik} - ${k.nama}</option>`).join('');
-            document.getElementById('formPengajuanCuti').reset(); 
+            const pcK = document.getElementById('pc_karyawan');
+            if (pcK) pcK.innerHTML = '<option value="">-- Pilih Nama --</option>' + state.karyawan.map(k => `<option value="${k.id}">${k.nik} - ${k.nama}</option>`).join('');
+            const form = document.getElementById('formPengajuanCuti');
+            if (form) form.reset(); 
             
             await stopScanner(); // Hentikan kamera agar performa terjaga saat ketik
             const modal = document.getElementById('modalPengajuanCuti'); const content = document.getElementById('modalPengajuanCutiContent');
+            if (!modal) return;
             modal.classList.remove('hidden'); setTimeout(() => { modal.classList.add('opacity-100'); if(content) { content.classList.remove('scale-95'); content.classList.add('scale-100'); } }, 10);
         };
         
         window.tutupModalPengajuanCuti = function() { 
             const modal = document.getElementById('modalPengajuanCuti'); const content = document.getElementById('modalPengajuanCutiContent');
+            if (!modal) return;
             modal.classList.remove('opacity-100'); if(content) { content.classList.remove('scale-100'); content.classList.add('scale-95'); }
             setTimeout(() => { modal.classList.add('hidden'); window.startScanner(); }, 300); // Nyalakan kembali
         };
         
         window.simpanPengajuanCuti = function() {
-            const d = { karyawanId: document.getElementById('pc_karyawan').value, jenis: document.getElementById('pc_jenis').value, mulai: document.getElementById('pc_mulai').value, selesai: document.getElementById('pc_selesai').value, alasan: document.getElementById('pc_alasan').value };
+            const pcK = document.getElementById('pc_karyawan');
+            const pcJ = document.getElementById('pc_jenis');
+            const pcM = document.getElementById('pc_mulai');
+            const pcS = document.getElementById('pc_selesai');
+            const pcA = document.getElementById('pc_alasan');
+            if (!pcK || !pcJ || !pcM || !pcS || !pcA) return;
+            const d = { karyawanId: pcK.value, jenis: pcJ.value, mulai: pcM.value, selesai: pcS.value, alasan: pcA.value };
             if(!d.karyawanId || !d.mulai || !d.selesai || !d.alasan) return showToast('Error', 'Lengkapi form!', 'error');
             if(!state.cuti) state.cuti = [];
             state.cuti.push({ id: Date.now(), karyawanId: parseInt(d.karyawanId,10), tanggalPengajuan: new Date().toISOString(), ...d, status: 'Menunggu' });
@@ -1449,11 +2393,23 @@
         let idCutiAktif = null;
         window.bukaModalDetailCuti = function(id) {
             idCutiAktif = id; const c = state.cuti.find(x => x.id === id); if(!c) return; const k = state.karyawan.find(x => x.id == c.karyawanId);
-            document.getElementById('dc_nama').innerText = k ? k.nama : '-'; document.getElementById('dc_jenis').innerText = c.jenis; document.getElementById('dc_status').innerText = c.status; document.getElementById('dc_periode').innerText = `${formatDateID(c.mulai)} - ${formatDateID(c.selesai)}`; document.getElementById('dc_alasan').innerText = c.alasan;
-            const b = document.getElementById('dc_action_buttons'); if(c.status === 'Menunggu') { b.classList.remove('hidden'); b.classList.add('flex'); } else { b.classList.add('hidden'); b.classList.remove('flex'); }
-            document.getElementById('modalDetailCuti').classList.remove('hidden');
+            const dcNama = document.getElementById('dc_nama'); if (dcNama) dcNama.innerText = k ? k.nama : '-';
+            const dcJenis = document.getElementById('dc_jenis'); if (dcJenis) dcJenis.innerText = c.jenis;
+            const dcStatus = document.getElementById('dc_status'); if (dcStatus) dcStatus.innerText = c.status;
+            const dcPeriode = document.getElementById('dc_periode'); if (dcPeriode) dcPeriode.innerText = `${formatDateID(c.mulai)} - ${formatDateID(c.selesai)}`;
+            const dcAlasan = document.getElementById('dc_alasan'); if (dcAlasan) dcAlasan.innerText = c.alasan;
+            const b = document.getElementById('dc_action_buttons'); 
+            if (b) {
+                if(c.status === 'Menunggu') { b.classList.remove('hidden'); b.classList.add('flex'); } else { b.classList.add('hidden'); b.classList.remove('flex'); }
+            }
+            const modal = document.getElementById('modalDetailCuti');
+            if (modal) modal.classList.remove('hidden');
         };
-        window.tutupModalDetailCuti = function() { document.getElementById('modalDetailCuti').classList.add('hidden'); idCutiAktif = null; };
+        window.tutupModalDetailCuti = function() { 
+            const modal = document.getElementById('modalDetailCuti');
+            if (modal) modal.classList.add('hidden'); 
+            idCutiAktif = null; 
+        };
         
         window.forwardWAKepsek = function() {
             const c = state.cuti.find(x => x.id === idCutiAktif); if(!c) return; const k = state.karyawan.find(x => x.id == c.karyawanId);
@@ -1476,10 +2432,16 @@
         window.dataGajiBulanIni = {};
 
         window.hitungGaji = function() {
-            const bln = document.getElementById('bulanGaji').value; 
-            document.getElementById('gajiResult').style.display='block'; 
-            document.getElementById('btnExp').style.display='flex';
-            const tb = document.getElementById('tg_body'); tb.innerHTML = '';
+            const blnEl = document.getElementById('bulanGaji');
+            if (!blnEl) return;
+            const bln = blnEl.value; 
+            const resEl = document.getElementById('gajiResult');
+            if (resEl) resEl.style.display='block'; 
+            const expEl = document.getElementById('btnExp');
+            if (expEl) expEl.style.display='flex';
+            const tb = document.getElementById('tg_body');
+            if (!tb) return;
+            tb.innerHTML = '';
             
             const now = new Date();
             window.dataGajiBulanIni = {}; // Bersihkan data cetak lama
@@ -1651,11 +2613,17 @@
             return `<div class="mb-8"><h1 class="text-3xl font-bold">Rapor Individu</h1></div><div class="bg-white p-6 rounded-2xl border mb-8 flex flex-col sm:flex-row gap-4 items-end"><div class="flex-1 w-full"><label class="block text-xs font-bold mb-2">Pegawai</label><select id="lapK" class="w-full border rounded-xl p-3 outline-none">${opt}</select></div><div class="w-full sm:w-auto"><label class="block text-xs font-bold mb-2">Bulan</label><select id="lapB" class="w-full border rounded-xl p-3 outline-none">${mo}</select></div><button onclick="window.tampilLaporan()" class="w-full sm:w-auto bg-blue-600 text-white font-bold px-8 py-3.5 rounded-xl"><i class="fas fa-search"></i> Cari</button></div><div id="lapRes" class="hidden bg-white rounded-2xl border overflow-x-auto"><table class="min-w-full text-sm text-left"><thead class="bg-slate-50 border-b"><tr><th class="py-4 px-6">Tanggal</th><th class="py-4 px-6">Masuk</th><th class="py-4 px-6">Pulang</th><th class="py-4 px-6">Status</th></tr></thead><tbody id="tl_body" class="divide-y"></tbody></table></div>`;
         }
         window.tampilLaporan = function() {
-            const kId = document.getElementById('lapK').value; const b = document.getElementById('lapB').value; if(!kId) return;
+            const lapK = document.getElementById('lapK');
+            const lapB = document.getElementById('lapB');
+            if (!lapK || !lapB) return;
+            const kId = lapK.value; const b = lapB.value; if(!kId) return;
             const ab = state.absensi.filter(a => a.karyawanId == kId && a.tanggal.startsWith(b)).sort((a,b)=>a.tanggal.localeCompare(b.tanggal));
-            const tb = document.getElementById('tl_body'); tb.innerHTML = '';
+            const tb = document.getElementById('tl_body'); 
+            if (!tb) return;
+            tb.innerHTML = '';
             ab.forEach(a => { const bg = (a.statusMasuk==='Tepat Waktu' || a.statusMasuk?.includes('Libur')) ? 'bg-emerald-100 text-emerald-700':'bg-amber-100 text-amber-700'; tb.innerHTML += `<tr><td class="py-4 px-6 whitespace-nowrap">${formatDateID(a.tanggal)}</td><td class="py-4 px-6 font-mono">${a.jamMasuk}</td><td class="py-4 px-6 font-mono">${a.jamPulang||'-'}</td><td class="py-4 px-6"><span class="px-3 py-1 rounded-full text-[10px] uppercase font-bold ${bg}">${a.statusMasuk}</span></td></tr>`; });
-            document.getElementById('lapRes').classList.remove('hidden');
+            const lapRes = document.getElementById('lapRes');
+            if (lapRes) lapRes.classList.remove('hidden');
         };
 
         function getPengaturanHTML() {
