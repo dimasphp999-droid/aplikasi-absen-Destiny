@@ -26,8 +26,25 @@
         ::-webkit-scrollbar-track { background: #f1f5f9; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-        #reader { border-radius: 0.75rem; overflow: hidden; border: none !important; }
-        #reader video { object-fit: cover; }
+        #reader { border-radius: 0.75rem; overflow: hidden; border: none !important; width: 100% !important; }
+        #reader video { object-fit: cover; width: 100% !important; border-radius: 0.75rem; }
+        #reader__scan_region { border: none !important; }
+        @keyframes scanLaser {
+            0% { top: 15%; opacity: 0.6; }
+            50% { top: 85%; opacity: 1; }
+            100% { top: 15%; opacity: 0.6; }
+        }
+        .scan-laser-line {
+            position: absolute;
+            left: 12%;
+            right: 12%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent 0%, #10b981 50%, transparent 100%);
+            box-shadow: 0 0 10px #10b981;
+            animation: scanLaser 2.2s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 5;
+        }
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; }
         
@@ -508,6 +525,11 @@
         let isInitialLoad = true;
         let kioskModeType = 'absen';
         let activeHapusMode = 'absensi';
+        let availableCameras = [];
+        let currentCameraIndex = 0;
+        let isScannerStarting = false;
+        let barcodeBuffer = '';
+        let lastKeyTime = 0;
 
         // ==========================================
         // SISTEM AUDIO (MP3 Kustom / Bawaan)
@@ -679,10 +701,40 @@
             if (isProcessingQR) return; // Mencegah double scan
             isProcessingQR = true;
 
-            const karyawan = state.karyawan.find(k => k.nik === nikScanned);
+            let code = String(nikScanned || '').trim();
+            // Handle URL / JSON barcode format
+            if (code.startsWith('{') && code.endsWith('}')) {
+                try {
+                    const parsed = JSON.parse(code);
+                    code = String(parsed.nik || parsed.nip || parsed.id || code).trim();
+                } catch(e) {}
+            } else if (code.includes('?') || code.includes('/')) {
+                const parts = code.split(/[\/?=&]/);
+                const lastPart = parts.filter(Boolean).pop();
+                if (lastPart) code = lastPart.trim();
+            }
+
+            // Bersihkan dari karakter carriage return atau newline (dari barcode scanner gun)
+            code = code.replace(/[\r\n]+/g, '').trim();
+            const cleanCode = code.toLowerCase();
+
+            const karyawan = (state.karyawan || []).find(k => 
+                (k.nik && k.nik.trim().toLowerCase() === cleanCode) ||
+                (k.nip && k.nip.trim().toLowerCase() === cleanCode) ||
+                (k.nikKtp && k.nikKtp.trim().toLowerCase() === cleanCode) ||
+                String(k.id) === code
+            );
+
+            // Efek visual flash saat barcode/QR terdeteksi
+            const readerDiv = document.getElementById('reader');
+            if (readerDiv) {
+                readerDiv.classList.add('ring-4', 'ring-emerald-400');
+                setTimeout(() => readerDiv.classList.remove('ring-4', 'ring-emerald-400'), 600);
+            }
+
             if(!karyawan) {
                 window.playSound('error'); 
-                showToast('Akses Ditolak', 'QR Code/NIK tidak dikenali oleh sistem.', 'error');
+                showToast('Akses Ditolak', `Kode "${code}" tidak terdaftar di sistem.`, 'error');
                 setTimeout(() => { isProcessingQR = false; }, 3000);
                 return;
             }
@@ -733,16 +785,16 @@
 
                 if (isShiftBelumSelesai) {
                     const diffTime = now.getTime() - new Date(absenTerakhir.tanggal).getTime();
-                    if (diffTime / (1000 * 3600 * 24) > 1.5) isShiftBelumSelesai = false; // Terlalu lama (lupa absen pulang kemarin lusa)
+                    if (diffTime / (1000 * 3600 * 24) > 1.5) isShiftBelumSelesai = false; // Terlalu lama
                 }
 
                 if (isShiftBelumSelesai) {
-                    // TERCATAT SEBAGAI JAM PULANG SHIFT (Bisa Beda Tanggal)
+                    // TERCATAT SEBAGAI JAM PULANG SHIFT
                     absenTerakhir.jamPulang = timeString; 
                     absenTerakhir.metodePulang = metode;
                     saveData(); 
                     window.playSound('pulang'); 
-                    showToast('Pulang Berhasil', `Hati-hati di jalan, ${karyawan.nama}!`);
+                    showToast('Pulang Berhasil', `Hati-hati di jalan, ${karyawan.nama}! (${metode})`);
                 } else { 
                     let absenHariIni = state.absensi.find(a => a.karyawanId === karyawan.id && a.tanggal === dateString);
                     if (!absenHariIni) {
@@ -762,59 +814,159 @@
             setTimeout(() => { isProcessingQR = false; }, 3500);
         };
 
-        // FIX: Perbaikan pengelolaan Instance Scanner untuk menghindari memory leak / error ganda
+        // PENGELOLAAN INSTANCE SCANNER YANG BERSIH & ROBUST
         async function stopScanner() { 
             if (html5QrCode) { 
                 try { 
                     if (html5QrCode.isScanning) {
                         await html5QrCode.stop(); 
                     }
+                } catch(err) {
+                    console.warn("Stop scanner error:", err);
+                }
+                try {
                     html5QrCode.clear(); 
-                } catch(err) {} 
+                } catch(err) {}
+                html5QrCode = null;
             } 
         }
         
-        window.startScanner = function() {
-            setTimeout(async () => {
+        window.startScanner = async function() {
+            if (isScannerStarting) return;
+            isScannerStarting = true;
+
+            try {
                 if (state.currentView !== 'scanWajah' && state.currentView !== 'absenGPS') return; 
-                const readerElement = document.getElementById('reader'); if(!readerElement) return;
-                
-                if (!html5QrCode) {
-                    html5QrCode = new Html5Qrcode("reader");
+                const readerElement = document.getElementById('reader'); 
+                if(!readerElement) return;
+
+                // Pastikan instance lama dibersihkan tuntas
+                await stopScanner();
+
+                const cameraStatusEl = document.getElementById('cameraStatus');
+                const errEl = document.getElementById('cameraError');
+                if (errEl) errEl.classList.add('hidden');
+                if (cameraStatusEl) cameraStatusEl.innerText = "Menghubungkan kamera...";
+
+                // Dukungan lengkap format QR Code dan Barcode 1D (Code 128, Code 39, EAN, UPC, dll)
+                let formats = undefined;
+                if (typeof Html5QrcodeSupportedFormats !== 'undefined') {
+                    formats = [
+                        Html5QrcodeSupportedFormats.QR_CODE,
+                        Html5QrcodeSupportedFormats.CODE_128,
+                        Html5QrcodeSupportedFormats.CODE_39,
+                        Html5QrcodeSupportedFormats.CODE_93,
+                        Html5QrcodeSupportedFormats.EAN_13,
+                        Html5QrcodeSupportedFormats.EAN_8,
+                        Html5QrcodeSupportedFormats.UPC_A,
+                        Html5QrcodeSupportedFormats.UPC_E,
+                        Html5QrcodeSupportedFormats.CODABAR,
+                        Html5QrcodeSupportedFormats.ITF,
+                        Html5QrcodeSupportedFormats.DATA_MATRIX
+                    ];
                 }
-                
-                await stopScanner(); // Pastikan bersih sebelum mulai
-                
+
+                html5QrCode = new Html5Qrcode("reader", {
+                    formatsToSupport: formats,
+                    verbose: false,
+                    experimentalFeatures: {
+                        useBarCodeDetectorIfSupported: true
+                    }
+                });
+
+                // Konfigurasi viewport scan yang fleksibel untuk Barcode panjang maupun QR Code
+                const scanConfig = {
+                    fps: 15,
+                    qrbox: (viewfinderWidth, viewfinderHeight) => {
+                        const w = Math.min(Math.floor(viewfinderWidth * 0.85), 320);
+                        const h = Math.min(Math.floor(viewfinderHeight * 0.75), 240);
+                        return { width: Math.max(w, 220), height: Math.max(h, 160) };
+                    },
+                    aspectRatio: 1.333333
+                };
+
+                const onScanSuccess = (decodedText) => {
+                    if (isProcessingQR) return;
+                    if (state.currentView === 'absenGPS') {
+                        window.prosesGPSLaluAbsen(decodedText);
+                    } else {
+                        window.prosesKehadiran(decodedText, 'QR/Barcode'); 
+                    }
+                };
+
+                // Deteksi daftar kamera fisik perangkat
                 try {
-                    await html5QrCode.start(
-                        { facingMode: cameraFacingMode }, 
-                        { fps: 10, qrbox: { width: 250, height: 250 } },
-                        (decodedText) => { 
-                            if (state.currentView === 'absenGPS') {
-                                window.prosesGPSLaluAbsen(decodedText);
-                            } else {
-                                window.prosesKehadiran(decodedText, 'QR'); 
-                            }
-                        },
-                        (errorMessage) => {
-                            // Ignored (scanning ongoing)
-                        }
-                    );
-                    document.getElementById('cameraError')?.classList.add('hidden');
-                } catch(err) {
-                    // Fallback jika tidak ada environment camera (kamera belakang)
-                    if(cameraFacingMode === "environment") { 
-                        cameraFacingMode = "user"; 
-                        window.startScanner(); 
-                        return; 
+                    if (!availableCameras || availableCameras.length === 0) {
+                        availableCameras = await Html5Qrcode.getCameras();
                     }
-                    const errEl = document.getElementById('cameraError'); 
-                    if(errEl) { 
-                        errEl.classList.remove('hidden'); 
-                        errEl.innerHTML = "<i class='fas fa-video-slash mr-2'></i>Kamera diblokir/tidak terdeteksi."; 
+                } catch(e) {
+                    console.log("Enumerasi kamera tidak didukung, menggunakan facingMode fallback.");
+                }
+
+                let cameraTarget = null;
+                if (availableCameras && availableCameras.length > 0) {
+                    if (currentCameraIndex >= availableCameras.length) currentCameraIndex = 0;
+                    cameraTarget = availableCameras[currentCameraIndex].id;
+                    if (cameraStatusEl) {
+                        cameraStatusEl.innerText = availableCameras[currentCameraIndex].label || `Kamera ${currentCameraIndex + 1}`;
+                    }
+                } else {
+                    cameraTarget = { facingMode: cameraFacingMode };
+                    if (cameraStatusEl) cameraStatusEl.innerText = cameraFacingMode === "environment" ? "Kamera Belakang" : "Kamera Depan";
+                }
+
+                try {
+                    await html5QrCode.start(cameraTarget, scanConfig, onScanSuccess, () => {});
+                    if (errEl) errEl.classList.add('hidden');
+                } catch(firstErr) {
+                    console.warn("Mencoba fallback kamera:", firstErr);
+                    // Fallback 1: Ganti facingMode ke user
+                    try {
+                        cameraFacingMode = "user";
+                        await html5QrCode.start({ facingMode: "user" }, scanConfig, onScanSuccess, () => {});
+                        if (errEl) errEl.classList.add('hidden');
+                        if (cameraStatusEl) cameraStatusEl.innerText = "Kamera Depan / Default";
+                    } catch(secondErr) {
+                        // Fallback 2: Kendala video umum
+                        try {
+                            await html5QrCode.start({ video: true }, scanConfig, onScanSuccess, () => {});
+                            if (errEl) errEl.classList.add('hidden');
+                            if (cameraStatusEl) cameraStatusEl.innerText = "Kamera Standar";
+                        } catch(fatalErr) {
+                            console.error("Kamera gagal diakses:", fatalErr);
+                            let pesanError = "Kamera tidak dapat diakses.";
+                            const errStr = String(fatalErr || '');
+                            if (errStr.includes("NotAllowedError") || errStr.includes("Permission")) {
+                                pesanError = "Izin akses kamera diblokir browser. Harap izinkan akses kamera di setelan situs.";
+                            } else if (errStr.includes("NotFoundError") || errStr.includes("DevicesNotFoundError")) {
+                                pesanError = "Tidak ditemukan perangkat kamera yang terhubung pada sistem.";
+                            } else if (errStr.includes("NotReadableError") || errStr.includes("TrackStartError")) {
+                                pesanError = "Kamera sedang digunakan aplikasi atau tab browser lain.";
+                            }
+                            if (cameraStatusEl) cameraStatusEl.innerText = "Kamera tidak aktif";
+                            if (errEl) {
+                                errEl.classList.remove('hidden');
+                                errEl.innerHTML = `
+                                    <div class="text-center p-4">
+                                        <i class="fas fa-video-slash text-3xl mb-2 text-rose-400"></i>
+                                        <p class="text-white text-xs font-semibold mb-3 leading-relaxed">${pesanError}</p>
+                                        <div class="flex flex-col gap-2">
+                                            <button onclick="window.startScanner()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 px-4 rounded-xl shadow transition">
+                                                <i class="fas fa-redo mr-1.5"></i> Coba Buka Kamera Lagi
+                                            </button>
+                                            <button onclick="document.getElementById('inputManualNIK')?.focus();" class="bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold py-2.5 px-4 rounded-xl transition">
+                                                <i class="fas fa-keyboard mr-1.5"></i> Gunakan Input NIK / Scanner Gun
+                                            </button>
+                                        </div>
+                                    </div>
+                                `;
+                            }
+                        }
                     }
                 }
-            }, 500);
+            } finally {
+                isScannerStarting = false;
+            }
         };
 
         window.toggleKioskMode = function(mode) {
@@ -834,30 +986,122 @@
             } else {
                 btnAbsen.className = "flex-1 bg-emerald-600 text-white font-bold py-2.5 rounded-xl shadow transition text-xs border border-emerald-700"; 
                 btnImk.className = "flex-1 text-slate-500 bg-slate-100 hover:bg-slate-200 font-semibold py-2.5 rounded-xl transition text-xs border border-slate-200";
-                titleEl.innerText = "Terminal Mesin QR"; 
-                subtitleEl.innerText = "Dekatkan QR Code ID Card ke Kamera";
+                titleEl.innerText = "Terminal Mesin QR & Barcode"; 
+                subtitleEl.innerText = "Arahkan Barcode ID Card atau QR Code ke Kamera";
             }
         };
 
-        window.toggleCamera = function() { 
-            cameraFacingMode = (cameraFacingMode === "environment") ? "user" : "environment"; 
-            window.startScanner(); 
+        window.toggleCamera = async function() { 
+            if (availableCameras && availableCameras.length > 1) {
+                currentCameraIndex = (currentCameraIndex + 1) % availableCameras.length;
+            } else {
+                cameraFacingMode = (cameraFacingMode === "environment") ? "user" : "environment"; 
+            }
+            await window.startScanner(); 
         };
+
+        // SCAN DARI FILE GAMBAR (JIKA KAMERA TIDAK TERSEDIA)
+        window.scanBarcodeFile = async function(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            showToast('Memindai File...', 'Membaca kode dari file gambar...', 'warning');
+            try {
+                let tempScanner = html5QrCode;
+                if (!tempScanner) {
+                    tempScanner = new Html5Qrcode("reader");
+                }
+                const decodedResult = await tempScanner.scanFile(file, true);
+                if (decodedResult) {
+                    if (state.currentView === 'absenGPS') {
+                        window.prosesGPSLaluAbsen(decodedResult);
+                    } else {
+                        window.prosesKehadiran(decodedResult, 'File Gambar');
+                    }
+                }
+            } catch (err) {
+                window.playSound('error');
+                showToast('Gagal Scan File', 'Kode Barcode / QR tidak terbaca pada gambar. Pastikan gambar tajam dan jelas.', 'error');
+            } finally {
+                event.target.value = '';
+            }
+        };
+
+        // INPUT MANUAL / SCANNER GUN FORM
+        window.prosesManualKiosk = function(e) {
+            if (e) e.preventDefault();
+            const input = document.getElementById('inputManualNIK');
+            if (!input) return;
+            const val = input.value.trim();
+            if (!val) return showToast('Peringatan', 'Ketik NIK atau scan barcode terlebih dahulu.', 'warning');
+            input.value = '';
+            if (state.currentView === 'absenGPS') {
+                window.prosesGPSLaluAbsen(val);
+            } else {
+                window.prosesKehadiran(val, 'Barcode Gun/Manual');
+            }
+        };
+
+        // LISTENER KEYBOARD GLOBAL UNTUK SCANNER GUN USB / BLUETOOTH
+        window.addEventListener('keydown', function(e) {
+            if (state.currentView !== 'scanWajah' && state.currentView !== 'absenGPS') return;
+            
+            // Jangan ganggu bila user sedang mengetik di input form/modal selain input manual kiosk
+            const activeEl = document.activeElement;
+            if (activeEl && (activeEl.tagName === 'TEXTAREA' || (activeEl.tagName === 'INPUT' && activeEl.id !== 'inputManualNIK'))) {
+                return;
+            }
+
+            const now = Date.now();
+            if (now - lastKeyTime > 250 && barcodeBuffer.length > 0) {
+                barcodeBuffer = '';
+            }
+            lastKeyTime = now;
+
+            if (e.key === 'Enter') {
+                if (barcodeBuffer.trim().length >= 2) {
+                    const scanned = barcodeBuffer.trim();
+                    barcodeBuffer = '';
+                    if (state.currentView === 'absenGPS') {
+                        window.prosesGPSLaluAbsen(scanned);
+                    } else {
+                        window.prosesKehadiran(scanned, 'Barcode Scanner');
+                    }
+                }
+            } else if (e.key.length === 1) {
+                barcodeBuffer += e.key;
+            }
+        });
 
         window.prosesGPSLaluAbsen = function(nik) {
             if (isProcessingQR) return; 
             isProcessingQR = true;
             
-            const karyawan = state.karyawan.find(k => k.nik === nik);
+            let code = String(nik || '').trim();
+            if (code.startsWith('{') && code.endsWith('}')) {
+                try {
+                    const parsed = JSON.parse(code);
+                    code = String(parsed.nik || parsed.nip || parsed.id || code).trim();
+                } catch(e) {}
+            }
+            code = code.replace(/[\r\n]+/g, '').trim();
+            const cleanCode = code.toLowerCase();
+
+            const karyawan = (state.karyawan || []).find(k => 
+                (k.nik && k.nik.trim().toLowerCase() === cleanCode) ||
+                (k.nip && k.nip.trim().toLowerCase() === cleanCode) ||
+                (k.nikKtp && k.nikKtp.trim().toLowerCase() === cleanCode) ||
+                String(k.id) === code
+            );
+
             if(!karyawan) { 
                 window.playSound('error'); 
-                showToast('Akses Ditolak', 'QR Code tidak terdaftar.', 'error'); 
+                showToast('Akses Ditolak', `Kode "${code}" tidak terdaftar di sistem.`, 'error'); 
                 setTimeout(() => { isProcessingQR = false; }, 3000); 
                 return; 
             }
             if (!navigator.geolocation) { 
                 window.playSound('error'); 
-                showToast('Gagal', 'Sistem GPS tidak didukung perangkat.', 'error'); 
+                showToast('Gagal', 'Sistem GPS tidak didukung perangkat ini.', 'error'); 
                 setTimeout(() => { isProcessingQR = false; }, 3000); 
                 return; 
             }
@@ -866,7 +1110,7 @@
             navigator.geolocation.getCurrentPosition(
                 (pos) => { 
                     isProcessingQR = false; 
-                    window.prosesKehadiran(nik, 'GPS', pos.coords.latitude, pos.coords.longitude); 
+                    window.prosesKehadiran(code, 'GPS', pos.coords.latitude, pos.coords.longitude); 
                 },
                 () => { 
                     window.playSound('error'); 
@@ -959,8 +1203,20 @@
 
         window.setView = async function(view) { 
             await stopScanner(); 
+            if (view === 'scanWajah') {
+                state.currentUserRole = 'kiosk';
+            } else if (view === 'absenGPS') {
+                state.currentUserRole = 'gps';
+            }
             state.currentView = view; 
             window.render(); 
+        };
+
+        window.kembaliKeAdmin = async function() {
+            await stopScanner();
+            state.currentUserRole = 'admin';
+            state.currentView = 'dashboard';
+            window.render();
         };
         
         window.handleLogin = function(role, e) {
@@ -1037,9 +1293,16 @@
 
         function getNavItemsHTML(isMobile = false) {
             const items = [
-                { id: 'dashboard', icon: 'fa-chart-pie', label: 'Ringkasan Dasbor' }, { id: 'jabatan', icon: 'fa-user-tie', label: 'Struktur Jabatan' }, { id: 'karyawan', icon: 'fa-users', label: 'Database Karyawan' },
-                { id: 'absensi', icon: 'fa-history', label: 'Riwayat Kehadiran' }, { id: 'imk', icon: 'fa-running', label: 'Riwayat IMK' }, { id: 'cuti', icon: 'fa-envelope-open-text', label: 'Cuti & Izin' },
-                { id: 'gaji', icon: 'fa-file-invoice-dollar', label: 'Penggajian' }, { id: 'laporan', icon: 'fa-print', label: 'Rapor Individu' }, { id: 'pengaturan', icon: 'fa-sliders-h', label: 'Pengaturan Sistem' }
+                { id: 'dashboard', icon: 'fa-chart-pie', label: 'Ringkasan Dasbor' },
+                { id: 'scanWajah', icon: 'fa-qrcode', label: 'Terminal Kiosk QR' },
+                { id: 'jabatan', icon: 'fa-user-tie', label: 'Struktur Jabatan' }, 
+                { id: 'karyawan', icon: 'fa-users', label: 'Database Karyawan' },
+                { id: 'absensi', icon: 'fa-history', label: 'Riwayat Kehadiran' }, 
+                { id: 'imk', icon: 'fa-running', label: 'Riwayat IMK' }, 
+                { id: 'cuti', icon: 'fa-envelope-open-text', label: 'Cuti & Izin' },
+                { id: 'gaji', icon: 'fa-file-invoice-dollar', label: 'Penggajian' }, 
+                { id: 'laporan', icon: 'fa-print', label: 'Rapor Individu' }, 
+                { id: 'pengaturan', icon: 'fa-sliders-h', label: 'Pengaturan Sistem' }
             ];
             return items.map(item => {
                 const isActive = state.currentView === item.id;
@@ -1078,15 +1341,85 @@
                 container.innerHTML = `
                     <div class="min-h-screen flex flex-col justify-center items-center p-4 sm:p-8" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);">
                         <div class="w-full max-w-xl">
-                            <div class="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/10 flex justify-between items-center mb-6">
-                                <div class="flex items-center space-x-4"><div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-white"><i class="fas ${isKiosk ? 'fa-qrcode' : 'fa-map-marker-alt'}"></i></div><div><h1 class="text-xl font-bold text-white" id="kioskTitle">${isKiosk ? 'Terminal Mesin QR' : 'Absen Personal GPS'}</h1><p class="text-xs text-emerald-400 font-medium" id="kioskSubtitle">${isKiosk ? 'Dekatkan QR Code ke Kamera' : 'Scan ID Card via Kamera untuk mengunci Lokasi GPS'}</p></div></div>
-                                <button onclick="window.handleLogout()" class="text-white/50 hover:text-red-400 bg-white/5 p-3 rounded-xl transition"><i class="fas fa-power-off text-xl"></i></button>
+                            <div class="bg-white/10 backdrop-blur-md rounded-2xl p-4 sm:p-6 border border-white/10 flex justify-between items-center mb-6">
+                                <div class="flex items-center space-x-3 sm:space-x-4">
+                                    <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-white shrink-0">
+                                        <i class="fas ${isKiosk ? 'fa-qrcode' : 'fa-map-marker-alt'}"></i>
+                                    </div>
+                                    <div>
+                                        <h1 class="text-lg sm:text-xl font-bold text-white leading-tight" id="kioskTitle">${isKiosk ? 'Terminal Mesin QR & Barcode' : 'Absen Personal GPS'}</h1>
+                                        <p class="text-xs text-emerald-400 font-medium" id="kioskSubtitle">${isKiosk ? 'Dekatkan Barcode ID Card atau QR Code ke Kamera' : 'Scan ID Card via Kamera untuk mengunci Titik Lokasi'}</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <button onclick="window.kembaliKeAdmin()" class="bg-emerald-600/30 hover:bg-emerald-600/60 text-emerald-300 hover:text-white px-3 py-2 rounded-xl text-xs font-bold transition border border-emerald-500/40 flex items-center whitespace-nowrap" title="Kembali ke Panel Admin">
+                                        <i class="fas fa-arrow-left mr-1.5"></i> Admin
+                                    </button>
+                                    <button onclick="window.handleLogout()" class="text-white/50 hover:text-red-400 bg-white/5 p-2.5 rounded-xl transition" title="Logout">
+                                        <i class="fas fa-power-off text-lg"></i>
+                                    </button>
+                                </div>
                             </div>
-                            <div class="bg-white rounded-3xl shadow-2xl p-8 border-b-8 border-emerald-500 relative text-center">
-                                <div class="mb-5"><h2 class="text-5xl font-bold text-slate-800 currentTimeDisplay">00:00:00</h2><p class="text-sm font-semibold text-slate-500 mt-2 uppercase currentDateDisplay">Memuat tanggal...</p></div>
-                                ${isKiosk ? `<div class="flex bg-slate-100 p-1 rounded-2xl mb-4 border border-slate-200"><button id="btnModeAbsen" onclick="window.toggleKioskMode('absen')" class="flex-1 bg-emerald-600 text-white font-bold py-2.5 rounded-xl shadow transition text-xs border border-emerald-700">Absen Masuk/Pulang</button><button id="btnModeImk" onclick="window.toggleKioskMode('imk')" class="flex-1 text-slate-500 bg-slate-100 hover:bg-slate-200 font-semibold py-2.5 rounded-xl transition text-xs border border-slate-200">Izin Keluar Masuk (IMK)</button></div>` : `<div class="bg-blue-50 border border-blue-200 p-3 rounded-xl mb-4 text-blue-700 text-xs font-bold flex items-center justify-center"><i class="fas fa-satellite-dish mr-2 animate-pulse text-lg"></i> Membutuhkan Akses Lokasi (GPS) & Scan ID Card</div>`}
-                                <div class="relative bg-slate-900 rounded-2xl overflow-hidden shadow-inner mb-6 flex items-center justify-center" style="min-height: 240px;"><p id="cameraError" class="text-amber-500 text-sm font-medium p-4 absolute inset-0 flex flex-col items-center justify-center hidden bg-slate-900 z-10"><i class="fas fa-video-slash text-3xl mb-2"></i> Kamera error.</p><div id="reader" class="w-full h-full object-cover"></div></div>
-                                <div class="flex gap-2"><button onclick="window.toggleCamera()" class="${isKiosk ? 'w-1/2' : 'w-full'} bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3.5 rounded-xl transition flex items-center justify-center border border-slate-300"><i class="fas fa-camera-rotate mr-2"></i> Putar Kamera</button>${isKiosk ? `<button onclick="window.bukaModalPengajuanCuti()" class="w-1/2 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3.5 rounded-xl transition flex items-center justify-center shadow"><i class="fas fa-envelope-open-text mr-2"></i> Form Izin</button>` : ''}</div>
+
+                            <div class="bg-white rounded-3xl shadow-2xl p-6 sm:p-8 border-b-8 border-emerald-500 relative text-center">
+                                <div class="mb-4">
+                                    <h2 class="text-4xl sm:text-5xl font-bold text-slate-800 currentTimeDisplay">00:00:00</h2>
+                                    <p class="text-xs sm:text-sm font-semibold text-slate-500 mt-1 uppercase currentDateDisplay">Memuat tanggal...</p>
+                                </div>
+
+                                ${isKiosk ? `
+                                <div class="flex bg-slate-100 p-1 rounded-2xl mb-4 border border-slate-200">
+                                    <button id="btnModeAbsen" onclick="window.toggleKioskMode('absen')" class="flex-1 bg-emerald-600 text-white font-bold py-2.5 rounded-xl shadow transition text-xs border border-emerald-700">Absen Masuk/Pulang</button>
+                                    <button id="btnModeImk" onclick="window.toggleKioskMode('imk')" class="flex-1 text-slate-500 bg-slate-100 hover:bg-slate-200 font-semibold py-2.5 rounded-xl transition text-xs border border-slate-200">Izin Keluar Masuk (IMK)</button>
+                                </div>
+                                ` : `
+                                <div class="bg-blue-50 border border-blue-200 p-3 rounded-xl mb-4 text-blue-700 text-xs font-bold flex items-center justify-center">
+                                    <i class="fas fa-satellite-dish mr-2 animate-pulse text-lg"></i> Membutuhkan Akses Lokasi (GPS) & Scan ID Card
+                                </div>
+                                `}
+
+                                <div class="flex items-center justify-between text-xs text-slate-500 mb-2 px-1">
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                        <span id="cameraStatus" class="font-medium text-slate-600">Menghubungkan kamera...</span>
+                                    </div>
+                                    <span class="text-[11px] text-slate-400 font-mono hidden sm:inline">Barcode 1D & QR Aktif</span>
+                                </div>
+
+                                <div class="relative bg-slate-950 rounded-2xl overflow-hidden shadow-inner mb-4 flex items-center justify-center border border-slate-200" style="min-height: 250px;">
+                                    <div class="scan-laser-line"></div>
+                                    <div id="cameraError" class="text-amber-500 text-xs font-medium p-4 absolute inset-0 flex flex-col items-center justify-center hidden bg-slate-900/95 z-20"></div>
+                                    <div id="reader" class="w-full h-full object-cover"></div>
+                                </div>
+
+                                <input type="file" id="fileQrInput" accept="image/*" class="hidden" onchange="window.scanBarcodeFile(event)">
+
+                                <div class="flex gap-2 mb-2">
+                                    <button type="button" onclick="window.toggleCamera()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 px-3 rounded-xl transition flex items-center justify-center border border-slate-300 text-xs shadow-sm">
+                                        <i class="fas fa-camera-rotate mr-1.5 text-emerald-600"></i> Putar Kamera
+                                    </button>
+                                    <button type="button" onclick="document.getElementById('fileQrInput').click()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 px-3 rounded-xl transition flex items-center justify-center border border-slate-300 text-xs shadow-sm" title="Scan dari foto/gambar barcode">
+                                        <i class="fas fa-image mr-1.5 text-indigo-600"></i> Scan Gambar
+                                    </button>
+                                    ${isKiosk ? `
+                                    <button type="button" onclick="window.bukaModalPengajuanCuti()" class="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 px-3 rounded-xl transition flex items-center justify-center shadow text-xs">
+                                        <i class="fas fa-envelope-open-text mr-1.5"></i> Form Izin
+                                    </button>
+                                    ` : ''}
+                                </div>
+
+                                <form onsubmit="window.prosesManualKiosk(event)" class="mt-4 pt-3 border-t border-slate-100 flex gap-2">
+                                    <div class="relative flex-1">
+                                        <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                            <i class="fas fa-barcode"></i>
+                                        </span>
+                                        <input type="text" id="inputManualNIK" placeholder="Scan Barcode Gun atau Ketik NIK..." autocomplete="off" class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none transition">
+                                    </div>
+                                    <button type="submit" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2.5 rounded-xl font-bold text-xs shadow transition whitespace-nowrap flex items-center">
+                                        <i class="fas fa-check mr-1.5 text-emerald-400"></i> Absen
+                                    </button>
+                                </form>
+                                <p class="text-[11px] text-slate-400 mt-2 text-center"><i class="fas fa-info-circle mr-1 text-slate-400"></i> Mendukung Barcode Scanner Gun USB/Bluetooth, Webcam & Kamera HP</p>
                             </div>
                         </div>
                     </div>`;
@@ -2257,7 +2590,7 @@
         window.bukaModalJabatan = function(id = null) { if(id) { const j = state.jabatan.find(x => x.id === id); document.getElementById('fj_id').value = j.id; document.getElementById('fj_nama').value = j.nama; } else { document.getElementById('fj_id').value = ''; document.getElementById('fj_nama').value = ''; } document.getElementById('modalJabatan').classList.remove('hidden'); };
         window.simpanJabatan = function() { const id = document.getElementById('fj_id').value; const nama = document.getElementById('fj_nama').value; if(!nama) return; if(id) { const idx = state.jabatan.findIndex(j => j.id == parseInt(id, 10)); state.jabatan[idx].nama = nama; } else { state.jabatan.push({ id: Date.now(), nama }); } saveData(); document.getElementById('modalJabatan').classList.add('hidden'); window.renderMainContent(); };
 
-        function getAbsensiHTML() { return `<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4"><div><h1 class="text-3xl font-bold text-slate-800">Riwayat Kehadiran</h1></div><div class="flex flex-wrap gap-2"><button onclick="window.bukaModalAbsensi()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-3 rounded-xl shadow text-sm transition"><i class="fas fa-plus mr-2"></i>Tambah Manual</button><button onclick="window.bukaModalHapusTanggal('absensi')" class="bg-amber-500 hover:bg-amber-600 text-white font-semibold px-4 py-3 rounded-xl shadow text-sm transition"><i class="fas fa-calendar-times mr-2"></i>Hapus via Tanggal</button><button onclick="window.confirmDelete('semua_absensi', 'all')" class="bg-red-500 hover:bg-red-600 text-white font-semibold px-4 py-3 rounded-xl shadow text-sm transition"><i class="fas fa-trash-alt mr-2"></i>Kosongkan</button></div></div><div class="bg-white rounded-2xl border overflow-x-auto shadow-sm"><table class="min-w-full text-sm text-left"><thead class="bg-slate-50 border-b text-xs text-slate-500 uppercase"><tr><th class="py-4 px-6">Tgl</th><th class="py-4 px-6">Karyawan</th><th class="py-4 px-6">Masuk</th><th class="py-4 px-6">Pulang</th><th class="py-4 px-6">Metode</th><th class="py-4 px-6">Status</th><th class="py-4 px-6 text-center">Aksi</th></tr></thead><tbody id="tabelAbsensiBody" class="divide-y"></tbody></table></div>`; }
+        function getAbsensiHTML() { return `<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4"><div><h1 class="text-3xl font-bold text-slate-800">Riwayat Kehadiran</h1></div><div class="flex flex-wrap gap-2"><button onclick="window.setView('scanWajah')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-3 rounded-xl shadow text-sm transition"><i class="fas fa-qrcode mr-2"></i>Buka Mesin Absen (QR)</button><button onclick="window.bukaModalAbsensi()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-3 rounded-xl shadow text-sm transition"><i class="fas fa-plus mr-2"></i>Tambah Manual</button><button onclick="window.bukaModalHapusTanggal('absensi')" class="bg-amber-500 hover:bg-amber-600 text-white font-semibold px-4 py-3 rounded-xl shadow text-sm transition"><i class="fas fa-calendar-times mr-2"></i>Hapus via Tanggal</button><button onclick="window.confirmDelete('semua_absensi', 'all')" class="bg-red-500 hover:bg-red-600 text-white font-semibold px-4 py-3 rounded-xl shadow text-sm transition"><i class="fas fa-trash-alt mr-2"></i>Kosongkan</button></div></div><div class="bg-white rounded-2xl border overflow-x-auto shadow-sm"><table class="min-w-full text-sm text-left"><thead class="bg-slate-50 border-b text-xs text-slate-500 uppercase"><tr><th class="py-4 px-6">Tgl</th><th class="py-4 px-6">Karyawan</th><th class="py-4 px-6">Masuk</th><th class="py-4 px-6">Pulang</th><th class="py-4 px-6">Metode</th><th class="py-4 px-6">Status</th><th class="py-4 px-6 text-center">Aksi</th></tr></thead><tbody id="tabelAbsensiBody" class="divide-y"></tbody></table></div>`; }
         function renderAbsensiTable() {
             const tbody = document.getElementById('tabelAbsensiBody'); if(!tbody) return; tbody.innerHTML = '';
             const sorted = [...state.absensi].sort((a, b) => b.id - a.id);
