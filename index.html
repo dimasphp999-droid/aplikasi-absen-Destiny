@@ -19,6 +19,11 @@
     <!-- FIREBASE SDK v8 (Compat) -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <!-- React, ReactDOM & Recharts -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/recharts/umd/Recharts.min.js"></script>
     
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc; }
@@ -457,6 +462,24 @@
     <div id="appContainer" class="w-full h-full min-h-screen"></div>
 
     <script>
+        // Mencegah Uncaught Promise Rejection: "The play() request was interrupted because the media was removed from the document"
+        // Ini sering terjadi pada komponen Html5Qrcode atau tag Audio saat komponen di-unmount secara cepat.
+        const originalPlay = HTMLMediaElement.prototype.play;
+        HTMLMediaElement.prototype.play = function() {
+            const playPromise = originalPlay.apply(this, arguments);
+            if (playPromise !== undefined) {
+                playPromise.catch(error => {
+                    // Silently ignore "interrupted" errors to prevent them from surfacing to the platform error monitor
+                    if (error.name === 'AbortError' || String(error).includes('interrupted')) {
+                        console.warn('Ignored media play interruption:', error.message);
+                    } else {
+                        console.warn('Media play error:', error);
+                    }
+                });
+            }
+            return playPromise;
+        };
+
         // ==========================================
         // FIREBASE CONFIGURATION
         // ==========================================
@@ -525,8 +548,6 @@
         let isInitialLoad = true;
         let kioskModeType = 'absen';
         let activeHapusMode = 'absensi';
-        let availableCameras = [];
-        let currentCameraIndex = 0;
         let isScannerStarting = false;
         let barcodeBuffer = '';
         let lastKeyTime = 0;
@@ -534,6 +555,8 @@
         // ==========================================
         // SISTEM AUDIO (MP3 Kustom / Bawaan)
         // ==========================================
+        window.__activeAudios = window.__activeAudios || new Set();
+
         window.playSound = function(type) {
             if (!state.pengaturan) state.pengaturan = {};
             try {
@@ -546,9 +569,18 @@
 
                 if (customAudio) {
                     const audio = new Audio(customAudio);
+                    window.__activeAudios.add(audio);
+                    
+                    audio.onended = () => {
+                        window.__activeAudios.delete(audio);
+                    };
+
                     const playPromise = audio.play();
                     if (playPromise !== undefined) { 
-                        playPromise.catch(e => { playSynthSound(type); }); 
+                        playPromise.catch(e => { 
+                            window.__activeAudios.delete(audio);
+                            playSynthSound(type); 
+                        }); 
                     }
                     return;
                 }
@@ -833,7 +865,7 @@
         };
 
         // PENGELOLAAN INSTANCE SCANNER YANG BERSIH & ROBUST
-        async function stopScanner() { 
+        async function stopScannerInternal() { 
             if (html5QrCode) { 
                 try { 
                     if (html5QrCode.isScanning) {
@@ -848,6 +880,14 @@
                 html5QrCode = null;
             } 
         }
+
+        async function stopScanner() {
+            // Tunggu jika scanner sedang dalam proses start untuk menghindari interupsi DOM (error play request interrupted)
+            while (isScannerStarting) {
+                await new Promise(r => setTimeout(r, 100));
+            }
+            await stopScannerInternal();
+        }
         
         window.startScanner = async function() {
             if (isScannerStarting) return;
@@ -859,7 +899,7 @@
                 if(!readerElement) return;
 
                 // Pastikan instance lama dibersihkan tuntas
-                await stopScanner();
+                await stopScannerInternal();
 
                 const cameraStatusEl = document.getElementById('cameraStatus');
                 const errEl = document.getElementById('cameraError');
@@ -912,25 +952,9 @@
                     }
                 };
 
-                // Deteksi daftar kamera fisik perangkat
-                try {
-                    if (!availableCameras || availableCameras.length === 0) {
-                        availableCameras = await Html5Qrcode.getCameras();
-                    }
-                } catch(e) {
-                    console.log("Enumerasi kamera tidak didukung, menggunakan facingMode fallback.");
-                }
-
-                let cameraTarget = null;
-                if (availableCameras && availableCameras.length > 0) {
-                    if (currentCameraIndex >= availableCameras.length) currentCameraIndex = 0;
-                    cameraTarget = availableCameras[currentCameraIndex].id;
-                    if (cameraStatusEl) {
-                        cameraStatusEl.innerText = availableCameras[currentCameraIndex].label || `Kamera ${currentCameraIndex + 1}`;
-                    }
-                } else {
-                    cameraTarget = { facingMode: cameraFacingMode };
-                    if (cameraStatusEl) cameraStatusEl.innerText = cameraFacingMode === "environment" ? "Kamera Belakang" : "Kamera Depan";
+                let cameraTarget = { facingMode: cameraFacingMode };
+                if (cameraStatusEl) {
+                    cameraStatusEl.innerText = cameraFacingMode === "environment" ? "Kamera Belakang" : "Kamera Depan";
                 }
 
                 try {
@@ -938,23 +962,18 @@
                     if (errEl) errEl.classList.add('hidden');
                 } catch(firstErr) {
                     console.warn("Mencoba fallback kamera:", firstErr);
-                    // Fallback 1: Ganti facingMode ke user
+                    let fallbackMode = cameraFacingMode === "environment" ? "user" : "environment";
                     try {
-                        cameraFacingMode = "user";
-                        await html5QrCode.start({ facingMode: "user" }, scanConfig, onScanSuccess, () => {});
+                        cameraFacingMode = fallbackMode;
+                        await html5QrCode.start({ facingMode: fallbackMode }, scanConfig, onScanSuccess, () => {});
                         if (errEl) errEl.classList.add('hidden');
-                        if (cameraStatusEl) cameraStatusEl.innerText = "Kamera Depan / Default";
+                        if (cameraStatusEl) cameraStatusEl.innerText = fallbackMode === "environment" ? "Kamera Belakang (Fallback)" : "Kamera Depan (Fallback)";
                     } catch(secondErr) {
-                        // Fallback 2: Kendala video umum
-                        try {
-                            await html5QrCode.start({ facingMode: "environment" }, scanConfig, onScanSuccess, () => {});
-                            if (errEl) errEl.classList.add('hidden');
-                            if (cameraStatusEl) cameraStatusEl.innerText = "Kamera Standar";
-                        } catch(fatalErr) {
-                            console.error("Kamera gagal diakses:", fatalErr);
-                            let pesanError = "Kamera tidak dapat diakses.";
-                            const errStr = String(fatalErr || '');
-                            if (errStr.includes("NotAllowedError") || errStr.includes("Permission")) {
+                        // Jika keduanya gagal, log error sebagai warning
+                        console.warn("Kamera gagal diakses:", secondErr);
+                        let pesanError = "Kamera tidak dapat diakses.";
+                        const errStr = String(secondErr || '');
+                        if (errStr.includes("NotAllowedError") || errStr.includes("Permission")) {
                                 pesanError = "Izin akses kamera diblokir browser. Harap izinkan akses kamera di setelan situs.";
                             } else if (errStr.includes("NotFoundError") || errStr.includes("DevicesNotFoundError")) {
                                 pesanError = "Tidak ditemukan perangkat kamera yang terhubung pada sistem.";
@@ -981,7 +1000,6 @@
                             }
                         }
                     }
-                }
             } finally {
                 isScannerStarting = false;
             }
@@ -1010,11 +1028,7 @@
         };
 
         window.toggleCamera = async function() { 
-            if (availableCameras && availableCameras.length > 1) {
-                currentCameraIndex = (currentCameraIndex + 1) % availableCameras.length;
-            } else {
-                cameraFacingMode = (cameraFacingMode === "environment") ? "user" : "environment"; 
-            }
+            cameraFacingMode = (cameraFacingMode === "environment") ? "user" : "environment"; 
             await window.startScanner(); 
         };
 
@@ -1498,10 +1512,87 @@
             window.renderMainContent();
         };
 
+        window.renderRechartsMonthly = function() {
+            const container = document.getElementById('monthlyChartContainer');
+            if (!container || !window.React || !window.ReactDOM || !window.Recharts) return;
+
+            // Generate Monthly Data
+            const now = new Date();
+            const year = now.getFullYear();
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'];
+            
+            const chartData = months.map((monthName, index) => {
+                const monthNum = String(index + 1).padStart(2, '0');
+                const prefix = `${year}-${monthNum}`;
+                
+                let tepat = 0;
+                let telat = 0;
+                
+                (state.absensi || []).forEach(a => {
+                    if (a.tanggal && a.tanggal.startsWith(prefix)) {
+                        if (a.statusMasuk === 'Terlambat') telat++;
+                        else tepat++;
+                    }
+                });
+                
+                return { name: monthName, tepat, telat, total: tepat + telat };
+            });
+
+            const e = React.createElement;
+            const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = window.Recharts;
+
+            const CustomTooltip = ({ active, payload, label }) => {
+                if (active && payload && payload.length) {
+                    return e('div', { className: 'bg-slate-900 text-white text-xs p-3 rounded-xl shadow-xl border border-slate-700' },
+                        e('p', { className: 'font-bold mb-2 pb-2 border-b border-slate-700' }, label + ' ' + year),
+                        e('div', { className: 'flex flex-col gap-1' },
+                            e('span', { className: 'text-emerald-400' }, 'Tepat Waktu: ' + payload[0].value),
+                            e('span', { className: 'text-amber-400' }, 'Terlambat: ' + payload[1].value),
+                            e('span', { className: 'text-slate-300 font-bold mt-1' }, 'Total: ' + (payload[0].value + payload[1].value))
+                        )
+                    );
+                }
+                return null;
+            };
+
+            const ChartComponent = () => {
+                return e(ResponsiveContainer, { width: '100%', height: '100%' },
+                    e(BarChart, { data: chartData, margin: { top: 20, right: 20, left: -20, bottom: 5 } },
+                        e(CartesianGrid, { strokeDasharray: '3 3', vertical: false, stroke: '#e2e8f0' }),
+                        e(XAxis, { 
+                            dataKey: 'name', 
+                            axisLine: false, 
+                            tickLine: false, 
+                            tick: { fontSize: 12, fill: '#64748b' },
+                            dy: 10
+                        }),
+                        e(YAxis, { 
+                            axisLine: false, 
+                            tickLine: false, 
+                            tick: { fontSize: 12, fill: '#64748b' }
+                        }),
+                        e(Tooltip, { content: e(CustomTooltip), cursor: { fill: '#f1f5f9' } }),
+                        e(Legend, { 
+                            wrapperStyle: { fontSize: '12px', paddingTop: '20px' },
+                            iconType: 'circle'
+                        }),
+                        e(Bar, { dataKey: 'tepat', name: 'Tepat Waktu', stackId: 'a', fill: '#10b981', radius: [0, 0, 0, 0], barSize: 32 }),
+                        e(Bar, { dataKey: 'telat', name: 'Terlambat', stackId: 'a', fill: '#f59e0b', radius: [4, 4, 0, 0] })
+                    )
+                );
+            };
+
+            const root = ReactDOM.createRoot(container);
+            root.render(e(ChartComponent));
+        };
+
         window.renderMainContent = function() {
             const area = document.getElementById('mainContentArea');
             if (!area) return;
-            if(state.currentView === 'dashboard') area.innerHTML = getDashboardHTML();
+            if(state.currentView === 'dashboard') {
+                area.innerHTML = getDashboardHTML();
+                if(window.renderRechartsMonthly) setTimeout(window.renderRechartsMonthly, 50);
+            }
             else if(state.currentView === 'karyawan') { area.innerHTML = getKaryawanHTML(); renderKaryawanTable(); }
             else if(state.currentView === 'jabatan') { area.innerHTML = getJabatanHTML(); renderJabatanTable(); }
             else if(state.currentView === 'absensi') { area.innerHTML = getAbsensiHTML(); renderAbsensiTable(); }
@@ -1970,6 +2061,21 @@
                         <div class="mt-4 pt-3 border-t border-slate-100 text-center">
                             <span class="text-[11px] text-slate-500">Masa berlaku BPJS dapat dipantau otomatis di sistem</span>
                         </div>
+                    </div>
+                </div>
+
+                <!-- CHART RECHARTS BULANAN -->
+                <div class="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-sm mb-8">
+                    <div class="flex justify-between items-center mb-6 pb-4 border-b border-slate-100">
+                        <div>
+                            <h3 class="font-bold text-slate-800 text-sm uppercase tracking-wider flex items-center">
+                                <i class="fas fa-chart-line mr-2 text-indigo-500"></i>Tren Kehadiran & Keterlambatan Bulanan
+                            </h3>
+                            <p class="text-xs text-slate-500 mt-0.5">Perbandingan interaktif total kehadiran dan keterlambatan setiap bulannya.</p>
+                        </div>
+                    </div>
+                    <div id="monthlyChartContainer" class="w-full h-[300px] flex items-center justify-center text-slate-400">
+                        <i class="fas fa-spinner fa-spin mr-2"></i> Memuat Grafik...
                     </div>
                 </div>
             `;
