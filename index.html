@@ -646,7 +646,25 @@
             }
         }
 
+        function saveSession() {
+            sessionStorage.setItem('destinySession', JSON.stringify({
+                role: state.currentUserRole,
+                view: state.currentView
+            }));
+        }
+
         function loadData() {
+            if (isInitialLoad) {
+                try {
+                    const sessionData = sessionStorage.getItem('destinySession');
+                    if (sessionData) {
+                        const parsed = JSON.parse(sessionData);
+                        if (parsed.role) state.currentUserRole = parsed.role;
+                        if (parsed.view) state.currentView = parsed.view;
+                    }
+                } catch(e) {}
+            }
+
             if (isFirebaseConnected) {
                 // Safety fallback timer to prevent blank screen if Firebase is unreachable
                 const timeoutId = setTimeout(() => {
@@ -1004,13 +1022,48 @@
         window.scanBarcodeFile = async function(event) {
             const file = event.target.files && event.target.files[0];
             if (!file) return;
+            
             showToast('Memindai File...', 'Membaca kode dari file gambar...', 'warning');
+            
+            // Generate a detached hidden reader to avoid interfering with the active camera stream
+            let hiddenDiv = document.getElementById('hiddenReader_fileScan');
+            if (!hiddenDiv) {
+                hiddenDiv = document.createElement('div');
+                hiddenDiv.id = 'hiddenReader_fileScan';
+                hiddenDiv.style.position = 'absolute';
+                hiddenDiv.style.left = '-9999px';
+                hiddenDiv.style.width = '300px';
+                hiddenDiv.style.height = '300px';
+                hiddenDiv.style.display = 'none'; // Will safely process scans in the background
+                document.body.appendChild(hiddenDiv);
+            }
+
+            let formats = undefined;
+            if (typeof Html5QrcodeSupportedFormats !== 'undefined') {
+                formats = [
+                    Html5QrcodeSupportedFormats.QR_CODE,
+                    Html5QrcodeSupportedFormats.CODE_128,
+                    Html5QrcodeSupportedFormats.CODE_39,
+                    Html5QrcodeSupportedFormats.CODE_93,
+                    Html5QrcodeSupportedFormats.EAN_13,
+                    Html5QrcodeSupportedFormats.EAN_8,
+                    Html5QrcodeSupportedFormats.UPC_A,
+                    Html5QrcodeSupportedFormats.UPC_E,
+                    Html5QrcodeSupportedFormats.CODABAR,
+                    Html5QrcodeSupportedFormats.ITF,
+                    Html5QrcodeSupportedFormats.DATA_MATRIX
+                ];
+            }
+
+            let fileScanner = null;
             try {
-                let tempScanner = html5QrCode;
-                if (!tempScanner) {
-                    tempScanner = new Html5Qrcode("reader");
-                }
-                const decodedResult = await tempScanner.scanFile(file, true);
+                fileScanner = new Html5Qrcode(hiddenDiv.id, {
+                    formatsToSupport: formats,
+                    experimentalFeatures: { useBarCodeDetectorIfSupported: true }
+                });
+                
+                // Set true to show the image locally inside the library's temporary canvas (improves stability)
+                const decodedResult = await fileScanner.scanFile(file, true);
                 if (decodedResult) {
                     if (state.currentView === 'absenGPS') {
                         window.prosesGPSLaluAbsen(decodedResult);
@@ -1019,9 +1072,13 @@
                     }
                 }
             } catch (err) {
+                console.error("Kesalahan Scan File:", err);
                 window.playSound('error');
-                showToast('Gagal Scan File', 'Kode Barcode / QR tidak terbaca pada gambar. Pastikan gambar tajam dan jelas.', 'error');
+                showToast('Gagal Scan File', 'Sistem tidak dapat membaca kode dari gambar ini. Pastikan gambar beresolusi tinggi, tajam, dan tidak buram.', 'error');
             } finally {
+                if (fileScanner) {
+                    try { fileScanner.clear(); } catch (e) {}
+                }
                 event.target.value = '';
             }
         };
@@ -1209,6 +1266,7 @@
                 state.currentUserRole = 'gps';
             }
             state.currentView = view; 
+            saveSession();
             window.render(); 
         };
 
@@ -1216,6 +1274,7 @@
             await stopScanner();
             state.currentUserRole = 'admin';
             state.currentView = 'dashboard';
+            saveSession();
             window.render();
         };
         
@@ -1224,17 +1283,21 @@
             if (role === 'admin') {
                 const user = document.getElementById('loginUser').value; const pass = document.getElementById('loginPass').value;
                 if (user === (state.pengaturan.adminUsername || 'admin') && pass === (state.pengaturan.adminPassword || 'admin123')) {
-                    state.currentUserRole = 'admin'; window.setView('dashboard'); showToast('Sukses', 'Selamat bekerja, Admin.');
+                    state.currentUserRole = 'admin'; state.currentView = 'dashboard'; saveSession(); window.setView('dashboard'); showToast('Sukses', 'Selamat bekerja, Admin.');
                 } else { window.playSound('error'); showToast('Akses Ditolak', 'Kredensial salah', 'error'); }
             } else { 
                 state.currentUserRole = role; 
-                window.setView(role === 'kiosk' ? 'scanWajah' : 'absenGPS'); 
+                state.currentView = role === 'kiosk' ? 'scanWajah' : 'absenGPS';
+                saveSession();
+                window.setView(state.currentView); 
             }
         };
         
         window.handleLogout = async function() { 
             await stopScanner();
             state.currentUserRole = null; 
+            state.currentView = 'login';
+            saveSession();
             window.setView('login'); 
         };
         
@@ -1438,7 +1501,7 @@
                     </aside>
                     <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
                         <header class="bg-white shadow-sm border-b border-slate-200 h-16 flex items-center justify-between px-4 z-10 lg:hidden"><div class="flex items-center space-x-3"><button onclick="window.toggleMobileMenu()" class="text-slate-600 p-2 rounded-lg bg-slate-100"><i class="fas fa-bars text-lg"></i></button><span class="font-bold text-slate-800">HR Admin</span></div></header>
-                        <div id="mobileMenu" class="fixed inset-0 bg-slate-900/60 z-50 hidden lg:hidden flex backdrop-blur-sm" onclick="window.toggleMobileMenu()"><div class="w-72 bg-slate-900 h-full flex flex-col shadow-2xl" onclick="event.stopPropagation()"><div class="p-6 flex items-center justify-between border-b border-slate-800 bg-slate-950"><div class="flex items-center space-x-3 text-white"><div class="bg-emerald-500 p-2 rounded-lg"><i class="fas fa-shield-alt"></i></div><h2 class="font-bold">HR Admin</h2></div><button onclick="window.toggleMobileMenu()" class="text-slate-400 bg-slate-800 p-2 rounded-lg"><i class="fas fa-times"></i></button></div><nav class="flex-1 overflow-y-auto py-6 space-y-1.5 px-4">${getNavItemsHTML(true)}</nav></div></div>
+                        <div id="mobileMenu" class="fixed inset-0 bg-slate-900/60 z-50 hidden lg:hidden flex backdrop-blur-sm" onclick="window.toggleMobileMenu()"><div class="w-72 bg-slate-900 h-full flex flex-col shadow-2xl" onclick="event.stopPropagation()"><div class="p-6 flex items-center justify-between border-b border-slate-800 bg-slate-950"><div class="flex items-center space-x-3 text-white"><div class="bg-emerald-500 p-2 rounded-lg"><i class="fas fa-shield-alt"></i></div><h2 class="font-bold">HR Admin</h2></div><button onclick="window.toggleMobileMenu()" class="text-slate-400 bg-slate-800 p-2 rounded-lg"><i class="fas fa-times"></i></button></div><nav class="flex-1 overflow-y-auto py-6 space-y-1.5 px-4">${getNavItemsHTML(true)}</nav><div class="p-5 border-t border-slate-800 bg-slate-950"><button onclick="window.handleLogout()" class="w-full text-left text-red-400 hover:text-white hover:bg-red-500/20 px-4 py-3 rounded-xl transition flex items-center font-medium"><i class="fas fa-sign-out-alt w-6 text-center mr-1"></i> Keluar Sistem</button></div></div></div>
                         <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-10 relative"><div class="max-w-7xl mx-auto" id="mainContentArea"></div></main>
                     </div>
                 </div>`;
