@@ -542,6 +542,9 @@
 
         let html5QrCode = null;
         let cameraFacingMode = "environment";
+        let availableCameras = [];
+        let currentCameraIndex = 0;
+        let selectedCameraId = null;
         let isProcessingQR = false;
         let clockInterval = null;
         let deleteTarget = null;
@@ -889,6 +892,109 @@
             await stopScannerInternal();
         }
         
+        function formatCameraLabel(label, index) {
+            if (!label || label.trim() === '') {
+                return `Kamera ${index + 1}`;
+            }
+            let clean = label.trim();
+            let lower = clean.toLowerCase();
+            let hint = '';
+            if (lower.includes('back') || lower.includes('belakang') || lower.includes('rear') || lower.includes('environment')) {
+                hint = ' (Belakang)';
+            } else if (lower.includes('front') || lower.includes('depan') || lower.includes('user')) {
+                hint = ' (Depan)';
+            } else if (lower.includes('usb') || lower.includes('external') || lower.includes('webcam')) {
+                hint = ' (USB/Eksternal)';
+            }
+            if (hint && !clean.includes('(') && !clean.includes('[')) {
+                clean += hint;
+            }
+            return clean;
+        }
+
+        async function updateCameraList() {
+            try {
+                if (typeof Html5Qrcode !== 'undefined' && Html5Qrcode.getCameras) {
+                    const devices = await Html5Qrcode.getCameras();
+                    if (devices && Array.isArray(devices) && devices.length > 0) {
+                        availableCameras = devices;
+                        
+                        // Sinkronkan selectedCameraId dan currentCameraIndex
+                        if (selectedCameraId) {
+                            const foundIdx = availableCameras.findIndex(c => c.id === selectedCameraId);
+                            if (foundIdx !== -1) {
+                                currentCameraIndex = foundIdx;
+                            } else {
+                                currentCameraIndex = 0;
+                                selectedCameraId = availableCameras[0].id;
+                            }
+                        } else {
+                            if (currentCameraIndex >= availableCameras.length) {
+                                currentCameraIndex = 0;
+                            }
+                            selectedCameraId = availableCameras[currentCameraIndex].id;
+                        }
+                    }
+                }
+            } catch(e) {
+                console.warn("Gagal enumerasi kamera:", e);
+            }
+            renderCameraSelectUI();
+        }
+
+        function renderCameraSelectUI() {
+            const selectEl = document.getElementById('cameraSelect');
+            const containerEl = document.getElementById('cameraSelectContainer');
+            const statusEl = document.getElementById('cameraStatus');
+            const badgeEl = document.getElementById('cameraCountBadge');
+            const toggleTextEl = document.getElementById('toggleCameraText');
+
+            if (!availableCameras || availableCameras.length === 0) {
+                if (containerEl) containerEl.classList.add('hidden');
+                if (badgeEl) badgeEl.classList.add('hidden');
+                if (statusEl) {
+                    statusEl.innerText = cameraFacingMode === 'environment' ? 'Kamera Belakang' : 'Kamera Depan';
+                }
+                return;
+            }
+
+            // Tampilkan badge jumlah kamera
+            if (badgeEl) {
+                badgeEl.classList.remove('hidden');
+                badgeEl.innerText = `${availableCameras.length} Kamera`;
+            }
+
+            // Tampilkan selector dropdown
+            if (containerEl) {
+                containerEl.classList.remove('hidden');
+            }
+
+            // Update isi dropdown
+            if (selectEl) {
+                selectEl.innerHTML = '';
+                availableCameras.forEach((cam, idx) => {
+                    const opt = document.createElement('option');
+                    opt.value = cam.id;
+                    const isCurrent = (selectedCameraId && cam.id === selectedCameraId) || (!selectedCameraId && idx === currentCameraIndex);
+                    if (isCurrent) opt.selected = true;
+                    opt.textContent = `${idx + 1}. ${formatCameraLabel(cam.label, idx)}`;
+                    selectEl.appendChild(opt);
+                });
+            }
+
+            // Update status & teks tombol putar
+            const currentCam = availableCameras[currentCameraIndex];
+            if (currentCam) {
+                const labelFormatted = formatCameraLabel(currentCam.label, currentCameraIndex);
+                if (statusEl) {
+                    statusEl.innerText = `${labelFormatted} (${currentCameraIndex + 1}/${availableCameras.length})`;
+                }
+                if (toggleTextEl) {
+                    toggleTextEl.innerText = availableCameras.length > 2 ? `Ganti Kamera (${currentCameraIndex + 1}/${availableCameras.length})` : 'Putar Kamera';
+                }
+            }
+        }
+
         window.startScanner = async function() {
             if (isScannerStarting) return;
             isScannerStarting = true;
@@ -905,6 +1011,27 @@
                 const errEl = document.getElementById('cameraError');
                 if (errEl) errEl.classList.add('hidden');
                 if (cameraStatusEl) cameraStatusEl.innerText = "Menghubungkan kamera...";
+
+                // Deteksi kamera sebelum start jika daftar masih kosong
+                if (availableCameras.length === 0) {
+                    try {
+                        if (typeof Html5Qrcode !== 'undefined' && Html5Qrcode.getCameras) {
+                            const devs = await Html5Qrcode.getCameras();
+                            if (devs && devs.length > 0) {
+                                availableCameras = devs;
+                                if (!selectedCameraId) {
+                                    // Default prioritaskan kamera belakang jika ada
+                                    const backIdx = availableCameras.findIndex(c => {
+                                        const l = (c.label || '').toLowerCase();
+                                        return l.includes('back') || l.includes('belakang') || l.includes('rear') || l.includes('0');
+                                    });
+                                    currentCameraIndex = backIdx !== -1 ? backIdx : 0;
+                                    selectedCameraId = availableCameras[currentCameraIndex].id;
+                                }
+                            }
+                        }
+                    } catch(e) {}
+                }
 
                 // Dukungan lengkap format QR Code dan Barcode 1D (Code 128, Code 39, EAN, UPC, dll)
                 let formats = undefined;
@@ -952,54 +1079,61 @@
                     }
                 };
 
-                let cameraTarget = { facingMode: cameraFacingMode };
-                if (cameraStatusEl) {
-                    cameraStatusEl.innerText = cameraFacingMode === "environment" ? "Kamera Belakang" : "Kamera Depan";
+                let cameraTarget;
+                if (selectedCameraId) {
+                    cameraTarget = selectedCameraId;
+                } else if (availableCameras && availableCameras.length > 0 && availableCameras[currentCameraIndex]) {
+                    cameraTarget = availableCameras[currentCameraIndex].id;
+                } else {
+                    cameraTarget = { facingMode: cameraFacingMode };
                 }
+
+                renderCameraSelectUI();
 
                 try {
                     await html5QrCode.start(cameraTarget, scanConfig, onScanSuccess, () => {});
                     if (errEl) errEl.classList.add('hidden');
+                    // Perbarui daftar seluruh kamera setelah izin aktif untuk mendapatkan nama label resmi
+                    await updateCameraList();
                 } catch(firstErr) {
                     console.warn("Mencoba fallback kamera:", firstErr);
-                    let fallbackMode = cameraFacingMode === "environment" ? "user" : "environment";
+                    let fallbackTarget = { facingMode: cameraFacingMode === "environment" ? "user" : "environment" };
                     try {
-                        cameraFacingMode = fallbackMode;
-                        await html5QrCode.start({ facingMode: fallbackMode }, scanConfig, onScanSuccess, () => {});
+                        cameraFacingMode = cameraFacingMode === "environment" ? "user" : "environment";
+                        await html5QrCode.start(fallbackTarget, scanConfig, onScanSuccess, () => {});
                         if (errEl) errEl.classList.add('hidden');
-                        if (cameraStatusEl) cameraStatusEl.innerText = fallbackMode === "environment" ? "Kamera Belakang (Fallback)" : "Kamera Depan (Fallback)";
+                        await updateCameraList();
                     } catch(secondErr) {
-                        // Jika keduanya gagal, log error sebagai warning
                         console.warn("Kamera gagal diakses:", secondErr);
                         let pesanError = "Kamera tidak dapat diakses.";
                         const errStr = String(secondErr || '');
                         if (errStr.includes("NotAllowedError") || errStr.includes("Permission")) {
-                                pesanError = "Izin akses kamera diblokir browser. Harap izinkan akses kamera di setelan situs.";
-                            } else if (errStr.includes("NotFoundError") || errStr.includes("DevicesNotFoundError")) {
-                                pesanError = "Tidak ditemukan perangkat kamera yang terhubung pada sistem.";
-                            } else if (errStr.includes("NotReadableError") || errStr.includes("TrackStartError")) {
-                                pesanError = "Kamera sedang digunakan aplikasi atau tab browser lain.";
-                            }
-                            if (cameraStatusEl) cameraStatusEl.innerText = "Kamera tidak aktif";
-                            if (errEl) {
-                                errEl.classList.remove('hidden');
-                                errEl.innerHTML = `
-                                    <div class="text-center p-4">
-                                        <i class="fas fa-video-slash text-3xl mb-2 text-rose-400"></i>
-                                        <p class="text-white text-xs font-semibold mb-3 leading-relaxed">${pesanError}</p>
-                                        <div class="flex flex-col gap-2">
-                                            <button onclick="window.startScanner()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 px-4 rounded-xl shadow transition">
-                                                <i class="fas fa-redo mr-1.5"></i> Coba Buka Kamera Lagi
-                                            </button>
-                                            <button onclick="document.getElementById('inputManualNIK')?.focus();" class="bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold py-2.5 px-4 rounded-xl transition">
-                                                <i class="fas fa-keyboard mr-1.5"></i> Gunakan Input NIK / Scanner Gun
-                                            </button>
-                                        </div>
+                            pesanError = "Izin akses kamera diblokir browser. Harap izinkan akses kamera di setelan situs.";
+                        } else if (errStr.includes("NotFoundError") || errStr.includes("DevicesNotFoundError")) {
+                            pesanError = "Tidak ditemukan perangkat kamera yang terhubung pada sistem.";
+                        } else if (errStr.includes("NotReadableError") || errStr.includes("TrackStartError")) {
+                            pesanError = "Kamera sedang digunakan aplikasi atau tab browser lain.";
+                        }
+                        if (cameraStatusEl) cameraStatusEl.innerText = "Kamera tidak aktif";
+                        if (errEl) {
+                            errEl.classList.remove('hidden');
+                            errEl.innerHTML = `
+                                <div class="text-center p-4">
+                                    <i class="fas fa-video-slash text-3xl mb-2 text-rose-400"></i>
+                                    <p class="text-white text-xs font-semibold mb-3 leading-relaxed">${pesanError}</p>
+                                    <div class="flex flex-col gap-2">
+                                        <button onclick="window.startScanner()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 px-4 rounded-xl shadow transition">
+                                            <i class="fas fa-redo mr-1.5"></i> Coba Buka Kamera Lagi
+                                        </button>
+                                        <button onclick="document.getElementById('inputManualNIK')?.focus();" class="bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold py-2.5 px-4 rounded-xl transition">
+                                            <i class="fas fa-keyboard mr-1.5"></i> Gunakan Input NIK / Scanner Gun
+                                        </button>
                                     </div>
-                                `;
-                            }
+                                </div>
+                            `;
                         }
                     }
+                }
             } finally {
                 isScannerStarting = false;
             }
@@ -1028,8 +1162,47 @@
         };
 
         window.toggleCamera = async function() { 
-            cameraFacingMode = (cameraFacingMode === "environment") ? "user" : "environment"; 
+            if (isScannerStarting) {
+                showToast("Mohon Tunggu", "Sedang menghubungkan kamera...", "warning");
+                return;
+            }
+
+            if (!availableCameras || availableCameras.length === 0) {
+                await updateCameraList();
+            }
+
+            if (availableCameras && availableCameras.length > 1) {
+                // Rotasi melalui SEMUA kamera yang terdeteksi (Kamera 1 -> 2 -> 3 -> 4 -> ...)
+                currentCameraIndex = (currentCameraIndex + 1) % availableCameras.length;
+                selectedCameraId = availableCameras[currentCameraIndex].id;
+                const curCam = availableCameras[currentCameraIndex];
+                const namaKamera = formatCameraLabel(curCam.label, currentCameraIndex);
+                showToast("Ganti Kamera", `Beralih ke: ${namaKamera} (${currentCameraIndex + 1}/${availableCameras.length})`);
+            } else {
+                cameraFacingMode = (cameraFacingMode === "environment") ? "user" : "environment"; 
+                selectedCameraId = null;
+                showToast("Putar Kamera", `Beralih ke: ${cameraFacingMode === "environment" ? "Kamera Belakang" : "Kamera Depan"}`);
+            }
+
+            renderCameraSelectUI();
             await window.startScanner(); 
+        };
+
+        window.selectCamera = async function(cameraId) {
+            if (!cameraId || cameraId === selectedCameraId) return;
+            if (isScannerStarting) {
+                showToast("Mohon Tunggu", "Sedang menghubungkan kamera...", "warning");
+                return;
+            }
+            selectedCameraId = cameraId;
+            const idx = availableCameras.findIndex(c => c.id === cameraId);
+            if (idx !== -1) {
+                currentCameraIndex = idx;
+                const namaKamera = formatCameraLabel(availableCameras[idx].label, idx);
+                showToast("Kamera Dipilih", `Menggunakan: ${namaKamera}`);
+            }
+            renderCameraSelectUI();
+            await window.startScanner();
         };
 
         // SCAN DARI FILE GAMBAR (JIKA KAMERA TIDAK TERSEDIA)
@@ -1445,11 +1618,25 @@
                                 `}
 
                                 <div class="flex items-center justify-between text-xs text-slate-500 mb-2 px-1">
-                                    <div class="flex items-center gap-1.5">
-                                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                                        <span id="cameraStatus" class="font-medium text-slate-600">Menghubungkan kamera...</span>
+                                    <div class="flex items-center gap-1.5 min-w-0">
+                                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse flex-shrink-0"></span>
+                                        <span id="cameraStatus" class="font-medium text-slate-600 truncate">Menghubungkan kamera...</span>
                                     </div>
-                                    <span class="text-[11px] text-slate-400 font-mono hidden sm:inline">Barcode 1D & QR Aktif</span>
+                                    <div class="flex items-center gap-1.5 flex-shrink-0">
+                                        <span id="cameraCountBadge" class="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full border border-emerald-300 hidden"></span>
+                                        <span class="text-[11px] text-slate-400 font-mono hidden sm:inline">Barcode 1D & QR</span>
+                                    </div>
+                                </div>
+
+                                <!-- DROPDOWN SELECTOR SEMUA KAMERA -->
+                                <div id="cameraSelectContainer" class="hidden mb-3">
+                                    <div class="flex items-center bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 shadow-sm transition text-left">
+                                        <i class="fas fa-video text-emerald-600 mr-2 text-xs flex-shrink-0"></i>
+                                        <label for="cameraSelect" class="sr-only">Pilih Kamera</label>
+                                        <select id="cameraSelect" onchange="window.selectCamera(this.value)" class="bg-transparent text-slate-700 font-semibold w-full outline-none text-xs cursor-pointer truncate">
+                                            <option value="">Memuat daftar kamera...</option>
+                                        </select>
+                                    </div>
                                 </div>
 
                                 <div class="relative bg-slate-950 rounded-2xl overflow-hidden shadow-inner mb-4 flex items-center justify-center border border-slate-200" style="min-height: 250px;">
@@ -1461,14 +1648,14 @@
                                 <input type="file" id="fileQrInput" accept="image/*" class="hidden" onchange="window.scanBarcodeFile(event)">
 
                                 <div class="flex gap-2 mb-2">
-                                    <button type="button" onclick="window.toggleCamera()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 px-3 rounded-xl transition flex items-center justify-center border border-slate-300 text-xs shadow-sm">
-                                        <i class="fas fa-camera-rotate mr-1.5 text-emerald-600"></i> Putar Kamera
+                                    <button type="button" id="btnToggleCamera" onclick="window.toggleCamera()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 px-3 rounded-xl transition flex items-center justify-center border border-slate-300 text-xs shadow-sm" title="Putar & rotasikan ke kamera berikutnya">
+                                        <i class="fas fa-camera-rotate mr-1.5 text-emerald-600"></i> <span id="toggleCameraText">Putar Kamera</span>
                                     </button>
-                                    <button type="button" onclick="document.getElementById('fileQrInput').click()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 px-3 rounded-xl transition flex items-center justify-center border border-slate-300 text-xs shadow-sm" title="Scan dari foto/gambar barcode">
+                                    <button type="button" id="btnScanGambar" onclick="document.getElementById('fileQrInput').click()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 px-3 rounded-xl transition flex items-center justify-center border border-slate-300 text-xs shadow-sm" title="Scan dari foto/gambar barcode">
                                         <i class="fas fa-image mr-1.5 text-indigo-600"></i> Scan Gambar
                                     </button>
                                     ${isKiosk ? `
-                                    <button type="button" onclick="window.bukaModalPengajuanCuti()" class="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 px-3 rounded-xl transition flex items-center justify-center shadow text-xs">
+                                    <button type="button" id="btnFormIzinKiosk" onclick="window.bukaModalPengajuanCuti()" class="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 px-3 rounded-xl transition flex items-center justify-center shadow text-xs">
                                         <i class="fas fa-envelope-open-text mr-1.5"></i> Form Izin
                                     </button>
                                     ` : ''}
@@ -1490,6 +1677,7 @@
                         </div>
                     </div>`;
                 startRealTimeClock(); 
+                renderCameraSelectUI();
                 window.startScanner(); 
                 return;
             }
