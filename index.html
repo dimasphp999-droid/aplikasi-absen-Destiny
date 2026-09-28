@@ -92,18 +92,16 @@
                 box-shadow: none !important; border: none !important; border-radius: 0 !important; background: white !important; transform: none !important; position: static !important; max-width: 100% !important; min-height: auto !important; margin: 0 !important; padding: 0 !important;
             }
             
-            /* GRID CETAK A4 - POTRET (3 KOLOM, 54mm x 85.6mm) */
-            body.printing-idcards:not(.orientasi-lanskap) #printableIDCardsArea {
+            /* AREA CETAK SATUAN KARTU PADA KERTAS A4 (CR80: 54mm x 85.6mm) */
+            body.printing-idcards #printableIDCardsArea {
                 display: flex !important;
-                flex-wrap: wrap !important;
                 justify-content: center !important;
-                gap: 6mm 6mm !important;
-                padding: 4mm 0 !important;
+                align-items: flex-start !important;
+                padding-top: 20mm !important;
                 background: white !important;
                 position: static !important;
                 margin: 0 auto !important;
                 width: 100% !important;
-                max-width: 195mm !important;
             }
             body.printing-idcards:not(.orientasi-lanskap) .id-card-item {
                 width: 54mm !important;
@@ -116,29 +114,16 @@
                 break-inside: avoid !important;
                 page-break-inside: avoid !important;
                 box-shadow: none !important;
-                border: 1px dashed #94a3b8 !important;
+                border: 1px solid #cbd5e1 !important;
                 border-radius: 3.2mm !important;
                 background: white !important;
-                margin: 0 !important;
+                margin: 0 auto !important;
                 overflow: hidden !important;
                 display: flex !important;
                 flex-direction: column !important;
                 justify-content: space-between !important;
             }
 
-            /* GRID CETAK A4 - LANSKAP (2 KOLOM, 85.6mm x 54mm) */
-            body.printing-idcards.orientasi-lanskap #printableIDCardsArea {
-                display: flex !important;
-                flex-wrap: wrap !important;
-                justify-content: center !important;
-                gap: 5mm 6mm !important;
-                padding: 4mm 0 !important;
-                background: white !important;
-                position: static !important;
-                margin: 0 auto !important;
-                width: 100% !important;
-                max-width: 195mm !important;
-            }
             body.printing-idcards.orientasi-lanskap .id-card-item {
                 width: 85.6mm !important;
                 height: 54mm !important;
@@ -150,14 +135,18 @@
                 break-inside: avoid !important;
                 page-break-inside: avoid !important;
                 box-shadow: none !important;
-                border: 1px dashed #94a3b8 !important;
+                border: 1px solid #cbd5e1 !important;
                 border-radius: 3.2mm !important;
                 background: white !important;
-                margin: 0 !important;
+                margin: 0 auto !important;
                 overflow: hidden !important;
                 display: flex !important;
                 flex-direction: column !important;
                 justify-content: space-between !important;
+            }
+
+            body.printing-idcards .id-card-item.border-dashed {
+                border: 1px dashed #64748b !important;
             }
 
             .id-card-item.tidak-dicetak {
@@ -383,8 +372,8 @@
                     </div>
                     <div>
                         <div class="flex items-center gap-2">
-                            <h3 class="font-bold text-slate-800 text-base sm:text-lg">Cetak Massal ID Card & QR Code Pegawai</h3>
-                            <span id="badgeJumlahKartu" class="bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-black px-2.5 py-0.5 rounded-full">0 Kartu</span>
+                            <h3 class="font-bold text-slate-800 text-base sm:text-lg">Cetak ID Card Pegawai</h3>
+                            <span id="badgeInfoKaryawan" class="bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-black px-2.5 py-0.5 rounded-full">Karyawan</span>
                         </div>
                         <p class="text-xs text-slate-500 mt-0.5 flex flex-wrap items-center gap-1.5">
                             <span class="inline-flex items-center px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 font-bold border border-emerald-200 text-[10px]"><i class="fas fa-check-circle mr-1 text-emerald-600"></i>Ukuran Normal CR80 (54 × 85.6 mm)</span>
@@ -397,49 +386,48 @@
                 <!-- TOMBOL AKSI UTAMA -->
                 <div class="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
                     <button type="button" onclick="window.tutupModalCetakKartu()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition">
-                        Batal
+                        Tutup
                     </button>
-                    <button type="button" onclick="window.cetakSemuaKartuQR()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm shadow-lg shadow-indigo-600/30 transition flex items-center">
-                        <i class="fas fa-print mr-2"></i> Cetak / Simpan PDF
+                    <button type="button" onclick="window.cetakKartuSatuan()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold text-xs sm:text-sm shadow-lg shadow-indigo-600/30 transition flex items-center">
+                        <i class="fas fa-print mr-2"></i> Cetak ID Card (PDF)
                     </button>
                 </div>
             </div>
 
             <!-- FILTER & OPTION TOOLBAR (DISEMBUNYIKAN SAAT PRINT) -->
             <div class="p-3.5 bg-slate-50 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 no-print text-xs">
-                <div class="flex flex-wrap items-center gap-2 flex-1 min-w-[280px]">
-                    <!-- SEARCH -->
-                    <div class="relative min-w-[160px] max-w-xs">
-                        <i class="fas fa-search absolute left-3 top-2.5 text-slate-400 text-xs"></i>
-                        <input type="text" id="filterKartuSearch" oninput="window.renderGridKartuID()" placeholder="Cari nama / NIK..." class="w-full pl-8 pr-3 py-2 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                <div class="flex flex-wrap items-center gap-2.5 flex-1 min-w-[280px]">
+                    <!-- PILIH PEGAWAI DARI RECORD KARYAWAN -->
+                    <div class="flex items-center gap-1.5 min-w-[260px] max-w-sm sm:max-w-md">
+                        <label class="font-bold text-slate-700 text-xs shrink-0 flex items-center">
+                            <i class="fas fa-user-tag mr-1.5 text-indigo-600"></i>Pilih Pegawai:
+                        </label>
+                        <div class="flex items-center gap-1 w-full">
+                            <button type="button" onclick="window.navigasiKaryawanCetak(-1)" title="Pegawai Sebelumnya" class="p-2 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 text-slate-600 transition shadow-2xs">
+                                <i class="fas fa-chevron-left text-[11px]"></i>
+                            </button>
+                            <select id="pilihKaryawanCetak" onchange="window.gantiKaryawanCetak(this.value)" class="w-full bg-white border border-slate-300 rounded-xl px-2.5 py-2 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs"></select>
+                            <button type="button" onclick="window.navigasiKaryawanCetak(1)" title="Pegawai Berikutnya" class="p-2 bg-white border border-slate-300 rounded-xl hover:bg-slate-100 text-slate-600 transition shadow-2xs">
+                                <i class="fas fa-chevron-right text-[11px]"></i>
+                            </button>
+                        </div>
                     </div>
 
                     <!-- ORIENTASI KARTU -->
-                    <select id="orientasiKartu" onchange="window.renderGridKartuID()" class="bg-white border border-slate-200 rounded-xl px-2.5 py-2 text-xs text-slate-700 font-bold outline-none focus:ring-2 focus:ring-indigo-500">
+                    <select id="orientasiKartu" onchange="window.renderKartuIDSatuan()" class="bg-white border border-slate-200 rounded-xl px-2.5 py-2 text-xs text-slate-700 font-bold outline-none focus:ring-2 focus:ring-indigo-500">
                         <option value="potret">Format: Potret (54 × 85.6 mm)</option>
                         <option value="lanskap">Format: Lanskap (85.6 × 54 mm)</option>
                     </select>
 
                     <!-- FORMAT KODE (QR / BARCODE) -->
-                    <select id="formatKodeScan" onchange="window.renderGridKartuID()" class="bg-white border border-slate-200 rounded-xl px-2.5 py-2 text-xs text-slate-700 font-bold outline-none focus:ring-2 focus:ring-indigo-500">
+                    <select id="formatKodeScan" onchange="window.renderKartuIDSatuan()" class="bg-white border border-slate-200 rounded-xl px-2.5 py-2 text-xs text-slate-700 font-bold outline-none focus:ring-2 focus:ring-indigo-500">
                         <option value="qr">Kode: QR Code Absensi</option>
                         <option value="barcode">Kode: Barcode 1D (Code 128)</option>
                         <option value="both">Kode: Kombinasi QR + Barcode</option>
                     </select>
 
-                    <!-- FILTER JABATAN -->
-                    <select id="filterKartuJabatan" onchange="window.renderGridKartuID()" class="bg-white border border-slate-200 rounded-xl px-2.5 py-2 text-xs text-slate-700 font-medium outline-none focus:ring-2 focus:ring-indigo-500">
-                        <option value="">Semua Jabatan</option>
-                    </select>
-
-                    <!-- FILTER STATUS PEGAWAI -->
-                    <select id="filterKartuStatus" onchange="window.renderGridKartuID()" class="bg-white border border-slate-200 rounded-xl px-2.5 py-2 text-xs text-slate-700 font-medium outline-none focus:ring-2 focus:ring-indigo-500">
-                        <option value="aktif">Pegawai Aktif Saja</option>
-                        <option value="semua">Semua Pegawai</option>
-                    </select>
-
                     <!-- TEMA KARTU -->
-                    <select id="temaWarnaKartu" onchange="window.renderGridKartuID()" class="bg-white border border-slate-200 rounded-xl px-2.5 py-2 text-xs text-slate-700 font-medium outline-none focus:ring-2 focus:ring-indigo-500">
+                    <select id="temaWarnaKartu" onchange="window.renderKartuIDSatuan()" class="bg-white border border-slate-200 rounded-xl px-2.5 py-2 text-xs text-slate-700 font-medium outline-none focus:ring-2 focus:ring-indigo-500">
                         <option value="corporate">Tema Dark Corporate</option>
                         <option value="emerald">Tema Emerald Clean</option>
                         <option value="indigo">Tema Modern Indigo</option>
@@ -447,34 +435,23 @@
 
                     <!-- TOGGLE GARIS GUNTING -->
                     <label class="inline-flex items-center gap-1.5 cursor-pointer bg-white border border-slate-200 rounded-xl px-2.5 py-2 text-slate-700 font-medium hover:bg-slate-100 transition select-none">
-                        <input type="checkbox" id="toggleGarisPotong" onchange="window.renderGridKartuID()" checked class="accent-indigo-600 rounded">
+                        <input type="checkbox" id="toggleGarisPotong" onchange="window.renderKartuIDSatuan()" checked class="accent-indigo-600 rounded">
                         <span><i class="fas fa-scissors text-slate-400 mr-1"></i>Garis Gunting</span>
                     </label>
                 </div>
-
-                <!-- CHECKBOX TOGGLE SELECT ALL -->
-                <div class="flex items-center gap-3">
-                    <button type="button" onclick="window.togglePilihSemuaKartu(true)" class="text-indigo-600 hover:text-indigo-800 font-bold text-xs hover:underline">
-                        Pilih Semua
-                    </button>
-                    <span class="text-slate-300">|</span>
-                    <button type="button" onclick="window.togglePilihSemuaKartu(false)" class="text-slate-500 hover:text-slate-700 font-bold text-xs hover:underline">
-                        Kosongkan Pilihan
-                    </button>
-                </div>
             </div>
 
-            <!-- AREA GRID KARTU ID SIAP CETAK (UKURAN STANDAR CR80 54x85.6mm) -->
-            <div class="p-4 sm:p-6 overflow-y-auto flex-1 bg-slate-100 custom-scrollbar max-h-[72vh]">
-                <div id="printableIDCardsArea" class="flex flex-wrap justify-center items-start gap-6 auto-rows-max">
-                    <!-- Kartu-kartu ID di-generate secara dinamis di sini -->
+            <!-- AREA PREVIEW KARTU ID SATUAN (UKURAN STANDAR CR80 54x85.6mm) -->
+            <div class="p-6 overflow-y-auto flex-1 bg-slate-100/90 custom-scrollbar flex flex-col items-center justify-center min-h-[420px]">
+                <div id="printableIDCardsArea" class="flex flex-col items-center justify-center">
+                    <!-- Kartu ID satuan di-generate di sini -->
                 </div>
             </div>
             
             <!-- FOOTER INFO (DISEMBUNYIKAN SAAT PRINT) -->
             <div class="px-6 py-3 bg-white border-t border-slate-200 text-xs text-slate-500 flex flex-col sm:flex-row justify-between items-center gap-2 no-print">
-                <span class="flex items-center"><i class="fas fa-lightbulb text-amber-500 mr-2"></i> Tips: Saat dialog cetak PDF browser terbuka, aktifkan opsi <b>"Background graphics"</b> agar warna kartu tampil sempurna.</span>
-                <span class="font-medium text-slate-400">Ukuran Standar ID Card CR80</span>
+                <span class="flex items-center"><i class="fas fa-lightbulb text-amber-500 mr-2"></i> Tips: Saat dialog cetak PDF browser terbuka, aktifkan opsi <b>"Background graphics"</b> dan pilih Scale <b>"Actual size / 100%"</b> agar warna dan ukuran presisi 54 × 85.6 mm.</span>
+                <span class="font-medium text-slate-400">Standar ID-1 / CR80</span>
             </div>
         </div>
     </div>
@@ -1629,48 +1606,44 @@
         };
 
         // ==========================================
-        // FITUR BULK GENERATE QR & CETAK ID CARD PEGAWAI
+        // FITUR CETAK SATUAN ID CARD & QR CODE PEGAWAI
         // ==========================================
-        window.kartuQRSelected = new Set();
+        window.karyawanCetakAktifId = null;
 
         window.bukaModalCetakKartu = function(targetKaryawanId = null) {
             const modal = document.getElementById('modalCetakKartuQR');
             const content = document.getElementById('modalCetakKartuQRContent');
             if (!modal) return;
 
-            // Reset Search dan Filter
-            const searchInput = document.getElementById('filterKartuSearch');
-            if (searchInput) searchInput.value = '';
+            // Populate Dropdown Daftar Karyawan dari Record
+            const selectKaryawan = document.getElementById('pilihKaryawanCetak');
+            const daftarKaryawan = (state.karyawan || []).slice().sort((a, b) => (a.nama || '').localeCompare(b.nama || ''));
 
-            const statusSelect = document.getElementById('filterKartuStatus');
-            if (statusSelect) statusSelect.value = 'aktif';
+            if (selectKaryawan) {
+                if (daftarKaryawan.length === 0) {
+                    selectKaryawan.innerHTML = '<option value="">(Belum ada data pegawai)</option>';
+                } else {
+                    selectKaryawan.innerHTML = daftarKaryawan.map(k => {
+                        const jab = (state.jabatan || []).find(j => j.id == k.jabatanId)?.nama || '-';
+                        const statusTxt = k.tanggalKeluar ? ' [Keluar]' : (k.statusKaryawan ? ` [${k.statusKaryawan}]` : '');
+                        return `<option value="${k.id}">${k.nama} (${k.nik || '-'}) - ${jab}${statusTxt}</option>`;
+                    }).join('');
+                }
 
-            // Populate Jabatan dropdown
-            const selectJabatan = document.getElementById('filterKartuJabatan');
-            if (selectJabatan) {
-                let options = '<option value="">Semua Jabatan</option>';
-                (state.jabatan || []).forEach(j => {
-                    options += `<option value="${j.id}">${j.nama}</option>`;
-                });
-                selectJabatan.innerHTML = options;
-                selectJabatan.value = '';
+                // Tentukan Karyawan yang aktif
+                if (targetKaryawanId !== null && targetKaryawanId !== undefined && targetKaryawanId !== '') {
+                    selectKaryawan.value = String(targetKaryawanId);
+                    window.karyawanCetakAktifId = Number(targetKaryawanId);
+                } else if (window.karyawanCetakAktifId && daftarKaryawan.some(k => k.id === window.karyawanCetakAktifId)) {
+                    selectKaryawan.value = String(window.karyawanCetakAktifId);
+                } else if (daftarKaryawan.length > 0) {
+                    selectKaryawan.value = String(daftarKaryawan[0].id);
+                    window.karyawanCetakAktifId = Number(daftarKaryawan[0].id);
+                }
             }
 
-            // Inisialisasi Karyawan yang dipilih
-            window.kartuQRSelected = new Set();
-            if (targetKaryawanId !== null && targetKaryawanId !== undefined && targetKaryawanId !== '') {
-                window.kartuQRSelected.add(Number(targetKaryawanId));
-            } else {
-                // Default: pilih semua karyawan aktif
-                (state.karyawan || []).forEach(k => {
-                    if (!k.tanggalKeluar) {
-                        window.kartuQRSelected.add(Number(k.id));
-                    }
-                });
-            }
-
-            // Render Kartu ke Grid
-            window.renderGridKartuID();
+            // Render Kartu Satuan yang dipilih
+            window.renderKartuIDSatuan();
 
             // Tampilkan Modal dengan Transisi Halus
             modal.classList.remove('hidden');
@@ -1698,334 +1671,271 @@
             }, 300);
         };
 
-        window.togglePilihKartu = function(karyawanId, isChecked) {
-            const id = Number(karyawanId);
-            if (isChecked) {
-                window.kartuQRSelected.add(id);
-            } else {
-                window.kartuQRSelected.delete(id);
-            }
-            window.updateBadgeJumlahKartu();
-
-            const card = document.getElementById(`card-id-${id}`);
-            if (card) {
-                if (isChecked) {
-                    card.classList.remove('opacity-50');
-                    card.classList.add('ring-2', 'ring-indigo-500');
-                } else {
-                    card.classList.add('opacity-50');
-                    card.classList.remove('ring-2', 'ring-indigo-500');
-                }
-            }
+        window.gantiKaryawanCetak = function(karyawanId) {
+            window.karyawanCetakAktifId = Number(karyawanId);
+            window.renderKartuIDSatuan();
         };
 
-        window.togglePilihSemuaKartu = function(pilihSemua) {
-            const query = (document.getElementById('filterKartuSearch')?.value || '').toLowerCase().trim();
-            const filterJabatan = document.getElementById('filterKartuJabatan')?.value || '';
-            const filterStatus = document.getElementById('filterKartuStatus')?.value || 'aktif';
+        window.navigasiKaryawanCetak = function(arah) {
+            const select = document.getElementById('pilihKaryawanCetak');
+            if (!select || select.options.length <= 1) return;
 
-            const filtered = (state.karyawan || []).filter(k => {
-                const matchSearch = !query ||
-                    k.nama.toLowerCase().includes(query) ||
-                    (k.nik && k.nik.toLowerCase().includes(query)) ||
-                    (k.nip && k.nip.toLowerCase().includes(query));
-                const matchJabatan = !filterJabatan || String(k.jabatanId) === String(filterJabatan);
-                const matchStatus = filterStatus === 'semua' || (filterStatus === 'aktif' && !k.tanggalKeluar);
-                return matchSearch && matchJabatan && matchStatus;
-            });
-
-            filtered.forEach(k => {
-                if (pilihSemua) {
-                    window.kartuQRSelected.add(Number(k.id));
-                } else {
-                    window.kartuQRSelected.delete(Number(k.id));
-                }
-            });
-
-            // Update status checkbox dan kartu yang tampil
-            document.querySelectorAll('.kartu-checkbox').forEach(cb => {
-                const id = Number(cb.dataset.id);
-                cb.checked = window.kartuQRSelected.has(id);
-                const card = document.getElementById(`card-id-${id}`);
-                if (card) {
-                    if (cb.checked) {
-                        card.classList.remove('opacity-50');
-                        card.classList.add('ring-2', 'ring-indigo-500');
-                    } else {
-                        card.classList.add('opacity-50');
-                        card.classList.remove('ring-2', 'ring-indigo-500');
-                    }
-                }
-            });
-
-            window.updateBadgeJumlahKartu();
+            let curIdx = select.selectedIndex;
+            if (curIdx < 0) curIdx = 0;
+            let nextIdx = (curIdx + arah + select.options.length) % select.options.length;
+            select.selectedIndex = nextIdx;
+            window.karyawanCetakAktifId = Number(select.value);
+            window.renderKartuIDSatuan();
         };
 
-        window.updateBadgeJumlahKartu = function() {
-            const badge = document.getElementById('badgeJumlahKartu');
-            if (badge) {
-                const total = window.kartuQRSelected ? window.kartuQRSelected.size : 0;
-                badge.innerText = `${total} Kartu Terpilih`;
-            }
-        };
-
-        window.renderGridKartuID = function() {
+        window.renderKartuIDSatuan = function() {
             const container = document.getElementById('printableIDCardsArea');
             if (!container) return;
 
-            const query = (document.getElementById('filterKartuSearch')?.value || '').toLowerCase().trim();
-            const filterJabatan = document.getElementById('filterKartuJabatan')?.value || '';
-            const filterStatus = document.getElementById('filterKartuStatus')?.value || 'aktif';
-            const tema = document.getElementById('temaWarnaKartu')?.value || 'corporate';
-            const orientasi = document.getElementById('orientasiKartu')?.value || 'potret';
-            const formatKode = document.getElementById('formatKodeScan')?.value || 'qr';
-            const showCropMarks = document.getElementById('toggleGarisPotong')?.checked !== false;
+            const selectKaryawan = document.getElementById('pilihKaryawanCetak');
+            const targetId = selectKaryawan ? Number(selectKaryawan.value) : Number(window.karyawanCetakAktifId);
+            const k = (state.karyawan || []).find(x => x.id === targetId) || (state.karyawan || [])[0];
 
-            const filtered = (state.karyawan || []).filter(k => {
-                const matchSearch = !query ||
-                    k.nama.toLowerCase().includes(query) ||
-                    (k.nik && k.nik.toLowerCase().includes(query)) ||
-                    (k.nip && k.nip.toLowerCase().includes(query));
-                const matchJabatan = !filterJabatan || String(k.jabatanId) === String(filterJabatan);
-                const matchStatus = filterStatus === 'semua' || (filterStatus === 'aktif' && !k.tanggalKeluar);
-                return matchSearch && matchJabatan && matchStatus;
-            });
-
-            window.updateBadgeJumlahKartu();
-
-            if (filtered.length === 0) {
+            if (!k) {
                 container.innerHTML = `
-                    <div class="col-span-full py-16 text-center text-slate-400 bg-white rounded-3xl border border-dashed border-slate-300 p-8 w-full max-w-md mx-auto">
+                    <div class="py-16 text-center text-slate-400 bg-white rounded-3xl border border-dashed border-slate-300 p-8 w-full max-w-md mx-auto">
                         <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3 text-slate-400">
                             <i class="fas fa-id-card text-2xl"></i>
                         </div>
-                        <h4 class="font-bold text-slate-700 text-base">Tidak Ada Karyawan Ditemukan</h4>
-                        <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">Silakan ubah kata kunci pencarian, filter jabatan, atau filter status karyawan.</p>
+                        <h4 class="font-bold text-slate-700 text-base">Tidak Ada Data Pegawai</h4>
+                        <p class="text-xs text-slate-400 mt-1">Silakan tambahkan data karyawan terlebih dahulu untuk mencetak ID Card.</p>
                     </div>
                 `;
+                const badge = document.getElementById('badgeInfoKaryawan');
+                if (badge) badge.innerText = 'Tidak Ada Data';
                 return;
             }
 
-            let cardsHtml = '';
-            filtered.forEach(k => {
-                const isSelected = window.kartuQRSelected ? window.kartuQRSelected.has(Number(k.id)) : false;
-                const jab = (state.jabatan || []).find(j => j.id == k.jabatanId)?.nama || 'Pegawai';
-                const shf = (state.pengaturan?.shifts || []).find(s => s.id == k.shiftId) || (state.pengaturan?.shifts || [])[0];
-                const shiftNama = shf ? `${shf.nama} (${shf.jamMasuk} - ${shf.jamPulang})` : '-';
-                const initial = (k.nama || 'P').charAt(0).toUpperCase();
+            const badge = document.getElementById('badgeInfoKaryawan');
+            if (badge) {
+                badge.innerText = `${k.nama} (${k.nik || '-'})`;
+            }
 
-                // Theme styling
-                let headerGradient = 'background: linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #312e81 100%);';
-                let headerAccentBar = 'bg-gradient-to-r from-amber-400 via-amber-300 to-amber-500 text-slate-950';
-                let headerTagText = 'OFFICIAL EMPLOYEE ID';
-                let avatarRing = 'from-slate-800 to-indigo-900';
-                let badgeRoleBg = 'bg-indigo-50 text-indigo-800 border-indigo-200';
-                let iconHeader = 'fa-graduation-cap text-amber-400';
+            const jab = (state.jabatan || []).find(j => j.id == k.jabatanId)?.nama || 'Pegawai';
+            const shf = (state.pengaturan?.shifts || []).find(s => s.id == k.shiftId) || (state.pengaturan?.shifts || [])[0];
+            const shiftNama = shf ? `${shf.nama} (${shf.jamMasuk} - ${shf.jamPulang})` : '-';
+            const initial = (k.nama || 'P').charAt(0).toUpperCase();
 
-                if (tema === 'emerald') {
-                    headerGradient = 'background: linear-gradient(135deg, #064e3b 0%, #047857 60%, #0f766e 100%);';
-                    headerAccentBar = 'bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-500 text-emerald-950';
-                    headerTagText = 'KARTU TANDA PEGAWAI';
-                    avatarRing = 'from-emerald-800 to-teal-700';
-                    badgeRoleBg = 'bg-emerald-50 text-emerald-800 border-emerald-200';
-                    iconHeader = 'fa-id-badge text-emerald-300';
-                } else if (tema === 'indigo') {
-                    headerGradient = 'background: linear-gradient(135deg, #312e81 0%, #4338ca 60%, #6366f1 100%);';
-                    headerAccentBar = 'bg-gradient-to-r from-indigo-300 via-violet-200 to-indigo-400 text-indigo-950';
-                    headerTagText = 'OFFICIAL STAFF CARD';
-                    avatarRing = 'from-indigo-900 to-violet-800';
-                    badgeRoleBg = 'bg-violet-50 text-violet-800 border-violet-200';
-                    iconHeader = 'fa-shield-halved text-indigo-300';
+            const orientasi = document.getElementById('orientasiKartu')?.value || 'potret';
+            const formatKode = document.getElementById('formatKodeScan')?.value || 'qr';
+            const tema = document.getElementById('temaWarnaKartu')?.value || 'corporate';
+            const showCropMarks = document.getElementById('toggleGarisPotong')?.checked !== false;
+
+            // Tema Warna Styling
+            let headerGradient = 'background: linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #312e81 100%);';
+            let headerAccentBar = 'bg-gradient-to-r from-amber-400 via-amber-300 to-amber-500 text-slate-950';
+            let headerTagText = 'OFFICIAL EMPLOYEE ID';
+            let avatarRing = 'from-slate-800 to-indigo-900';
+            let badgeRoleBg = 'bg-indigo-50 text-indigo-800 border-indigo-200';
+            let iconHeader = 'fa-graduation-cap text-amber-400';
+
+            if (tema === 'emerald') {
+                headerGradient = 'background: linear-gradient(135deg, #064e3b 0%, #047857 60%, #0f766e 100%);';
+                headerAccentBar = 'bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-500 text-emerald-950';
+                headerTagText = 'KARTU TANDA PEGAWAI';
+                avatarRing = 'from-emerald-800 to-teal-700';
+                badgeRoleBg = 'bg-emerald-50 text-emerald-800 border-emerald-200';
+                iconHeader = 'fa-id-badge text-emerald-300';
+            } else if (tema === 'indigo') {
+                headerGradient = 'background: linear-gradient(135deg, #312e81 0%, #4338ca 60%, #6366f1 100%);';
+                headerAccentBar = 'bg-gradient-to-r from-indigo-300 via-violet-200 to-indigo-400 text-indigo-950';
+                headerTagText = 'OFFICIAL STAFF CARD';
+                avatarRing = 'from-indigo-900 to-violet-800';
+                badgeRoleBg = 'bg-violet-50 text-violet-800 border-violet-200';
+                iconHeader = 'fa-shield-halved text-indigo-300';
+            }
+
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(k.nik)}&margin=1`;
+
+            // Render Barcode / QR Code Snippet
+            let codeHtml = '';
+            if (orientasi === 'potret') {
+                if (formatKode === 'qr') {
+                    codeHtml = `
+                        <div class="my-1.5 p-1 bg-white border border-slate-200 rounded-xl flex flex-col items-center justify-center shadow-2xs w-full">
+                            <img src="${qrUrl}" alt="QR ${k.nik}" class="w-20 h-20 object-contain" loading="lazy">
+                            <div class="flex items-center gap-1 mt-0.5">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                <span class="font-mono text-[9px] font-bold text-slate-700 tracking-wider">${k.nik}</span>
+                            </div>
+                            <span class="text-[7.5px] font-semibold text-slate-400 uppercase tracking-tight">Scan untuk Presensi</span>
+                        </div>
+                    `;
+                } else if (formatKode === 'barcode') {
+                    codeHtml = `
+                        <div class="my-1.5 p-1.5 bg-white border border-slate-200 rounded-xl flex flex-col items-center justify-center shadow-2xs w-full">
+                            <svg class="barcode-svg" data-nik="${k.nik}" style="width: 100%; max-width: 180px; height: 38px;"></svg>
+                            <span class="font-mono text-[9.5px] font-bold text-slate-700 tracking-wider mt-0.5">${k.nik}</span>
+                            <span class="text-[7.5px] font-semibold text-slate-400 uppercase tracking-tight">Barcode 1D Code-128</span>
+                        </div>
+                    `;
+                } else { // both
+                    codeHtml = `
+                        <div class="my-1 p-1 bg-white border border-slate-200 rounded-xl flex items-center justify-between gap-1.5 shadow-2xs w-full">
+                            <img src="${qrUrl}" alt="QR ${k.nik}" class="w-14 h-14 object-contain shrink-0" loading="lazy">
+                            <div class="flex-1 flex flex-col items-center justify-center overflow-hidden">
+                                <svg class="barcode-svg" data-nik="${k.nik}" style="width: 100%; max-width: 110px; height: 26px;"></svg>
+                                <span class="font-mono text-[8.5px] font-bold text-slate-700 tracking-tight">${k.nik}</span>
+                            </div>
+                        </div>
+                    `;
                 }
 
-                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(k.nik)}&margin=2`;
-
-                // Render Barcode / QR Code Snippet
-                let codeHtml = '';
-                if (orientasi === 'potret') {
-                    if (formatKode === 'qr') {
-                        codeHtml = `
-                            <div class="my-1.5 p-1 bg-white border border-slate-200 rounded-xl flex flex-col items-center justify-center shadow-2xs w-full">
-                                <img src="${qrUrl}" alt="QR ${k.nik}" class="w-18 h-18 sm:w-20 sm:h-20 object-contain" loading="lazy">
-                                <div class="flex items-center gap-1 mt-0.5">
-                                    <span class="w-1 h-1 rounded-full bg-emerald-500 animate-pulse"></span>
-                                    <span class="font-mono text-[9px] font-bold text-slate-700 tracking-wider">${k.nik}</span>
-                                </div>
-                                <span class="text-[7px] font-semibold text-slate-400 uppercase tracking-tight">Scan untuk Presensi</span>
-                            </div>
-                        `;
-                    } else if (formatKode === 'barcode') {
-                        codeHtml = `
-                            <div class="my-1.5 p-1.5 bg-white border border-slate-200 rounded-xl flex flex-col items-center justify-center shadow-2xs w-full">
-                                <svg class="barcode-svg" data-nik="${k.nik}" style="width: 100%; max-width: 180px; height: 38px;"></svg>
-                                <span class="font-mono text-[9px] font-bold text-slate-700 tracking-wider mt-0.5">${k.nik}</span>
-                                <span class="text-[7px] font-semibold text-slate-400 uppercase tracking-tight">Barcode 1D Code-128</span>
-                            </div>
-                        `;
-                    } else { // both
-                        codeHtml = `
-                            <div class="my-1 p-1 bg-white border border-slate-200 rounded-xl flex items-center justify-between gap-1.5 shadow-2xs w-full">
-                                <img src="${qrUrl}" alt="QR ${k.nik}" class="w-13 h-13 object-contain shrink-0" loading="lazy">
-                                <div class="flex-1 flex flex-col items-center overflow-hidden">
-                                    <svg class="barcode-svg" data-nik="${k.nik}" style="width: 100%; height: 26px;"></svg>
-                                    <span class="font-mono text-[8px] font-bold text-slate-700 tracking-wider mt-0.5">${k.nik}</span>
-                                </div>
-                            </div>
-                        `;
-                    }
-                } else { // lanskap
-                    if (formatKode === 'qr') {
-                        codeHtml = `
-                            <div class="p-1.5 bg-white border border-slate-200 rounded-xl flex flex-col items-center justify-center shadow-2xs h-full w-full">
-                                <img src="${qrUrl}" alt="QR ${k.nik}" class="w-20 h-20 sm:w-22 sm:h-22 object-contain" loading="lazy">
-                                <span class="font-mono text-[9px] font-bold text-slate-700 mt-1 tracking-wider">${k.nik}</span>
-                                <span class="text-[7px] font-semibold text-slate-400 uppercase">Scan QR Presensi</span>
-                            </div>
-                        `;
-                    } else if (formatKode === 'barcode') {
-                        codeHtml = `
-                            <div class="p-2 bg-white border border-slate-200 rounded-xl flex flex-col items-center justify-center shadow-2xs h-full w-full">
-                                <svg class="barcode-svg" data-nik="${k.nik}" style="width: 100%; max-width: 190px; height: 48px;"></svg>
-                                <span class="font-mono text-[9px] font-bold text-slate-700 tracking-wider mt-1">${k.nik}</span>
-                                <span class="text-[7px] font-semibold text-slate-400 uppercase">Barcode Scanner Code-128</span>
-                            </div>
-                        `;
-                    } else { // both
-                        codeHtml = `
-                            <div class="p-1.5 bg-white border border-slate-200 rounded-xl flex items-center justify-between gap-2 shadow-2xs h-full w-full">
-                                <img src="${qrUrl}" alt="QR ${k.nik}" class="w-16 h-16 object-contain shrink-0" loading="lazy">
-                                <div class="flex-1 flex flex-col items-center overflow-hidden">
-                                    <svg class="barcode-svg" data-nik="${k.nik}" style="width: 100%; height: 32px;"></svg>
-                                    <span class="font-mono text-[8.5px] font-bold text-slate-700 tracking-wider mt-1">${k.nik}</span>
-                                    <span class="text-[6.5px] font-semibold text-slate-400 uppercase">Dual QR & Barcode</span>
-                                </div>
-                            </div>
-                        `;
-                    }
-                }
-
-                // Construct Card HTML based on orientation
-                if (orientasi === 'potret') {
-                    // STANDAR POTRET: 54mm x 85.6mm (CR80)
-                    cardsHtml += `
-                        <div id="card-id-${k.id}" data-id="${k.id}" class="id-card-item card-potret w-[220px] h-[348px] bg-white rounded-[10px] ${showCropMarks ? 'border border-dashed border-slate-300' : 'border border-slate-200'} shadow-sm overflow-hidden flex flex-col justify-between relative transition duration-150 ${isSelected ? 'ring-2 ring-indigo-500' : 'opacity-40'}">
+                container.innerHTML = `
+                    <div class="flex flex-col items-center">
+                        <!-- KARTU ID POTRET CR80 (54 x 85.6 mm) -->
+                        <div id="card-id-${k.id}" data-id="${k.id}" class="id-card-item card-potret w-[240px] h-[380px] bg-white rounded-[14px] ${showCropMarks ? 'border border-dashed border-slate-300' : 'border border-slate-200'} shadow-xl overflow-hidden flex flex-col justify-between relative transition duration-150">
                             
-                            <!-- CHECKBOX PILIH KARTU (DISEMBUNYIKAN SAAT PRINT) -->
-                            <div class="absolute top-1.5 right-1.5 z-20 no-print">
-                                <label class="flex items-center gap-1 bg-white/95 backdrop-blur-md px-1.5 py-0.5 rounded-lg shadow-sm border border-slate-200 cursor-pointer text-[10px] font-bold text-slate-700 select-none hover:bg-slate-50 transition">
-                                    <input type="checkbox" data-id="${k.id}" class="kartu-checkbox accent-indigo-600 rounded cursor-pointer w-3 h-3" onchange="window.togglePilihKartu(${k.id}, this.checked)" ${isSelected ? 'checked' : ''}>
-                                    <span>Cetak</span>
-                                </label>
-                            </div>
-
                             <!-- INDIKATOR GARIS GUNTING (CROP MARKS) -->
                             ${showCropMarks ? `
-                                <div class="absolute -top-1.5 -left-1.5 text-slate-400 text-[8px] no-print" title="Garis Potong Presisi">
+                                <div class="absolute -top-1.5 -left-1.5 text-slate-400 text-[9px] no-print" title="Garis Potong Standar CR80">
                                     <i class="fas fa-scissors"></i>
                                 </div>
                             ` : ''}
 
-                            <!-- HEADER DENGAN LUBANG LANYARD & BRANDING INSTITUSI -->
-                            <div class="px-2.5 pt-2 pb-1 text-center text-white relative overflow-hidden" style="${headerGradient}">
-                                <div class="w-8 h-1.5 bg-black/40 border border-white/20 rounded-full mx-auto mb-1 opacity-80"></div>
-                                <div class="flex items-center justify-center space-x-1.5">
-                                    <i class="fas ${iconHeader} text-[10px]"></i>
-                                    <div class="text-left">
-                                        <h4 class="font-black text-[9px] tracking-wider uppercase leading-none text-white">DESTINY INSTITUTE</h4>
-                                        <p class="text-[6.5px] font-semibold tracking-widest text-slate-200 uppercase -mt-0.5">ACADEMY HR SYSTEM</p>
-                                    </div>
+                            <!-- LANYARD / STRAP SLOT SIMULATOR (DISEMBUNYIKAN SAAT PRINT) -->
+                            <div class="absolute top-1 left-1/2 transform -translate-x-1/2 w-8 h-1 rounded-full bg-slate-400/40 no-print"></div>
+
+                            <!-- HEADER KARTU STRIP -->
+                            <div class="px-3 pt-3 pb-2 text-white text-center relative overflow-hidden" style="${headerGradient}">
+                                <div class="flex items-center justify-center space-x-1.5 mb-0.5">
+                                    <i class="fas ${iconHeader} text-xs"></i>
+                                    <span class="font-black text-[10.5px] tracking-wider uppercase text-white">DESTINY INSTITUTE</span>
                                 </div>
-                                <div class="mt-1.5 -mx-2.5 ${headerAccentBar} text-[7.5px] font-black tracking-widest py-0.2 uppercase shadow-xs">
+                                <div class="inline-block px-2 py-0.2 rounded-full ${headerAccentBar} text-[7.5px] font-black uppercase tracking-wider shadow-2xs">
                                     ${headerTagText}
                                 </div>
                             </div>
 
-                            <!-- TENGAH: IDENTITAS PEGAWAI & KODE ABSENSI -->
-                            <div class="px-2.5 pt-1.5 pb-1 text-center bg-white flex-1 flex flex-col justify-between items-center">
-                                <!-- Avatar Foto Pegawai -->
-                                <div class="flex flex-col items-center">
-                                    <div class="w-11 h-11 rounded-full bg-gradient-to-tr ${avatarRing} text-white font-bold text-base flex items-center justify-center shadow-xs border border-white ring-1 ring-slate-200">
-                                        ${initial}
-                                    </div>
-                                    <h3 class="font-black text-slate-800 text-[11px] leading-tight px-1 mt-1 line-clamp-1" title="${k.nama}">
+                            <!-- BODY IDENTITAS PEGAWAI -->
+                            <div class="px-3 py-1 flex-1 flex flex-col items-center text-center justify-between">
+                                <!-- AVATAR FOTO -->
+                                <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr ${avatarRing} text-white font-black text-xl flex items-center justify-center shadow-sm border-2 border-white ring-2 ring-slate-100 mt-0.5">
+                                    ${initial}
+                                </div>
+
+                                <!-- NAMA & JABATAN -->
+                                <div class="mt-1 w-full">
+                                    <h3 class="font-black text-slate-900 text-xs leading-snug px-1 line-clamp-1" title="${k.nama}">
                                         ${k.nama}
                                     </h3>
-                                    <span class="inline-block text-[8px] font-bold px-2 py-0.2 rounded-full border ${badgeRoleBg} mt-0.5">
+                                    <span class="inline-block text-[8px] font-bold px-2 py-0.5 rounded-full border ${badgeRoleBg} mt-0.5">
                                         ${jab}
                                     </span>
                                 </div>
 
-                                <!-- Meta Info NIK & Status -->
-                                <div class="w-full flex items-center justify-between bg-slate-50 border border-slate-200 rounded-md px-1.5 py-0.5 text-[8.5px] mt-1">
-                                    <span class="font-mono font-bold text-slate-800">${k.nik}</span>
-                                    <span class="text-[7.5px] font-bold ${k.statusKaryawan === 'Kontrak' ? 'text-amber-600' : 'text-emerald-700'}">${k.statusKaryawan || 'Tetap'}</span>
+                                <!-- META DATA TABLE (NIP, SHIFT, STATUS) -->
+                                <div class="w-full bg-slate-50 border border-slate-200 rounded-lg p-1 text-[8px] text-slate-600 space-y-0.5 text-left mt-1">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-slate-400 font-medium">NIP:</span>
+                                        <span class="font-mono font-bold text-slate-700">${k.nip || '-'}</span>
+                                    </div>
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-slate-400 font-medium">Shift:</span>
+                                        <span class="font-semibold text-slate-700 truncate max-w-[120px]">${shf?.nama || '-'}</span>
+                                    </div>
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-slate-400 font-medium">Status:</span>
+                                        <span class="font-bold ${k.statusKaryawan === 'Kontrak' ? 'text-amber-600' : 'text-emerald-700'}">${k.statusKaryawan || 'Tetap'}</span>
+                                    </div>
                                 </div>
 
-                                <!-- KODE SCAN (QR / BARCODE) -->
+                                <!-- SCANNER AREA (QR / BARCODE) -->
                                 ${codeHtml}
                             </div>
 
-                            <!-- BAWAH: WATERMARK RESMI & SIZE INFO -->
-                            <div class="px-2 py-1 bg-slate-100 border-t border-slate-200 text-center">
-                                <p class="text-[6.5px] text-slate-400 font-bold uppercase tracking-wider leading-none">DESTINY INSTITUTE &bull; 54 × 85.6 MM (CR80)</p>
+                            <!-- FOOTER KARTU WATERMARK -->
+                            <div class="px-2 py-1 bg-slate-100 border-t border-slate-200 text-center text-[7px] text-slate-400 font-bold uppercase tracking-wider flex items-center justify-between">
+                                <span>DESTINY INSTITUTE</span>
+                                <span>CR80 (54 × 85.6 MM)</span>
                             </div>
+                        </div>
 
-                            <!-- ACTION BAR (DISEMBUNYIKAN SAAT PRINT) -->
-                            <div class="p-1.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-1 no-print">
-                                <button type="button" onclick="window.cetakSatuKartu(${k.id})" class="flex-1 py-1 px-1.5 bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-700 text-[10px] font-bold rounded-lg transition flex items-center justify-center shadow-2xs">
-                                    <i class="fas fa-print mr-1"></i> Cetak Kartu
-                                </button>
-                                <button type="button" onclick="window.tampilkanQR('${k.nik}', '${k.nama}')" class="py-1 px-2 bg-white hover:bg-slate-200 text-slate-700 border border-slate-200 text-[10px] font-bold rounded-lg transition shadow-2xs" title="Lihat Popup QR">
-                                    <i class="fas fa-expand"></i>
-                                </button>
+                        <!-- PANEL AKSI & INFORMASI DI BAWAH KARTU (DISEMBUNYIKAN SAAT PRINT) -->
+                        <div class="mt-5 flex flex-wrap items-center justify-center gap-2 no-print">
+                            <button type="button" onclick="window.cetakKartuSatuan()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow-lg shadow-indigo-600/30 transition flex items-center">
+                                <i class="fas fa-print mr-2"></i> Cetak Kartu Ini (PDF)
+                            </button>
+                            <button type="button" onclick="window.tampilkanQR('${k.nik}', '${k.nama}')" class="bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 px-4 py-2.5 rounded-xl font-bold text-xs transition flex items-center shadow-xs">
+                                <i class="fas fa-qrcode mr-2 text-emerald-600"></i> Zoom QR Absen
+                            </button>
+                            <button type="button" onclick="window.lihatDetailKaryawan(${k.id})" class="bg-white hover:bg-slate-100 text-indigo-600 border border-indigo-200 px-4 py-2.5 rounded-xl font-bold text-xs transition flex items-center shadow-xs">
+                                <i class="fas fa-user mr-2"></i> Profil Lengkap
+                            </button>
+                        </div>
+                    </div>
+                `;
+            } else { // Lanskap
+                if (formatKode === 'qr') {
+                    codeHtml = `
+                        <div class="p-1 bg-white border border-slate-200 rounded-xl flex flex-col items-center justify-center shadow-2xs w-full max-w-[130px]">
+                            <img src="${qrUrl}" alt="QR ${k.nik}" class="w-18 h-18 object-contain" loading="lazy">
+                            <span class="font-mono text-[8.5px] font-bold text-slate-700 tracking-wider mt-0.5">${k.nik}</span>
+                            <span class="text-[6.5px] font-semibold text-slate-400 uppercase">Scan Presensi</span>
+                        </div>
+                    `;
+                } else if (formatKode === 'barcode') {
+                    codeHtml = `
+                        <div class="p-1.5 bg-white border border-slate-200 rounded-xl flex flex-col items-center justify-center shadow-2xs w-full">
+                            <svg class="barcode-svg" data-nik="${k.nik}" style="width: 100%; max-width: 160px; height: 38px;"></svg>
+                            <span class="font-mono text-[9px] font-bold text-slate-700 tracking-wider mt-0.5">${k.nik}</span>
+                            <span class="text-[7px] font-semibold text-slate-400 uppercase">Barcode 1D Code-128</span>
+                        </div>
+                    `;
+                } else { // both
+                    codeHtml = `
+                        <div class="p-1 bg-white border border-slate-200 rounded-xl flex items-center justify-between gap-1 shadow-2xs w-full">
+                            <img src="${qrUrl}" alt="QR ${k.nik}" class="w-13 h-13 object-contain shrink-0" loading="lazy">
+                            <div class="flex-1 flex flex-col items-center justify-center overflow-hidden">
+                                <svg class="barcode-svg" data-nik="${k.nik}" style="width: 100%; max-width: 95px; height: 24px;"></svg>
+                                <span class="font-mono text-[8px] font-bold text-slate-700 tracking-tight">${k.nik}</span>
                             </div>
                         </div>
                     `;
-                } else {
-                    // STANDAR LANSKAP: 85.6mm x 54mm (CR80)
-                    cardsHtml += `
-                        <div id="card-id-${k.id}" data-id="${k.id}" class="id-card-item card-lanskap w-[348px] h-[220px] bg-white rounded-[10px] ${showCropMarks ? 'border border-dashed border-slate-300' : 'border border-slate-200'} shadow-sm overflow-hidden flex flex-col justify-between relative transition duration-150 ${isSelected ? 'ring-2 ring-indigo-500' : 'opacity-40'}">
-                            
-                            <!-- CHECKBOX PILIH KARTU (DISEMBUNYIKAN SAAT PRINT) -->
-                            <div class="absolute top-1.5 right-1.5 z-20 no-print">
-                                <label class="flex items-center gap-1 bg-white/95 backdrop-blur-md px-1.5 py-0.5 rounded-lg shadow-sm border border-slate-200 cursor-pointer text-[10px] font-bold text-slate-700 select-none hover:bg-slate-50 transition">
-                                    <input type="checkbox" data-id="${k.id}" class="kartu-checkbox accent-indigo-600 rounded cursor-pointer w-3 h-3" onchange="window.togglePilihKartu(${k.id}, this.checked)" ${isSelected ? 'checked' : ''}>
-                                    <span>Cetak</span>
-                                </label>
-                            </div>
+                }
 
+                container.innerHTML = `
+                    <div class="flex flex-col items-center">
+                        <!-- KARTU ID LANSKAP CR80 (85.6 x 54 mm) -->
+                        <div id="card-id-${k.id}" data-id="${k.id}" class="id-card-item card-lanskap w-[380px] h-[240px] bg-white rounded-[14px] ${showCropMarks ? 'border border-dashed border-slate-300' : 'border border-slate-200'} shadow-xl overflow-hidden flex flex-col justify-between relative transition duration-150">
+                            
                             <!-- INDIKATOR GARIS GUNTING (CROP MARKS) -->
                             ${showCropMarks ? `
-                                <div class="absolute -top-1.5 -left-1.5 text-slate-400 text-[8px] no-print" title="Garis Potong Presisi">
+                                <div class="absolute -top-1.5 -left-1.5 text-slate-400 text-[9px] no-print" title="Garis Potong Standar CR80">
                                     <i class="fas fa-scissors"></i>
                                 </div>
                             ` : ''}
 
                             <!-- HEADER LANSKAP STRIP -->
-                            <div class="px-3 py-1 text-white flex items-center justify-between" style="${headerGradient}">
+                            <div class="px-3.5 py-1.5 text-white flex items-center justify-between" style="${headerGradient}">
                                 <div class="flex items-center space-x-1.5">
-                                    <i class="fas ${iconHeader} text-[10px]"></i>
-                                    <span class="font-black text-[9px] tracking-wider uppercase text-white">DESTINY INSTITUTE</span>
+                                    <i class="fas ${iconHeader} text-[11px]"></i>
+                                    <span class="font-black text-[10px] tracking-wider uppercase text-white">DESTINY INSTITUTE</span>
                                 </div>
-                                <span class="text-[7.5px] font-bold uppercase tracking-wider text-amber-300 mr-14 sm:mr-0">${headerTagText}</span>
+                                <span class="text-[8px] font-bold uppercase tracking-wider text-amber-300">${headerTagText}</span>
                             </div>
 
                             <!-- TENGAH: 2 KOLOM (KIRI IDENTITAS, KANAN KODE SCAN) -->
-                            <div class="px-3 py-1.5 bg-white flex-1 grid grid-cols-12 gap-2 items-center">
+                            <div class="px-3.5 py-2 bg-white flex-1 grid grid-cols-12 gap-2.5 items-center">
                                 <!-- Kiri: Foto + Biodata -->
-                                <div class="col-span-5 flex flex-col items-center text-center border-r border-slate-100 pr-1.5">
-                                    <div class="w-12 h-12 rounded-xl bg-gradient-to-tr ${avatarRing} text-white font-bold text-lg flex items-center justify-center shadow-xs border border-white ring-1 ring-slate-200 mb-1">
+                                <div class="col-span-5 flex flex-col items-center text-center border-r border-slate-100 pr-2">
+                                    <div class="w-13 h-13 rounded-2xl bg-gradient-to-tr ${avatarRing} text-white font-bold text-xl flex items-center justify-center shadow-xs border-2 border-white ring-1 ring-slate-200 mb-1">
                                         ${initial}
                                     </div>
-                                    <h3 class="font-black text-slate-800 text-[10.5px] leading-tight px-0.5 line-clamp-1" title="${k.nama}">
+                                    <h3 class="font-black text-slate-800 text-[11px] leading-tight px-0.5 line-clamp-1" title="${k.nama}">
                                         ${k.nama}
                                     </h3>
-                                    <span class="inline-block text-[7.5px] font-bold px-1.5 py-0.2 rounded-full border ${badgeRoleBg} mt-0.5">
+                                    <span class="inline-block text-[8px] font-bold px-2 py-0.5 rounded-full border ${badgeRoleBg} mt-0.5">
                                         ${jab}
                                     </span>
-                                    <div class="w-full bg-slate-50 border border-slate-200 rounded px-1 py-0.5 text-[8px] font-mono font-bold text-slate-700 mt-1 flex justify-between items-center">
+                                    <div class="w-full bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5 text-[8.5px] font-mono font-bold text-slate-700 mt-1 flex justify-between items-center">
                                         <span>${k.nik}</span>
-                                        <span class="text-[7px] font-semibold ${k.statusKaryawan === 'Kontrak' ? 'text-amber-600' : 'text-emerald-700'}">${k.statusKaryawan || 'Tetap'}</span>
+                                        <span class="text-[7.5px] font-semibold ${k.statusKaryawan === 'Kontrak' ? 'text-amber-600' : 'text-emerald-700'}">${k.statusKaryawan || 'Tetap'}</span>
                                     </div>
                                 </div>
 
@@ -2036,30 +1946,31 @@
                             </div>
 
                             <!-- BAWAH: WATERMARK FOOTER -->
-                            <div class="px-3 py-0.5 bg-slate-100 border-t border-slate-200 flex items-center justify-between text-[6.5px] text-slate-400 font-bold uppercase tracking-wider">
+                            <div class="px-3.5 py-1 bg-slate-100 border-t border-slate-200 flex items-center justify-between text-[7px] text-slate-400 font-bold uppercase tracking-wider">
                                 <span>DESTINY INSTITUTE HR SYSTEM</span>
                                 <span>85.6 × 54 MM (CR80 LANSKAP)</span>
                             </div>
-
-                            <!-- ACTION BAR (DISEMBUNYIKAN SAAT PRINT) -->
-                            <div class="p-1.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-1 no-print">
-                                <button type="button" onclick="window.cetakSatuKartu(${k.id})" class="flex-1 py-1 px-1.5 bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-700 text-[10px] font-bold rounded-lg transition flex items-center justify-center shadow-2xs">
-                                    <i class="fas fa-print mr-1"></i> Cetak Kartu Ini
-                                </button>
-                                <button type="button" onclick="window.tampilkanQR('${k.nik}', '${k.nama}')" class="py-1 px-2 bg-white hover:bg-slate-200 text-slate-700 border border-slate-200 text-[10px] font-bold rounded-lg transition shadow-2xs" title="Lihat Popup QR">
-                                    <i class="fas fa-expand"></i>
-                                </button>
-                            </div>
                         </div>
-                    `;
-                }
-            });
 
-            container.innerHTML = cardsHtml;
+                        <!-- PANEL AKSI & INFORMASI DI BAWAH KARTU (DISEMBUNYIKAN SAAT PRINT) -->
+                        <div class="mt-5 flex flex-wrap items-center justify-center gap-2 no-print">
+                            <button type="button" onclick="window.cetakKartuSatuan()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow-lg shadow-indigo-600/30 transition flex items-center">
+                                <i class="fas fa-print mr-2"></i> Cetak Kartu Ini (PDF)
+                            </button>
+                            <button type="button" onclick="window.tampilkanQR('${k.nik}', '${k.nama}')" class="bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 px-4 py-2.5 rounded-xl font-bold text-xs transition flex items-center shadow-xs">
+                                <i class="fas fa-qrcode mr-2 text-emerald-600"></i> Zoom QR Absen
+                            </button>
+                            <button type="button" onclick="window.lihatDetailKaryawan(${k.id})" class="bg-white hover:bg-slate-100 text-indigo-600 border border-indigo-200 px-4 py-2.5 rounded-xl font-bold text-xs transition flex items-center shadow-xs">
+                                <i class="fas fa-user mr-2"></i> Profil Lengkap
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
 
-            // Trigger JsBarcode untuk semua elemen SVG barcode
+            // Trigger JsBarcode untuk SVG barcode
             if (typeof JsBarcode === 'function') {
-                document.querySelectorAll('.barcode-svg').forEach(svg => {
+                container.querySelectorAll('.barcode-svg').forEach(svg => {
                     const nik = svg.dataset.nik;
                     if (nik) {
                         try {
@@ -2079,23 +1990,11 @@
             }
         };
 
-        window.cetakSemuaKartuQR = function() {
-            if (!window.kartuQRSelected || window.kartuQRSelected.size === 0) {
-                showToast('Peringatan', 'Silakan pilih minimal 1 kartu untuk dicetak.', 'warning');
-                return;
-            }
+        // Alias renderGridKartuID
+        window.renderGridKartuID = window.renderKartuIDSatuan;
 
+        window.cetakKartuSatuan = function() {
             const orientasi = document.getElementById('orientasiKartu')?.value || 'potret';
-
-            // Beri tanda kartu yang tidak dicentang agar disembunyikan saat dicetak
-            document.querySelectorAll('.id-card-item').forEach(el => {
-                const id = Number(el.dataset.id);
-                if (window.kartuQRSelected.has(id)) {
-                    el.classList.remove('tidak-dicetak');
-                } else {
-                    el.classList.add('tidak-dicetak');
-                }
-            });
 
             document.body.classList.add('printing-idcards');
             if (orientasi === 'lanskap') {
@@ -2109,7 +2008,6 @@
             const selesaiPrint = () => {
                 document.body.classList.remove('printing-idcards');
                 document.body.classList.remove('orientasi-lanskap');
-                document.querySelectorAll('.id-card-item').forEach(el => el.classList.remove('tidak-dicetak'));
                 window.removeEventListener('afterprint', selesaiPrint);
             };
 
@@ -2117,17 +2015,13 @@
             setTimeout(selesaiPrint, 2500);
         };
 
+        // Aliases untuk kompatibilitas
+        window.cetakSemuaKartuQR = window.cetakKartuSatuan;
         window.cetakSatuKartu = function(karyawanId) {
-            const id = Number(karyawanId);
-            const simpanSelected = new Set(window.kartuQRSelected);
-            window.kartuQRSelected = new Set([id]);
-            window.renderGridKartuID();
-            window.cetakSemuaKartuQR();
-
+            window.bukaModalCetakKartu(karyawanId);
             setTimeout(() => {
-                window.kartuQRSelected = simpanSelected;
-                window.renderGridKartuID();
-            }, 1000);
+                window.cetakKartuSatuan();
+            }, 300);
         };
 
         window.bukaModalHapusTanggal = function(mode = 'absensi') {
@@ -3491,7 +3385,7 @@
         }
 
         function getKaryawanHTML() {
-            return `<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4"><div><h1 class="text-3xl font-bold text-slate-800">Database Karyawan</h1></div><div class="flex flex-wrap gap-2"><button onclick="window.bukaModalCetakKartu()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-xl font-bold text-sm shadow transition flex items-center"><i class="fas fa-id-card mr-2"></i> Cetak Kartu ID QR (Bulk)</button><button onclick="window.bukaModalImport()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-xl font-bold text-sm shadow transition flex items-center"><i class="fas fa-file-import mr-2"></i> Import Excel</button><button onclick="window.eksporKaryawan()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-3 rounded-xl font-bold text-sm shadow transition flex items-center"><i class="fas fa-file-export mr-2"></i> Ekspor Excel</button><button onclick="window.bukaModalKaryawan()" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-3 rounded-xl font-bold text-sm shadow transition flex items-center"><i class="fas fa-plus mr-2"></i> Tambah Manual</button></div></div><div class="bg-white rounded-2xl border overflow-x-auto shadow-sm"><table class="min-w-full text-sm text-left"><thead class="bg-slate-50 text-slate-500 uppercase text-xs border-b"><tr><th class="py-4 px-6">Identitas</th><th class="py-4 px-6">Jabatan & Shift</th><th class="py-4 px-6 text-right">Gaji Pokok</th><th class="py-4 px-6 text-center">Tindakan</th></tr></thead><tbody id="tabelKaryawanBody" class="divide-y"></tbody></table></div>`;
+            return `<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4"><div><h1 class="text-3xl font-bold text-slate-800">Database Karyawan</h1></div><div class="flex flex-wrap gap-2"><button onclick="window.bukaModalCetakKartu()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-xl font-bold text-sm shadow transition flex items-center"><i class="fas fa-id-card mr-2"></i> Cetak ID Card</button><button onclick="window.bukaModalImport()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-xl font-bold text-sm shadow transition flex items-center"><i class="fas fa-file-import mr-2"></i> Import Excel</button><button onclick="window.eksporKaryawan()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-3 rounded-xl font-bold text-sm shadow transition flex items-center"><i class="fas fa-file-export mr-2"></i> Ekspor Excel</button><button onclick="window.bukaModalKaryawan()" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-3 rounded-xl font-bold text-sm shadow transition flex items-center"><i class="fas fa-plus mr-2"></i> Tambah Manual</button></div></div><div class="bg-white rounded-2xl border overflow-x-auto shadow-sm"><table class="min-w-full text-sm text-left"><thead class="bg-slate-50 text-slate-500 uppercase text-xs border-b"><tr><th class="py-4 px-6">Identitas</th><th class="py-4 px-6">Jabatan & Shift</th><th class="py-4 px-6 text-right">Gaji Pokok</th><th class="py-4 px-6 text-center">Tindakan</th></tr></thead><tbody id="tabelKaryawanBody" class="divide-y"></tbody></table></div>`;
         }
         function renderKaryawanTable() {
             const tbody = document.getElementById('tabelKaryawanBody'); if(!tbody) return; tbody.innerHTML = '';
