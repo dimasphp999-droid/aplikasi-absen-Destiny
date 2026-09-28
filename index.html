@@ -1583,7 +1583,6 @@
         function getNavItemsHTML(isMobile = false) {
             const items = [
                 { id: 'dashboard', icon: 'fa-chart-pie', label: 'Ringkasan Dasbor' },
-                { id: 'scanWajah', icon: 'fa-qrcode', label: 'Terminal Kiosk QR' },
                 { id: 'jabatan', icon: 'fa-user-tie', label: 'Struktur Jabatan' }, 
                 { id: 'karyawan', icon: 'fa-users', label: 'Database Karyawan' },
                 { id: 'absensi', icon: 'fa-history', label: 'Riwayat Kehadiran' }, 
@@ -3268,16 +3267,329 @@
         window.bukaModalJabatan = function(id = null) { if(id) { const j = state.jabatan.find(x => x.id === id); document.getElementById('fj_id').value = j.id; document.getElementById('fj_nama').value = j.nama; } else { document.getElementById('fj_id').value = ''; document.getElementById('fj_nama').value = ''; } document.getElementById('modalJabatan').classList.remove('hidden'); };
         window.simpanJabatan = function() { const id = document.getElementById('fj_id').value; const nama = document.getElementById('fj_nama').value; if(!nama) return; if(id) { const idx = state.jabatan.findIndex(j => j.id == parseInt(id, 10)); state.jabatan[idx].nama = nama; } else { state.jabatan.push({ id: Date.now(), nama }); } saveData(); document.getElementById('modalJabatan').classList.add('hidden'); window.renderMainContent(); };
 
-        function getAbsensiHTML() { return `<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4"><div><h1 class="text-3xl font-bold text-slate-800">Riwayat Kehadiran</h1></div><div class="flex flex-wrap gap-2"><button onclick="window.setView('scanWajah')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-3 rounded-xl shadow text-sm transition"><i class="fas fa-qrcode mr-2"></i>Buka Mesin Absen (QR)</button><button onclick="window.bukaModalAbsensi()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-3 rounded-xl shadow text-sm transition"><i class="fas fa-plus mr-2"></i>Tambah Manual</button><button onclick="window.bukaModalHapusTanggal('absensi')" class="bg-amber-500 hover:bg-amber-600 text-white font-semibold px-4 py-3 rounded-xl shadow text-sm transition"><i class="fas fa-calendar-times mr-2"></i>Hapus via Tanggal</button><button onclick="window.confirmDelete('semua_absensi', 'all')" class="bg-red-500 hover:bg-red-600 text-white font-semibold px-4 py-3 rounded-xl shadow text-sm transition"><i class="fas fa-trash-alt mr-2"></i>Kosongkan</button></div></div><div class="bg-white rounded-2xl border overflow-x-auto shadow-sm"><table class="min-w-full text-sm text-left"><thead class="bg-slate-50 border-b text-xs text-slate-500 uppercase"><tr><th class="py-4 px-6">Tgl</th><th class="py-4 px-6">Karyawan</th><th class="py-4 px-6">Masuk</th><th class="py-4 px-6">Pulang</th><th class="py-4 px-6">Metode</th><th class="py-4 px-6">Status</th><th class="py-4 px-6 text-center">Aksi</th></tr></thead><tbody id="tabelAbsensiBody" class="divide-y"></tbody></table></div>`; }
+        window.absensiPagination = {
+            page: 1,
+            perPage: 25,
+            search: '',
+            tanggal: '',
+            status: ''
+        };
+
+        window.gantiHalamanAbsensi = function(halaman) {
+            window.absensiPagination.page = halaman;
+            renderAbsensiTable();
+        };
+
+        window.gantiPerPageAbsensi = function(perPage) {
+            window.absensiPagination.perPage = parseInt(perPage, 10) || 25;
+            window.absensiPagination.page = 1;
+            renderAbsensiTable();
+        };
+
+        window.filterAbsensiSearch = function(val) {
+            window.absensiPagination.search = (val || '').toLowerCase().trim();
+            window.absensiPagination.page = 1;
+            renderAbsensiTable();
+        };
+
+        window.filterAbsensiTanggal = function(val) {
+            window.absensiPagination.tanggal = val || '';
+            window.absensiPagination.page = 1;
+            renderAbsensiTable();
+        };
+
+        window.filterAbsensiStatus = function(val) {
+            window.absensiPagination.status = val || '';
+            window.absensiPagination.page = 1;
+            renderAbsensiTable();
+        };
+
+        window.resetFilterAbsensi = function() {
+            window.absensiPagination.search = '';
+            window.absensiPagination.tanggal = '';
+            window.absensiPagination.status = '';
+            window.absensiPagination.page = 1;
+            const sInp = document.getElementById('filterAbsensiSearch'); if(sInp) sInp.value = '';
+            const tInp = document.getElementById('filterAbsensiTanggal'); if(tInp) tInp.value = '';
+            const stInp = document.getElementById('filterAbsensiStatus'); if(stInp) stInp.value = '';
+            renderAbsensiTable();
+        };
+
+        function getAbsensiHTML() {
+            const allCount = (state.absensi || []).length;
+            return `
+                <div class="space-y-6 mb-8">
+                    <!-- HEADER & ACTION BUTTONS -->
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <div class="flex items-center gap-3">
+                                <h1 class="text-3xl font-bold text-slate-800 tracking-tight">Riwayat Kehadiran</h1>
+                                <span class="bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-bold px-2.5 py-1 rounded-full">
+                                    ${allCount} Total Data
+                                </span>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-1">Sistem pagination cepat & pencarian instan (25 data per halaman).</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="window.setView('scanWajah')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2.5 rounded-xl shadow-sm text-xs sm:text-sm transition flex items-center">
+                                <i class="fas fa-qrcode mr-2"></i>Mesin Absen (QR)
+                            </button>
+                            <button onclick="window.bukaModalAbsensi()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2.5 rounded-xl shadow-sm text-xs sm:text-sm transition flex items-center">
+                                <i class="fas fa-plus mr-2"></i>Tambah Manual
+                            </button>
+                            <button onclick="window.bukaModalHapusTanggal('absensi')" class="bg-amber-500 hover:bg-amber-600 text-white font-semibold px-4 py-2.5 rounded-xl shadow-sm text-xs sm:text-sm transition flex items-center">
+                                <i class="fas fa-calendar-times mr-2"></i>Hapus per Tanggal
+                            </button>
+                            <button onclick="window.confirmDelete('semua_absensi', 'all')" class="bg-rose-500 hover:bg-rose-600 text-white font-semibold px-4 py-2.5 rounded-xl shadow-sm text-xs sm:text-sm transition flex items-center">
+                                <i class="fas fa-trash-alt mr-2"></i>Kosongkan
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- FILTER & SEARCH TOOLBAR -->
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+                        <!-- SEARCH INPUT -->
+                        <div class="relative flex-1">
+                            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                <i class="fas fa-search text-xs"></i>
+                            </span>
+                            <input type="text" id="filterAbsensiSearch" value="${window.absensiPagination.search || ''}" oninput="window.filterAbsensiSearch(this.value)" placeholder="Cari nama karyawan / NIK..." class="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
+                        </div>
+
+                        <div class="flex flex-wrap items-center gap-2.5">
+                            <!-- FILTER TANGGAL -->
+                            <div class="relative">
+                                <input type="date" id="filterAbsensiTanggal" value="${window.absensiPagination.tanggal || ''}" onchange="window.filterAbsensiTanggal(this.value)" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 transition" title="Filter Tanggal">
+                            </div>
+
+                            <!-- FILTER STATUS -->
+                            <select id="filterAbsensiStatus" onchange="window.filterAbsensiStatus(this.value)" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 font-medium outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                                <option value="" ${!window.absensiPagination.status ? 'selected' : ''}>Semua Status</option>
+                                <option value="Tepat Waktu" ${window.absensiPagination.status === 'Tepat Waktu' ? 'selected' : ''}>Tepat Waktu</option>
+                                <option value="Terlambat" ${window.absensiPagination.status === 'Terlambat' ? 'selected' : ''}>Terlambat</option>
+                                <option value="Libur" ${window.absensiPagination.status === 'Libur' ? 'selected' : ''}>Hadir (Libur)</option>
+                            </select>
+
+                            <!-- PER PAGE SELECTOR -->
+                            <div class="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+                                <span class="hidden sm:inline">Tampilkan:</span>
+                                <select id="filterAbsensiPerPage" onchange="window.gantiPerPageAbsensi(this.value)" class="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs text-slate-800 font-bold outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                                    <option value="25" ${window.absensiPagination.perPage === 25 ? 'selected' : ''}>25 / hal</option>
+                                    <option value="50" ${window.absensiPagination.perPage === 50 ? 'selected' : ''}>50 / hal</option>
+                                    <option value="100" ${window.absensiPagination.perPage === 100 ? 'selected' : ''}>100 / hal</option>
+                                </select>
+                            </div>
+
+                            <!-- RESET FILTER -->
+                            <button type="button" onclick="window.resetFilterAbsensi()" class="px-3 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition flex items-center" title="Reset Filter">
+                                <i class="fas fa-rotate-left mr-1.5 text-[10px]"></i> Reset
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TABLE CARD -->
+                <div class="bg-white rounded-3xl border border-slate-200/90 overflow-hidden shadow-sm">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full text-sm text-left">
+                            <thead class="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                <tr>
+                                    <th class="py-4 px-6">Tgl Presensi</th>
+                                    <th class="py-4 px-6">Karyawan</th>
+                                    <th class="py-4 px-6">Jam Masuk</th>
+                                    <th class="py-4 px-6">Jam Pulang</th>
+                                    <th class="py-4 px-6">Metode</th>
+                                    <th class="py-4 px-6">Status</th>
+                                    <th class="py-4 px-6 text-center">Tindakan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabelAbsensiBody" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+
+                    <!-- PAGINATION FOOTER -->
+                    <div id="absensiPaginationContainer" class="p-4 sm:p-5 border-t border-slate-200 bg-slate-50/70 flex flex-col sm:flex-row items-center justify-between gap-3">
+                    </div>
+                </div>
+            `;
+        }
+
         function renderAbsensiTable() {
-            const tbody = document.getElementById('tabelAbsensiBody'); if(!tbody) return; tbody.innerHTML = '';
-            const sorted = [...state.absensi].sort((a, b) => b.id - a.id);
-            if(sorted.length === 0){ tbody.innerHTML = '<tr><td colspan="7" class="py-8 text-center text-slate-400">Database kosong.</td></tr>'; return; }
-            sorted.forEach(a => {
-                const k = state.karyawan.find(x => x.id == a.karyawanId); const badge = (a.statusMasuk === 'Tepat Waktu' || a.statusMasuk?.includes('Libur')) ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700';
-                let met = a.metode === 'GPS' ? `<a href="https://maps.google.com/?q=${a.lat},${a.lng}" target="_blank" class="text-blue-600 bg-blue-50 border border-blue-200 px-2 py-1 rounded text-xs font-bold whitespace-nowrap hover:bg-blue-600 hover:text-white transition"><i class="fas fa-map-marker-alt mr-1"></i>Buka Peta</a>` : (a.metode === 'Manual' ? `<span class="text-indigo-600 bg-indigo-50 border border-indigo-200 px-2 py-1 rounded text-xs font-bold"><i class="fas fa-keyboard mr-1"></i>Manual</span>` : `<span class="text-slate-500 bg-slate-100 border px-2 py-1 rounded text-xs font-bold"><i class="fas fa-qrcode mr-1"></i>Kiosk QR</span>`);
-                tbody.innerHTML += `<tr><td class="py-4 px-6 text-slate-600 whitespace-nowrap">${formatDateID(a.tanggal)}</td><td class="py-4 px-6 font-bold text-slate-800">${k ? k.nama : 'Dihapus'}</td><td class="py-4 px-6 font-mono">${a.jamMasuk}</td><td class="py-4 px-6 font-mono">${a.jamPulang || '-'}</td><td class="py-4 px-6">${met}</td><td class="py-4 px-6"><span class="px-3 py-1 rounded-full text-[10px] uppercase font-bold ${badge}">${a.statusMasuk}</span></td><td class="py-4 px-6 text-center whitespace-nowrap"><button onclick="window.bukaModalAbsensi(${a.id})" class="text-blue-500 bg-blue-50 hover:bg-blue-500 hover:text-white p-2 rounded-lg transition mr-1"><i class="fas fa-edit"></i></button><button onclick="window.confirmDelete('absensi', ${a.id})" class="text-red-500 bg-red-50 hover:bg-red-500 hover:text-white p-2 rounded-lg transition"><i class="fas fa-trash"></i></button></td></tr>`;
-            });
+            const tbody = document.getElementById('tabelAbsensiBody');
+            const pageContainer = document.getElementById('absensiPaginationContainer');
+            if(!tbody) return;
+
+            const allAbsensi = state.absensi || [];
+            const kMap = new Map((state.karyawan || []).map(k => [k.id, k]));
+            
+            // 1. FILTERING
+            const { search, tanggal, status, page, perPage } = window.absensiPagination;
+            
+            let filtered = allAbsensi;
+
+            if (search) {
+                filtered = filtered.filter(a => {
+                    const k = kMap.get(a.karyawanId);
+                    const nama = (k ? k.nama : '').toLowerCase();
+                    const nik = (k ? k.nik : '').toLowerCase();
+                    return nama.includes(search) || nik.includes(search);
+                });
+            }
+
+            if (tanggal) {
+                filtered = filtered.filter(a => a.tanggal === tanggal);
+            }
+
+            if (status) {
+                filtered = filtered.filter(a => (a.statusMasuk || '').toLowerCase().includes(status.toLowerCase()));
+            }
+
+            // 2. SORTING (Paling baru di atas)
+            const sorted = [...filtered].sort((a, b) => b.id - a.id);
+            const totalRecords = sorted.length;
+            const totalPages = Math.max(1, Math.ceil(totalRecords / perPage));
+            const currentPage = Math.min(Math.max(1, page), totalPages);
+            window.absensiPagination.page = currentPage;
+
+            // 3. PAGINATION SLICE (Hanya 25 item yang dirender ke DOM)
+            const startIndex = (currentPage - 1) * perPage;
+            const endIndex = Math.min(startIndex + perPage, totalRecords);
+            const pageItems = sorted.slice(startIndex, endIndex);
+
+            if (totalRecords === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="py-12 text-center text-slate-400">
+                            <div class="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-2 text-lg">
+                                <i class="fas fa-inbox"></i>
+                            </div>
+                            <span class="font-bold text-slate-600 block text-sm">Tidak ada data kehadiran ditemukan</span>
+                            <span class="text-xs text-slate-400 mt-0.5">Coba ubah kata kunci pencarian atau reset filter.</span>
+                        </td>
+                    </tr>
+                `;
+                if (pageContainer) pageContainer.innerHTML = '';
+                return;
+            }
+
+            // 4. RENDER ROWS (Satu kali assignment innerHTML)
+            const rowsHTML = pageItems.map(a => {
+                const k = kMap.get(a.karyawanId);
+                const badge = (a.statusMasuk === 'Tepat Waktu' || a.statusMasuk?.includes('Libur')) 
+                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                    : 'bg-rose-50 text-rose-700 border border-rose-200';
+                
+                let met = a.metode === 'GPS' 
+                    ? `<a href="https://maps.google.com/?q=${a.lat},${a.lng}" target="_blank" class="text-blue-600 bg-blue-50 border border-blue-200 px-2 py-1 rounded-md text-xs font-bold whitespace-nowrap hover:bg-blue-600 hover:text-white transition inline-flex items-center"><i class="fas fa-map-marker-alt mr-1"></i>Buka Peta</a>` 
+                    : (a.metode === 'Manual' 
+                        ? `<span class="text-indigo-600 bg-indigo-50 border border-indigo-200 px-2 py-1 rounded-md text-xs font-bold inline-flex items-center"><i class="fas fa-keyboard mr-1"></i>Manual</span>` 
+                        : `<span class="text-slate-600 bg-slate-100 border border-slate-200 px-2 py-1 rounded-md text-xs font-bold inline-flex items-center"><i class="fas fa-qrcode mr-1"></i>Kiosk QR</span>`);
+
+                const initial = k ? (k.nama.charAt(0) || 'P').toUpperCase() : '?';
+
+                return `
+                    <tr class="hover:bg-slate-50/80 transition">
+                        <td class="py-3.5 px-6 text-slate-600 font-medium whitespace-nowrap">
+                            ${formatDateID(a.tanggal)}
+                        </td>
+                        <td class="py-3.5 px-6">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-100 flex items-center justify-center text-xs font-black shrink-0">
+                                    ${initial}
+                                </div>
+                                <div>
+                                    <span class="font-bold text-slate-800 block text-sm leading-tight">${k ? k.nama : 'Karyawan Dihapus'}</span>
+                                    <span class="text-[11px] text-slate-400 font-mono">${k ? (k.nik || '-') : '-'}</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="py-3.5 px-6 font-mono font-semibold text-slate-700">
+                            ${a.jamMasuk || '-'}
+                        </td>
+                        <td class="py-3.5 px-6 font-mono font-semibold ${a.jamPulang ? 'text-slate-700' : 'text-slate-400'}">
+                            ${a.jamPulang || '-'}
+                        </td>
+                        <td class="py-3.5 px-6 whitespace-nowrap">
+                            ${met}
+                        </td>
+                        <td class="py-3.5 px-6 whitespace-nowrap">
+                            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider inline-flex items-center ${badge}">
+                                ${a.statusMasuk}
+                            </span>
+                        </td>
+                        <td class="py-3.5 px-6 text-center whitespace-nowrap">
+                            <button onclick="window.bukaModalAbsensi(${a.id})" class="text-blue-600 bg-blue-50 hover:bg-blue-600 hover:text-white p-2 rounded-xl transition mr-1.5 shadow-2xs" title="Edit Catatan">
+                                <i class="fas fa-edit text-xs"></i>
+                            </button>
+                            <button onclick="window.confirmDelete('absensi', ${a.id})" class="text-rose-600 bg-rose-50 hover:bg-rose-600 hover:text-white p-2 rounded-xl transition shadow-2xs" title="Hapus Catatan">
+                                <i class="fas fa-trash text-xs"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            tbody.innerHTML = rowsHTML;
+
+            // 5. RENDER PAGINATION BUTTONS & INFO
+            if (pageContainer) {
+                let paginationButtonsHTML = '';
+                
+                // Prev button
+                paginationButtonsHTML += `
+                    <button type="button" onclick="window.gantiHalamanAbsensi(${currentPage - 1})" ${currentPage === 1 ? 'disabled class="px-3 py-1.5 text-xs rounded-xl border border-slate-200 text-slate-300 bg-slate-50 cursor-not-allowed"' : 'class="px-3 py-1.5 text-xs rounded-xl border border-slate-200 text-slate-700 bg-white hover:bg-slate-100 font-bold transition shadow-2xs"'}>
+                        <i class="fas fa-chevron-left mr-1"></i> Prev
+                    </button>
+                `;
+
+                // Page numbers (Windowed)
+                let startPage = Math.max(1, currentPage - 2);
+                let endPage = Math.min(totalPages, currentPage + 2);
+
+                if (startPage > 1) {
+                    paginationButtonsHTML += `
+                        <button type="button" onclick="window.gantiHalamanAbsensi(1)" class="w-8 h-8 text-xs rounded-xl border border-slate-200 text-slate-700 bg-white hover:bg-slate-100 font-semibold transition">1</button>
+                    `;
+                    if (startPage > 2) {
+                        paginationButtonsHTML += `<span class="px-1 text-slate-400 text-xs">...</span>`;
+                    }
+                }
+
+                for (let p = startPage; p <= endPage; p++) {
+                    const isActive = p === currentPage;
+                    paginationButtonsHTML += `
+                        <button type="button" onclick="window.gantiHalamanAbsensi(${p})" class="w-8 h-8 text-xs rounded-xl font-bold transition ${isActive ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/30' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'}">
+                            ${p}
+                        </button>
+                    `;
+                }
+
+                if (endPage < totalPages) {
+                    if (endPage < totalPages - 1) {
+                        paginationButtonsHTML += `<span class="px-1 text-slate-400 text-xs">...</span>`;
+                    }
+                    paginationButtonsHTML += `
+                        <button type="button" onclick="window.gantiHalamanAbsensi(${totalPages})" class="w-8 h-8 text-xs rounded-xl border border-slate-200 text-slate-700 bg-white hover:bg-slate-100 font-semibold transition">${totalPages}</button>
+                    `;
+                }
+
+                // Next button
+                paginationButtonsHTML += `
+                    <button type="button" onclick="window.gantiHalamanAbsensi(${currentPage + 1})" ${currentPage === totalPages ? 'disabled class="px-3 py-1.5 text-xs rounded-xl border border-slate-200 text-slate-300 bg-slate-50 cursor-not-allowed"' : 'class="px-3 py-1.5 text-xs rounded-xl border border-slate-200 text-slate-700 bg-white hover:bg-slate-100 font-bold transition shadow-2xs"'}>
+                        Next <i class="fas fa-chevron-right ml-1"></i>
+                    </button>
+                `;
+
+                pageContainer.innerHTML = `
+                    <div class="text-xs text-slate-500 font-medium">
+                        Menampilkan <b>${startIndex + 1} - ${endIndex}</b> dari <b>${totalRecords}</b> data presensi
+                        <span class="text-slate-400 ml-1.5">(Hal. ${currentPage} dari ${totalPages})</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        ${paginationButtonsHTML}
+                    </div>
+                `;
+            }
         }
         
         window.bukaModalAbsensi = function(id = null) {
