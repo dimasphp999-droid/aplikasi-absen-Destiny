@@ -65,17 +65,109 @@
             .no-print { display: none !important; }
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 
-            /* CETAK SLIP GAJI */
+            /* CETAK SLIP GAJI (RESOLUSI TINGGI, PAS 1 HALAMAN A4, TIDAK TERPOTONG DI BAWAH) */
+            body:not(.printing-idcards) {
+                background: white !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                height: auto !important;
+                overflow: visible !important;
+            }
             body:not(.printing-idcards) #modalSlipGaji,
             body:not(.printing-idcards) #modalSlipGajiContent,
             body:not(.printing-idcards) #modalSlipGajiContent * {
                 visibility: visible;
             }
             body:not(.printing-idcards) #modalSlipGaji {
-                display: block !important; position: absolute; left: 0; top: 0; width: 100%; padding: 0 !important; margin: 0 !important; background: white !important;
+                display: block !important;
+                position: static !important;
+                width: 100% !important;
+                height: auto !important;
+                min-height: auto !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                background: white !important;
+                overflow: visible !important;
+                box-shadow: none !important;
             }
             body:not(.printing-idcards) #modalSlipGajiContent {
-                position: absolute; left: 0; top: 0; width: 100%; max-width: 100%; box-shadow: none !important; transform: none !important; scale: 1 !important; border-radius: 0 !important;
+                position: static !important;
+                width: 100% !important;
+                max-width: 190mm !important;
+                margin: 0 auto !important;
+                padding: 0 !important;
+                box-shadow: none !important;
+                transform: none !important;
+                scale: 1 !important;
+                border-radius: 0 !important;
+                border: none !important;
+                background: white !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+            body:not(.printing-idcards) #slipPrintArea {
+                padding: 4mm 6mm 2mm 6mm !important;
+                margin: 0 auto !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+                background: white !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+            body:not(.printing-idcards) .slip-kop {
+                padding-bottom: 2.5mm !important;
+                margin-bottom: 3mm !important;
+                border-bottom: 2.5px solid #0f172a !important;
+            }
+            body:not(.printing-idcards) .slip-info-box {
+                margin-bottom: 3mm !important;
+                padding: 2.5mm 3.5mm !important;
+                border: 1px solid #cbd5e1 !important;
+                background-color: #f8fafc !important;
+                border-radius: 6px !important;
+            }
+            body:not(.printing-idcards) .slip-info-box td {
+                padding-bottom: 1mm !important;
+                font-size: 11px !important;
+                line-height: 1.35 !important;
+            }
+            body:not(.printing-idcards) .slip-table-box {
+                margin-bottom: 3.5mm !important;
+                border: 1px solid #cbd5e1 !important;
+                border-radius: 6px !important;
+                overflow: hidden !important;
+            }
+            body:not(.printing-idcards) .slip-table th {
+                padding: 4px 8px !important;
+                font-size: 11px !important;
+                background-color: #0f172a !important;
+                color: white !important;
+            }
+            body:not(.printing-idcards) .slip-table td {
+                padding: 3.5px 8px !important;
+                font-size: 11px !important;
+            }
+            body:not(.printing-idcards) .slip-thp-banner {
+                padding: 3mm 5mm !important;
+                margin-bottom: 4.5mm !important;
+                border-radius: 8px !important;
+                background-color: #4f46e5 !important;
+                color: white !important;
+                box-shadow: none !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+            body:not(.printing-idcards) .slip-ttd-section {
+                padding: 0 8mm !important;
+                margin-top: 1mm !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+            body:not(.printing-idcards) .slip-ttd-section p {
+                font-size: 11px !important;
+            }
+            body:not(.printing-idcards) .slip-ttd-space {
+                height: 14mm !important;
             }
 
             /* CETAK KARTU ID QR & BARCODE CR80 (UKURAN STANDAR NORMAL ID CARD) */
@@ -282,85 +374,92 @@
                 </div>
             </div>
 
-            <!-- AREA KERTAS SLIP YANG AKAN DICETAK -->
-            <div class="p-8 sm:p-12 text-slate-800 bg-white sm:rounded-b-3xl">
+            <!-- AREA KERTAS SLIP YANG AKAN DICETAK (1 HALAMAN PENUH TANPA TERPOTONG) -->
+            <div id="slipPrintArea" class="p-6 sm:p-10 text-slate-800 bg-white sm:rounded-b-3xl">
                 <!-- KOP SURAT -->
-                <div class="flex justify-between items-center border-b-4 border-slate-900 pb-6 mb-6">
-                    <div class="flex items-center gap-5">
-                        <div class="w-16 h-16 bg-slate-900 text-white rounded-2xl flex items-center justify-center shadow-md">
-                            <i class="fas fa-building text-3xl"></i>
+                <div class="slip-kop flex justify-between items-center border-b-2 sm:border-b-4 border-slate-900 pb-4 mb-4 sm:mb-5">
+                    <div class="flex items-center gap-4">
+                        <div class="w-14 h-14 bg-slate-900 text-white rounded-2xl flex items-center justify-center shadow-md shrink-0">
+                            <i class="fas fa-building text-2xl"></i>
                         </div>
                         <div>
-                            <h1 class="text-3xl font-black text-slate-900 tracking-tight">DESTINY INSTITUTE</h1>
-                            <p class="text-sm text-slate-500 font-semibold tracking-wide mt-1">Divisi Human Resources & Payroll</p>
+                            <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-none">DESTINY INSTITUTE</h1>
+                            <p class="text-xs sm:text-sm text-slate-500 font-semibold tracking-wide mt-1">Divisi Human Resources & Payroll</p>
                         </div>
                     </div>
                     <div class="text-right">
-                        <h2 class="text-xl font-bold text-indigo-700 border-b-2 border-indigo-700 inline-block uppercase tracking-widest pb-1">Slip Gaji</h2>
-                        <p class="text-sm text-slate-600 mt-2 font-bold bg-slate-100 px-3 py-1 rounded-lg inline-block" id="slip_periode">-</p>
+                        <h2 class="text-lg sm:text-xl font-bold text-indigo-700 border-b-2 border-indigo-700 inline-block uppercase tracking-widest pb-0.5">Slip Gaji</h2>
+                        <div>
+                            <span class="text-xs sm:text-sm text-slate-600 mt-1 font-bold bg-slate-100 px-3 py-0.5 rounded-lg inline-block" id="slip_periode">-</span>
+                        </div>
                     </div>
                 </div>
 
                 <!-- INFO PEGAWAI -->
-                <div class="grid grid-cols-2 gap-4 mb-8 bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                <div class="slip-info-box grid grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-5 bg-slate-50 p-4 sm:p-5 rounded-2xl border border-slate-200">
                     <div>
-                        <table class="text-sm">
-                            <tr><td class="font-bold text-slate-500 w-24 pb-2">Nama</td><td class="font-bold text-slate-800 pb-2">: <span id="slip_nama">-</span></td></tr>
-                            <tr><td class="font-bold text-slate-500 w-24 pb-2">NIK / ID</td><td class="font-semibold text-slate-700 pb-2">: <span id="slip_nik">-</span></td></tr>
-                            <tr><td class="font-bold text-slate-500 w-24 pb-2">Status</td><td class="font-bold text-emerald-600 pb-2">: <span id="slip_status_karyawan">Tetap</span></td></tr>
+                        <table class="text-xs sm:text-sm w-full">
+                            <tr><td class="font-bold text-slate-500 w-24 pb-1.5">Nama</td><td class="font-bold text-slate-800 pb-1.5">: <span id="slip_nama">-</span></td></tr>
+                            <tr><td class="font-bold text-slate-500 w-24 pb-1.5">NIK / ID</td><td class="font-semibold text-slate-700 pb-1.5">: <span id="slip_nik">-</span></td></tr>
+                            <tr><td class="font-bold text-slate-500 w-24 pb-1.5">Status</td><td class="font-bold text-emerald-600 pb-1.5">: <span id="slip_status_karyawan">Tetap</span></td></tr>
                             <tr><td class="font-bold text-slate-500 w-24">Tgl Cetak</td><td class="font-semibold text-slate-600">: <span id="slip_tanggal_cetak">-</span></td></tr>
                         </table>
                     </div>
                     <div>
-                        <table class="text-sm">
-                            <tr><td class="font-bold text-slate-500 w-24 pb-2">Jabatan</td><td class="font-semibold text-slate-700 pb-2">: <span id="slip_jabatan">-</span></td></tr>
-                            <tr><td class="font-bold text-slate-500 w-24 pb-2">Kehadiran</td><td class="font-semibold text-slate-700 pb-2">: <span id="slip_kehadiran">-</span></td></tr>
+                        <table class="text-xs sm:text-sm w-full">
+                            <tr><td class="font-bold text-slate-500 w-24 pb-1.5">Jabatan</td><td class="font-semibold text-slate-700 pb-1.5">: <span id="slip_jabatan">-</span></td></tr>
+                            <tr><td class="font-bold text-slate-500 w-24 pb-1.5">Kehadiran</td><td class="font-semibold text-slate-700 pb-1.5">: <span id="slip_kehadiran">-</span></td></tr>
                             <tr><td class="font-bold text-slate-500 w-24">Cuti & Izin</td><td class="font-bold text-amber-700">: <span id="slip_cuti_izin">0 Hari</span></td></tr>
                         </table>
                     </div>
                 </div>
 
                 <!-- RINCIAN KEUANGAN -->
-                <div class="mb-8">
-                    <table class="w-full text-sm border-collapse">
+                <div class="slip-table-box mb-4 sm:mb-5 overflow-hidden rounded-xl border border-slate-200">
+                    <table class="slip-table w-full text-xs sm:text-sm border-collapse">
                         <thead>
-                            <tr class="bg-slate-900 text-white"><th class="py-3 px-5 text-left rounded-tl-xl w-7/12 font-bold tracking-wide">KETERANGAN</th><th class="py-3 px-5 text-right rounded-tr-xl w-5/12 font-bold tracking-wide">JUMLAH (Rp)</th></tr>
+                            <tr class="bg-slate-900 text-white">
+                                <th class="py-2.5 px-4 text-left font-bold tracking-wide">KETERANGAN</th>
+                                <th class="py-2.5 px-4 text-right font-bold tracking-wide">JUMLAH (Rp)</th>
+                            </tr>
                         </thead>
-                        <tbody class="border-x-2 border-b-2 border-slate-100">
+                        <tbody class="divide-y divide-slate-100">
                             <!-- PENERIMAAN -->
-                            <tr class="bg-emerald-50"><td colspan="2" class="py-2.5 px-5 font-bold text-emerald-700 text-xs uppercase tracking-wider">A. Penghasilan</td></tr>
-                            <tr class="border-b border-slate-100"><td class="py-4 px-5 text-slate-700 font-medium">1. Gaji Pokok</td><td class="py-4 px-5 text-right font-bold text-slate-800" id="slip_gapok">-</td></tr>
-                            <tr class="border-b border-slate-100"><td class="py-4 px-5 text-slate-700 font-medium">2. Tunjangan Kehadiran <br><span id="slip_tunjangan_ket" class="text-[10px] text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded font-bold inline-block mt-1"></span></td><td class="py-4 px-5 text-right font-bold text-slate-800" id="slip_tunjangan">-</td></tr>
-                            <tr class="bg-slate-50 border-b-2 border-slate-300"><td class="py-4 px-5 font-bold text-slate-800 text-right uppercase text-xs">Total Penghasilan (A) :</td><td class="py-4 px-5 text-right font-black text-slate-900" id="slip_total_penerimaan">-</td></tr>
+                            <tr class="bg-emerald-50/70"><td colspan="2" class="py-2 px-4 font-bold text-emerald-800 text-xs uppercase tracking-wider">A. Penghasilan</td></tr>
+                            <tr><td class="py-2.5 px-4 text-slate-700 font-medium">1. Gaji Pokok</td><td class="py-2.5 px-4 text-right font-bold text-slate-800" id="slip_gapok">-</td></tr>
+                            <tr><td class="py-2.5 px-4 text-slate-700 font-medium">2. Tunjangan Kehadiran <span id="slip_tunjangan_ket" class="text-[10px] text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded font-bold inline-block ml-1"></span></td><td class="py-2.5 px-4 text-right font-bold text-slate-800" id="slip_tunjangan">-</td></tr>
+                            <tr class="bg-slate-50 font-bold border-t border-slate-200"><td class="py-2 px-4 text-slate-800 text-right uppercase text-xs">Total Penghasilan (A) :</td><td class="py-2 px-4 text-right font-black text-slate-900" id="slip_total_penerimaan">-</td></tr>
                             
                             <!-- POTONGAN -->
-                            <tr class="bg-rose-50"><td colspan="2" class="py-2.5 px-5 font-bold text-rose-700 text-xs uppercase tracking-wider">B. Potongan</td></tr>
-                            <tr class="border-b border-slate-100"><td class="py-4 px-5 text-slate-700 font-medium">1. Denda Keterlambatan <br><span id="slip_denda_ket" class="text-[10px] text-rose-600 bg-rose-100 px-2 py-0.5 rounded font-bold inline-block mt-1"></span></td><td class="py-4 px-5 text-right font-bold text-rose-600" id="slip_denda">-</td></tr>
-                            <tr class="bg-slate-50 border-b-2 border-slate-300"><td class="py-4 px-5 font-bold text-slate-800 text-right uppercase text-xs">Total Potongan (B) :</td><td class="py-4 px-5 text-right font-black text-rose-600" id="slip_total_potongan">-</td></tr>
+                            <tr class="bg-rose-50/70"><td colspan="2" class="py-2 px-4 font-bold text-rose-800 text-xs uppercase tracking-wider">B. Potongan</td></tr>
+                            <tr><td class="py-2.5 px-4 text-slate-700 font-medium">1. Denda Keterlambatan <span id="slip_denda_ket" class="text-[10px] text-rose-700 bg-rose-100 px-2 py-0.5 rounded font-bold inline-block ml-1"></span></td><td class="py-2.5 px-4 text-right font-bold text-rose-600" id="slip_denda">-</td></tr>
+                            <tr class="bg-slate-50 font-bold border-t border-slate-200"><td class="py-2 px-4 text-slate-800 text-right uppercase text-xs">Total Potongan (B) :</td><td class="py-2 px-4 text-right font-black text-rose-600" id="slip_total_potongan">-</td></tr>
                         </tbody>
                     </table>
                 </div>
 
                 <!-- TAKE HOME PAY -->
-                <div class="bg-indigo-600 text-white rounded-2xl p-6 sm:p-8 flex justify-between items-center mb-16 shadow-xl shadow-indigo-600/20">
+                <div class="slip-thp-banner bg-indigo-600 text-white rounded-2xl p-4 sm:p-5 flex justify-between items-center mb-5 sm:mb-6 shadow-md shadow-indigo-600/20">
                     <div>
-                        <h3 class="text-xl font-bold tracking-wide">PENERIMAAN BERSIH</h3>
-                        <p class="text-sm text-indigo-200 mt-1 font-medium">Take Home Pay (A - B)</p>
+                        <h3 class="text-base sm:text-lg font-bold tracking-wide">PENERIMAAN BERSIH</h3>
+                        <p class="text-xs text-indigo-100 mt-0.5 font-medium">Take Home Pay (A - B)</p>
                     </div>
-                    <div class="text-3xl sm:text-4xl font-black tracking-tight" id="slip_thp">-</div>
+                    <div class="text-2xl sm:text-3xl font-black tracking-tight" id="slip_thp">-</div>
                 </div>
 
                 <!-- TTD -->
-                <div class="flex justify-between items-end px-4 sm:px-10">
-                    <div class="text-center w-40">
-                        <p class="text-sm font-medium text-slate-500 mb-20">Penerima,</p>
-                        <p class="font-bold text-slate-800 border-b-2 border-slate-800 pb-1 text-lg" id="slip_ttd_nama">-</p>
-                        <p class="text-xs text-slate-500 mt-1 font-semibold uppercase tracking-wider">Karyawan</p>
+                <div class="slip-ttd-section flex justify-between items-end px-6 sm:px-10">
+                    <div class="text-center w-36 sm:w-44">
+                        <p class="text-xs sm:text-sm font-medium text-slate-500">Penerima,</p>
+                        <div class="h-12 sm:h-14 slip-ttd-space"></div>
+                        <p class="font-bold text-slate-800 border-b-2 border-slate-800 pb-0.5 text-sm sm:text-base leading-tight" id="slip_ttd_nama">-</p>
+                        <p class="text-[11px] text-slate-500 mt-1 font-semibold uppercase tracking-wider">Karyawan</p>
                     </div>
-                    <div class="text-center w-48">
-                        <p class="text-sm font-medium text-slate-500 mb-20">Mengetahui,</p>
-                        <p class="font-bold text-slate-800 border-b-2 border-slate-800 pb-1 text-lg">Manager HRD</p>
-                        <p class="text-xs text-slate-500 mt-1 font-semibold uppercase tracking-wider">Destiny Institute</p>
+                    <div class="text-center w-36 sm:w-44">
+                        <p class="text-xs sm:text-sm font-medium text-slate-500">Mengetahui,</p>
+                        <div class="h-12 sm:h-14 slip-ttd-space"></div>
+                        <p class="font-bold text-slate-800 border-b-2 border-slate-800 pb-0.5 text-sm sm:text-base leading-tight">Manager HRD</p>
+                        <p class="text-[11px] text-slate-500 mt-1 font-semibold uppercase tracking-wider">Destiny Institute</p>
                     </div>
                 </div>
             </div>
@@ -2576,7 +2675,7 @@
             else if(state.currentView === 'absensi') { area.innerHTML = getAbsensiHTML(); renderAbsensiTable(); }
             else if(state.currentView === 'imk') { area.innerHTML = getImkHTML(); renderImkTable(); }
             else if(state.currentView === 'cuti') { area.innerHTML = getCutiHTML(); renderCutiTable(); }
-            else if(state.currentView === 'gaji') area.innerHTML = getGajiHTML();
+            else if(state.currentView === 'gaji') { area.innerHTML = getGajiHTML(); if (typeof window.hitungGaji === 'function') setTimeout(window.hitungGaji, 10); }
             else if(state.currentView === 'laporan') area.innerHTML = getLaporanHTML();
             else if(state.currentView === 'pengaturan') { area.innerHTML = getPengaturanHTML(); renderShiftTable(); renderLiburTable(); }
         };
@@ -5315,15 +5414,35 @@
         }
 
         function getGajiHTML() {
-            let mo = '';
+            // Ambil semua bulan unik dari data absensi dan cuti agar riwayat penggajian lengkap
+            const setBulan = new Set();
+            (state.absensi || []).forEach(a => {
+                if (a.tanggal && a.tanggal.length >= 7) setBulan.add(a.tanggal.substring(0, 7));
+            });
+            (state.cuti || []).forEach(c => {
+                if (c.tanggalMulai && c.tanggalMulai.length >= 7) setBulan.add(c.tanggalMulai.substring(0, 7));
+                if (c.tanggalSelesai && c.tanggalSelesai.length >= 7) setBulan.add(c.tanggalSelesai.substring(0, 7));
+            });
+            
+            // Tambahkan juga 6 bulan terakhir dari hari ini
             const td = new Date();
             for (let i = 0; i < 6; i++) {
                 let m = td.getMonth() + 1 - i;
                 let y = td.getFullYear();
                 if (m <= 0) { m += 12; y -= 1; }
-                const val = `${y}-${String(m).padStart(2, '0')}`;
-                mo += `<option value="${val}">${new Date(y, m - 1, 1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}</option>`;
+                setBulan.add(`${y}-${String(m).padStart(2, '0')}`);
             }
+
+            const listBulanSorted = Array.from(setBulan).sort((a, b) => b.localeCompare(a));
+            
+            let mo = '';
+            listBulanSorted.forEach(val => {
+                const parts = val.split('-');
+                const y = parseInt(parts[0], 10);
+                const m = parseInt(parts[1], 10);
+                const label = new Date(y, m - 1, 1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+                mo += `<option value="${val}">${label} (${val})</option>`;
+            });
 
             const totalKaryawan = (state.karyawan || []).length;
             const jabatanOptions = '<option value="">Semua Jabatan</option>' + (state.jabatan || []).map(j => `<option value="${j.nama}">${j.nama}</option>`).join('');
@@ -5339,7 +5458,7 @@
                                     ${totalKaryawan} Pegawai Terdaftar
                                 </span>
                             </div>
-                            <p class="text-xs text-slate-500 mt-1">Sistem payroll otomatis: hitung gaji pokok, tunjangan kehadiran, denda telat, dan rekapitulasi cuti & izin karyawan.</p>
+                            <p class="text-xs text-slate-500 mt-1">Sistem payroll otomatis: hitung gaji pokok, tunjangan kehadiran, denda telat, dan konversi rekapitulasi ke file Excel (.xlsx).</p>
                         </div>
                     </div>
 
@@ -5353,13 +5472,57 @@
                                 ${mo}
                             </select>
                         </div>
-                        <div class="flex flex-wrap gap-2.5">
+                        <div class="flex flex-wrap items-center gap-2.5">
                             <button onclick="window.hitungGaji()" class="flex-1 sm:flex-none bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-3 rounded-2xl shadow-sm hover:shadow text-sm transition flex items-center justify-center">
                                 <i class="fas fa-calculator mr-2"></i> Hitung Gaji Bulan Ini
                             </button>
-                            <button id="btnExp" onclick="window.eksporGaji()" style="display:none;" class="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-3 rounded-2xl shadow-sm hover:shadow text-sm transition flex items-center justify-center">
-                                <i class="fas fa-file-excel mr-2"></i> Ekspor Excel
-                            </button>
+                            
+                            <!-- TOMBOL KONVERSI EXCEL DENGAN DROPDOWN OPSI -->
+                            <div class="relative inline-block flex-1 sm:flex-none" id="dropdownEksporGajiWrapper">
+                                <div class="flex items-center rounded-2xl shadow-sm overflow-hidden border border-emerald-600 bg-emerald-600">
+                                    <button onclick="window.eksporGaji('bulan_ini')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-3 text-sm transition flex items-center justify-center gap-2" title="Convert ke Excel untuk bulan yang dipilih">
+                                        <i class="fas fa-file-excel text-base"></i>
+                                        <span>Convert ke Excel</span>
+                                    </button>
+                                    <button type="button" onclick="window.toggleDropdownEksporGaji(event)" class="bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-3 text-sm transition border-l border-emerald-500/50 flex items-center justify-center" title="Pilihan Konversi Excel Lengkap">
+                                        <i class="fas fa-chevron-down text-xs"></i>
+                                    </button>
+                                </div>
+
+                                <div id="menuDropdownEksporGaji" class="hidden absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 py-2.5 z-50 animate-in fade-in zoom-in-95">
+                                    <div class="px-4 py-2 border-b border-slate-100">
+                                        <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Pilihan Ekspor Penggajian (.xlsx)</span>
+                                        <span class="text-xs text-slate-500 font-medium">Download semua data kalkulasi gaji pegawai</span>
+                                    </div>
+                                    <button onclick="window.eksporGaji('bulan_ini'); window.toggleDropdownEksporGaji(null, false);" class="w-full text-left px-4 py-3 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 text-xs font-semibold flex items-center gap-3 transition">
+                                        <div class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                                            <i class="fas fa-calendar-check text-sm"></i>
+                                        </div>
+                                        <div>
+                                            <span class="block font-bold text-slate-800">Bulan Terpilih Saja</span>
+                                            <span class="text-[10px] text-slate-400 font-normal">Kalkulasi lengkap bulan yang aktif + Ringkasan & Total</span>
+                                        </div>
+                                    </button>
+                                    <button onclick="window.eksporGaji('semua_periode'); window.toggleDropdownEksporGaji(null, false);" class="w-full text-left px-4 py-3 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 text-xs font-semibold flex items-center gap-3 transition">
+                                        <div class="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0">
+                                            <i class="fas fa-layer-group text-sm"></i>
+                                        </div>
+                                        <div>
+                                            <span class="block font-bold text-slate-800">Semua Data Kalkulasi (Multi-Periode)</span>
+                                            <span class="text-[10px] text-slate-400 font-normal">Gabungkan semua riwayat periode gaji dari awal hingga akhir</span>
+                                        </div>
+                                    </button>
+                                    <button onclick="window.eksporGaji('lengkap_multi_sheet'); window.toggleDropdownEksporGaji(null, false);" class="w-full text-left px-4 py-3 hover:bg-amber-50 text-slate-700 hover:text-amber-700 text-xs font-semibold flex items-center gap-3 transition">
+                                        <div class="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                                            <i class="fas fa-file-invoice text-sm"></i>
+                                        </div>
+                                        <div>
+                                            <span class="block font-bold text-slate-800">Paket Eksekutif Multi-Sheet</span>
+                                            <span class="text-[10px] text-slate-400 font-normal">Sheet 1: Rekap Gaji • Sheet 2: KPI • Sheet 3: Per Jabatan</span>
+                                        </div>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -5418,6 +5581,10 @@
                             <select id="filterJabatanGaji" onchange="window.filterTabelGajiByJabatan(this.value)" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 font-medium outline-none focus:ring-2 focus:ring-indigo-500 transition">
                                 ${jabatanOptions}
                             </select>
+                            <button onclick="window.eksporGaji('bulan_ini')" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold px-3.5 py-2 rounded-xl text-xs flex items-center gap-1.5 transition shrink-0" title="Unduh File Excel Data Penggajian">
+                                <i class="fas fa-file-excel text-sm text-emerald-600"></i>
+                                <span class="hidden sm:inline">Convert Excel</span>
+                            </button>
                         </div>
                     </div>
 
@@ -5445,9 +5612,128 @@
             `;
         }
         
-        // Memori global untuk menampung data kalkulasi bulan aktif (Untuk cetak PDF & WhatsApp)
+        // Memori global untuk menampung data kalkulasi bulan aktif (Untuk cetak PDF, WhatsApp & Ekspor)
         window.dataGajiBulanIni = {};
         window.currentSlipKaryawanId = null;
+
+        // FUNGSI UTAMA HITUNG GAJI PEGAWAI SECARA TERPUSAT (Menjamin 100% konsistensi tabel UI dan Excel)
+        function hitungDataGajiPegawai(k, bln, jMap, now) {
+            const shift = (state.pengaturan && state.pengaturan.shifts) 
+                ? (state.pengaturan.shifts.find(s => s.id === k.shiftId) || state.pengaturan.shifts[0]) 
+                : { jamMasuk: '08:00', jamPulang: '16:00' };
+
+            // Robust employee matching for attendance
+            const ab = (state.absensi || []).filter(a => {
+                const matchId = (a.karyawanId == k.id || String(a.karyawanId) === String(k.id));
+                const matchNik = (k.nik && a.karyawanNik && String(a.karyawanNik) === String(k.nik));
+                return (matchId || matchNik) && a.tanggal && a.tanggal.startsWith(bln);
+            });
+
+            const h = ab.length;
+            let t = 0;
+            let hTunjangan = 0;
+            let pAwal = 0;
+            const isNightShift = shift.jamPulang < shift.jamMasuk;
+
+            ab.forEach(a => {
+                const isTelat = (a.statusMasuk === 'Terlambat');
+                if (isTelat) t++;
+
+                let isPulangAwal = false;
+                let sudahPulang = false;
+
+                if (!a.jamPulang) {
+                    let tglMasuk = new Date(`${a.tanggal}T${a.jamMasuk || '08:00'}:00`);
+                    let diffHours = (now.getTime() - tglMasuk.getTime()) / (1000 * 3600);
+                    if (diffHours >= 24) isPulangAwal = true;
+                } else {
+                    sudahPulang = true;
+                    if (isNightShift) {
+                        if (a.jamPulang >= shift.jamPulang && a.jamPulang < shift.jamMasuk) {
+                            // Valid
+                        } else {
+                            isPulangAwal = true;
+                        }
+                    } else {
+                        if (a.jamPulang >= shift.jamPulang || a.jamPulang < shift.jamMasuk) {
+                            // Valid
+                        } else {
+                            isPulangAwal = true;
+                        }
+                    }
+                }
+
+                if (isPulangAwal) pAwal++;
+                if (sudahPulang && !isTelat && !isPulangAwal) {
+                    hTunjangan++;
+                }
+            });
+
+            // Rekapitulasi Cuti & Izin Pegawai
+            const dataCuti = hitungHariCutiKaryawanBulan(k.id, bln);
+
+            const tarifTunjangan = (state.pengaturan && state.pengaturan.tunjanganHadir) ? Number(state.pengaturan.tunjanganHadir) : 0;
+            const tarifDenda = (state.pengaturan && state.pengaturan.dendaTelat) ? Number(state.pengaturan.dendaTelat) : 0;
+            const gajiPokok = Number(k.gajiPokok) || 0;
+
+            const tunj = hTunjangan * tarifTunjangan;
+            const den = t * tarifDenda;
+            const bruto = gajiPokok + tunj;
+            let tot = bruto - den;
+            if (tot < 0) tot = 0;
+
+            const jabatanObj = jMap.get(k.jabatanId) || jMap.get(String(k.jabatanId));
+            const jabatanNama = jabatanObj ? jabatanObj.nama : (k.jabatanNama || '-');
+
+            return {
+                id: k.id,
+                nik: k.nik || '-',
+                nama: k.nama || 'Tanpa Nama',
+                noWa: k.noWa || '',
+                jabatan: jabatanNama,
+                statusKaryawan: k.statusKaryawan || 'Tetap',
+                shiftNama: shift.nama || `${shift.jamMasuk} - ${shift.jamPulang}`,
+                bulan: bln,
+                gajiPokok,
+                hadir: h,
+                telat: t,
+                pulangAwal: pAwal,
+                hariValid: hTunjangan,
+                tarifTunjangan,
+                tunjangan: tunj,
+                tarifDenda,
+                denda: den,
+                bruto,
+                totalBersih: tot,
+                totalCutiHari: dataCuti.totalHari,
+                cutiRincian: dataCuti.rincian,
+                cutiHari: dataCuti.cuti,
+                sakitHari: dataCuti.sakit,
+                izinHari: dataCuti.izin,
+                pendingCutiHari: dataCuti.pendingHari
+            };
+        }
+
+        window.toggleDropdownEksporGaji = function(e, forceState) {
+            if (e) { e.preventDefault(); e.stopPropagation(); }
+            const menu = document.getElementById('menuDropdownEksporGaji');
+            if (!menu) return;
+            if (typeof forceState === 'boolean') {
+                if (forceState) menu.classList.remove('hidden');
+                else menu.classList.add('hidden');
+            } else {
+                menu.classList.toggle('hidden');
+            }
+        };
+
+        // Tutup dropdown jika klik di luar
+        document.addEventListener('click', function(e) {
+            const menu = document.getElementById('menuDropdownEksporGaji');
+            const wrapper = document.getElementById('dropdownEksporGajiWrapper');
+            if (menu && !menu.classList.contains('hidden') && wrapper && !wrapper.contains(e.target)) {
+                menu.classList.add('hidden');
+            }
+        });
 
         window.hitungGaji = function() {
             const blnEl = document.getElementById('bulanGaji');
@@ -5478,156 +5764,92 @@
             let grandTotalCuti = 0;
             let grandTotalDenda = 0;
 
-            const jMap = new Map((state.jabatan || []).map(j => [j.id, j]));
+            const jMap = new Map();
+            (state.jabatan || []).forEach(j => {
+                jMap.set(j.id, j);
+                jMap.set(String(j.id), j);
+            });
             
-            state.karyawan.forEach(k => {
-                const shift = state.pengaturan.shifts?.find(s => s.id === k.shiftId) || state.pengaturan.shifts[0] || { jamMasuk: '08:00', jamPulang: '16:00' };
-                const ab = (state.absensi || []).filter(a => a.karyawanId === k.id && a.tanggal.startsWith(bln)); 
-                const h = ab.length; 
-                
-                let t = 0;
-                let hTunjangan = 0; 
-                let pAwal = 0;      
-                const isNightShift = shift.jamPulang < shift.jamMasuk;
-                
-                ab.forEach(a => {
-                    const isTelat = (a.statusMasuk === 'Terlambat');
-                    if (isTelat) t++;
-                    
-                    let isPulangAwal = false;
-                    let sudahPulang = false;
+            (state.karyawan || []).forEach(k => {
+                const item = hitungDataGajiPegawai(k, bln, jMap, now);
 
-                    if (!a.jamPulang) {
-                        let tglMasuk = new Date(`${a.tanggal}T${a.jamMasuk}:00`);
-                        let diffHours = (now.getTime() - tglMasuk.getTime()) / (1000 * 3600);
-                        if (diffHours >= 24) isPulangAwal = true; 
-                    } else {
-                        sudahPulang = true;
-                        if (isNightShift) {
-                            if (a.jamPulang >= shift.jamPulang && a.jamPulang < shift.jamMasuk) {
-                            } else { isPulangAwal = true; }
-                        } else {
-                            if (a.jamPulang >= shift.jamPulang || a.jamPulang < shift.jamMasuk) {
-                            } else { isPulangAwal = true; }
-                        }
-                    }
+                grandTotalGaji += item.totalBersih;
+                grandTotalHadir += item.hadir;
+                grandTotalCuti += item.totalCutiHari;
+                grandTotalDenda += item.denda;
 
-                    if (isPulangAwal) pAwal++;
-
-                    if (sudahPulang && !isTelat && !isPulangAwal) {
-                        hTunjangan++;
-                    }
-                });
-
-                // Rekapitulasi Cuti & Izin Pegawai
-                const dataCuti = hitungHariCutiKaryawanBulan(k.id, bln);
-                
-                const tunj = hTunjangan * (state.pengaturan.tunjanganHadir || 0); 
-                const den = t * (state.pengaturan.dendaTelat || 0); 
-                let tot = (k.gajiPokok || 0) + tunj - den; 
-                if (tot < 0) tot = 0;
-
-                grandTotalGaji += tot;
-                grandTotalHadir += h;
-                grandTotalCuti += dataCuti.totalHari;
-                grandTotalDenda += den;
-
-                const jabatanObj = jMap.get(k.jabatanId);
-                const jabatanNama = jabatanObj ? jabatanObj.nama : '-';
-                
-                // Simpan data untuk kebutuhan cetak Struk/PDF dan WhatsApp
-                window.dataGajiBulanIni[k.id] = {
-                    nama: k.nama, 
-                    nik: k.nik,
-                    noWa: k.noWa || '',
-                    jabatan: jabatanNama,
-                    statusKaryawan: k.statusKaryawan || 'Tetap',
-                    gajiPokok: k.gajiPokok || 0, 
-                    hadir: h, 
-                    telat: t, 
-                    pulangAwal: pAwal,
-                    hariValid: hTunjangan, 
-                    tunjangan: tunj, 
-                    denda: den, 
-                    totalBersih: tot, 
-                    bulan: bln,
-                    totalCutiHari: dataCuti.totalHari,
-                    cutiRincian: dataCuti.rincian,
-                    cutiHari: dataCuti.cuti,
-                    sakitHari: dataCuti.sakit,
-                    izinHari: dataCuti.izin,
-                    pendingCutiHari: dataCuti.pendingHari
-                };
+                // Simpan data untuk kebutuhan cetak Struk/PDF, WhatsApp dan Ekspor
+                window.dataGajiBulanIni[k.id] = item;
 
                 const initial = (k.nama || 'P').charAt(0).toUpperCase();
 
                 // Format Tampilan Kolom Cuti & Izin
                 let cutiBadgeHTML = '';
-                if (dataCuti.totalHari > 0) {
+                if (item.totalCutiHari > 0) {
                     cutiBadgeHTML = `
                         <span class="bg-amber-50 text-amber-800 border border-amber-200 px-2.5 py-1 rounded-xl text-xs font-bold inline-flex items-center shadow-2xs">
-                            <i class="fas fa-calendar-check mr-1.5 text-amber-600"></i>${dataCuti.totalHari} Hari
+                            <i class="fas fa-calendar-check mr-1.5 text-amber-600"></i>${item.totalCutiHari} Hari
                         </span>
-                        <div class="text-[11px] text-slate-500 font-medium mt-1 leading-tight">${dataCuti.rincian}</div>
+                        <div class="text-[11px] text-slate-500 font-medium mt-1 leading-tight">${item.cutiRincian}</div>
                     `;
                 } else {
                     cutiBadgeHTML = `<span class="text-xs text-slate-400 font-medium"><i class="fas fa-minus mr-1"></i>0 Hari</span>`;
                 }
 
-                if (dataCuti.pendingHari > 0) {
+                if (item.pendingCutiHari > 0) {
                     cutiBadgeHTML += `
                         <div class="text-[10px] text-amber-600 font-semibold mt-1 flex items-center justify-center">
-                            <i class="fas fa-hourglass-half mr-1"></i>${dataCuti.pendingHari} hari pending
+                            <i class="fas fa-hourglass-half mr-1"></i>${item.pendingCutiHari} hari pending
                         </div>
                     `;
                 }
                 
                 tb.innerHTML += `
-                    <tr class="hover:bg-slate-50/80 transition row-pegawai-gaji" data-nama="${(k.nama || '').toLowerCase()}" data-nik="${(k.nik || '').toLowerCase()}" data-jabatan="${jabatanNama.toLowerCase()}">
+                    <tr class="hover:bg-slate-50/80 transition row-pegawai-gaji" data-nama="${(item.nama || '').toLowerCase()}" data-nik="${(item.nik || '').toLowerCase()}" data-jabatan="${item.jabatan.toLowerCase()}">
                         <td class="py-3.5 px-6">
                             <div class="flex items-center space-x-3">
                                 <div class="w-9 h-9 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-700 font-black text-xs flex items-center justify-center shrink-0">
                                     ${initial}
                                 </div>
                                 <div>
-                                    <span class="font-bold text-slate-800 block text-sm leading-tight">${k.nama}</span>
-                                    <span class="text-[11px] text-slate-400 font-mono">${k.nik} • ${jabatanNama}</span>
+                                    <span class="font-bold text-slate-800 block text-sm leading-tight">${item.nama}</span>
+                                    <span class="text-[11px] text-slate-400 font-mono">${item.nik} • ${item.jabatan}</span>
                                 </div>
                             </div>
                         </td>
                         <td class="py-3.5 px-6 text-center whitespace-nowrap">
                             <span class="text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-lg text-xs font-bold inline-flex items-center">
-                                <i class="fas fa-check mr-1 text-[10px]"></i>${h} Hadir
+                                <i class="fas fa-check mr-1 text-[10px]"></i>${item.hadir} Hadir
                             </span>
                             <div class="flex items-center justify-center gap-1.5 mt-1 text-[11px]">
-                                <span class="${t > 0 ? 'text-rose-600 font-bold' : 'text-slate-400'}">${t} Telat</span>
+                                <span class="${item.telat > 0 ? 'text-rose-600 font-bold' : 'text-slate-400'}">${item.telat} Telat</span>
                                 <span class="text-slate-300">•</span>
-                                <span class="${pAwal > 0 ? 'text-amber-600 font-medium' : 'text-slate-400'}">${pAwal} Pulang Awal</span>
+                                <span class="${item.pulangAwal > 0 ? 'text-amber-600 font-medium' : 'text-slate-400'}">${item.pulangAwal} Pulang Awal</span>
                             </div>
                         </td>
                         <td class="py-3.5 px-6 text-center whitespace-nowrap bg-amber-50/20 border-x border-amber-100/60">
                             ${cutiBadgeHTML}
                         </td>
                         <td class="py-3.5 px-6 text-right font-medium text-slate-700 whitespace-nowrap">
-                            ${formatRupiah(k.gajiPokok || 0)}
+                            ${formatRupiah(item.gajiPokok)}
                         </td>
                         <td class="py-3.5 px-6 text-right whitespace-nowrap">
-                            <div class="text-emerald-600 text-xs font-bold">+ ${formatRupiah(tunj)}</div>
-                            <span class="text-[10px] text-slate-400 font-normal">(${hTunjangan}x valid)</span>
+                            <div class="text-emerald-600 text-xs font-bold">+ ${formatRupiah(item.tunjangan)}</div>
+                            <span class="text-[10px] text-slate-400 font-normal">(${item.hariValid}x valid)</span>
                         </td>
                         <td class="py-3.5 px-6 text-right whitespace-nowrap">
-                            <div class="text-rose-600 text-xs font-bold">- ${formatRupiah(den)}</div>
-                            <span class="text-[10px] text-slate-400 font-normal">(${t}x denda)</span>
+                            <div class="text-rose-600 text-xs font-bold">- ${formatRupiah(item.denda)}</div>
+                            <span class="text-[10px] text-slate-400 font-normal">(${item.telat}x denda)</span>
                         </td>
                         <td class="py-3.5 px-6 text-right font-black text-slate-800 whitespace-nowrap text-sm">
-                            ${formatRupiah(tot)}
+                            ${formatRupiah(item.totalBersih)}
                         </td>
                         <td class="py-3.5 px-6 text-center border-l bg-slate-50/80 whitespace-nowrap">
                             <div class="flex items-center justify-center gap-1.5">
-                                <button onclick="window.bukaSlipGaji(${k.id})" class="bg-indigo-50 text-indigo-700 hover:bg-indigo-600 hover:text-white px-2.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center shadow-2xs" title="Pratinjau & Cetak PDF Slip Gaji">
+                                <button onclick="window.bukaSlipGaji(${item.id})" class="bg-indigo-50 text-indigo-700 hover:bg-indigo-600 hover:text-white px-2.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center shadow-2xs" title="Pratinjau & Cetak PDF Slip Gaji">
                                     <i class="fas fa-print mr-1"></i> Slip
                                 </button>
-                                <button onclick="window.kirimSlipWA(${k.id})" class="bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white px-2.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center shadow-2xs" title="Kirim Rincian Slip ke WhatsApp Karyawan">
+                                <button onclick="window.kirimSlipWA(${item.id})" class="bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white px-2.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center shadow-2xs" title="Kirim Rincian Slip ke WhatsApp Karyawan">
                                     <i class="fab fa-whatsapp mr-1 text-sm"></i> WA
                                 </button>
                             </div>
@@ -5649,7 +5871,7 @@
             const kpiDenda = document.getElementById('kpiTotalDenda');
             if (kpiDenda) kpiDenda.innerText = formatRupiah(grandTotalDenda);
 
-            showToast('Selesai', `Kalkulasi gaji berhasil untuk ${state.karyawan.length} pegawai.`);
+            showToast('Selesai', `Kalkulasi gaji berhasil untuk ${(state.karyawan || []).length} pegawai.`);
         };
 
         // Filter tabel gaji real-time
@@ -5731,12 +5953,19 @@
         };
 
         window.cetakPDFSlip = function() {
-            window.print();
+            document.body.classList.remove('printing-idcards');
+            document.body.classList.add('printing-slip');
+            setTimeout(() => {
+                window.print();
+                setTimeout(() => {
+                    document.body.classList.remove('printing-slip');
+                }, 1000);
+            }, 60);
         };
 
         window.kirimSlipWA = function(idKaryawan) {
             const data = window.dataGajiBulanIni[idKaryawan];
-            const k = (state.karyawan || []).find(x => x.id == idKaryawan);
+            const k = (state.karyawan || []).find(x => x.id == idKaryawan || String(x.id) === String(idKaryawan));
             if (!data || !k) return showToast('Error', 'Data gaji tidak ditemukan', 'error');
             if (!k.noWa) return showToast('Peringatan', 'Nomor WA karyawan belum terdaftar di Data Karyawan!', 'warning');
             
@@ -5772,75 +6001,322 @@
             window.open(`https://wa.me/${formatWANumber(k.noWa)}?text=${pesan}`, '_blank');
         };
 
-        window.eksporGaji = function() {
-            const bln = document.getElementById('bulanGaji').value; if(!bln) return;
-            const now = new Date();
-            const jMap = new Map((state.jabatan || []).map(j => [j.id, j]));
-            
-            const data = state.karyawan.map(k => {
-                const shift = state.pengaturan.shifts?.find(s => s.id === k.shiftId) || state.pengaturan.shifts[0] || { jamMasuk: '08:00', jamPulang: '16:00' };
-                const ab = (state.absensi || []).filter(a => a.karyawanId === k.id && a.tanggal.startsWith(bln)); 
-                const h = ab.length; 
-                const t = ab.filter(a => a.statusMasuk === 'Terlambat').length;
-                
-                let hTunjangan = 0;
-                let pAwal = 0;
-                const isNightShift = shift.jamPulang < shift.jamMasuk;
-                
-                ab.forEach(a => {
-                    const isTelat = (a.statusMasuk === 'Terlambat');
-                    let isPulangAwal = false;
-                    let sudahPulang = false;
-
-                    if (!a.jamPulang) {
-                        let tglMasuk = new Date(`${a.tanggal}T${a.jamMasuk}:00`);
-                        let diffHours = (now.getTime() - tglMasuk.getTime()) / (1000 * 3600);
-                        if (diffHours >= 24) isPulangAwal = true;
-                    } else {
-                        sudahPulang = true;
-                        if (isNightShift) {
-                            if (a.jamPulang >= shift.jamPulang && a.jamPulang < shift.jamMasuk) {
-                            } else isPulangAwal = true;
-                        } else {
-                            if (a.jamPulang >= shift.jamPulang || a.jamPulang < shift.jamMasuk) {
-                            } else isPulangAwal = true;
-                        }
+        // HELPER AUTO-FIT LEBAR KOLOM EXCEL AGAR RAPI DI SEMUA APLIKASI SPREADSHEET
+        function autoFitExcelColumns(ws, dataArray) {
+            if (!ws || !dataArray || dataArray.length === 0) return;
+            const keys = Object.keys(dataArray[0]);
+            ws['!cols'] = keys.map(k => {
+                let maxLen = k.length;
+                for (let i = 0; i < dataArray.length; i++) {
+                    const val = dataArray[i][k];
+                    if (val !== undefined && val !== null) {
+                        const len = String(val).length;
+                        if (len > maxLen) maxLen = len;
                     }
-                    if (isPulangAwal) pAwal++;
-                    if (sudahPulang && !isTelat && !isPulangAwal) hTunjangan++;
-                });
-
-                const dataCuti = hitungHariCutiKaryawanBulan(k.id, bln);
-                const tunj = hTunjangan * (state.pengaturan.tunjanganHadir || 0); 
-                const den = t * (state.pengaturan.dendaTelat || 0);
-                const jabObj = jMap.get(k.jabatanId);
-                
-                return { 
-                    "NIK": k.nik, 
-                    "Nama": k.nama, 
-                    "Jabatan": jabObj ? jabObj.nama : '-',
-                    "Status": k.statusKaryawan || 'Tetap',
-                    "Bulan": bln, 
-                    "Hadir Total": h, 
-                    "Telat": t,
-                    "Pulang Awal / Lupa": pAwal, 
-                    "Tepat Waktu & Valid (Hari)": hTunjangan, 
-                    "Cuti & Izin Total (Hari)": dataCuti.totalHari,
-                    "Rincian Cuti & Izin": dataCuti.rincian,
-                    "Gaji Pokok": k.gajiPokok || 0, 
-                    "Tunjangan Hadir": tunj, 
-                    "Denda": den, 
-                    "Total Bersih": Math.max(0, (k.gajiPokok || 0) + tunj - den) 
-                };
+                }
+                return { wch: Math.min(Math.max(maxLen + 3, 10), 45) };
             });
-            try { 
-                const ws = XLSX.utils.json_to_sheet(data); 
-                const wb = XLSX.utils.book_new(); 
-                XLSX.utils.book_append_sheet(wb, ws, "Gaji"); 
-                XLSX.writeFile(wb, `Gaji_${bln}.xlsx`); 
-                showToast('Berhasil', 'Excel perhitungan gaji berhasil diunduh'); 
-            } catch(e){ 
-                showToast('Gagal', 'Terjadi kesalahan ekspor excel', 'error'); 
+        }
+
+        // FUNGSI KONVERSI KE EXCEL UNTUK SEMUA DATA KALKULASI PENGGAJIAN
+        window.eksporGaji = function(mode = 'bulan_ini') {
+            if (typeof XLSX === 'undefined') {
+                return showToast('Error', 'Library SheetJS belum terpasang dengan baik. Mohon muat ulang halaman.', 'error');
+            }
+
+            const blnEl = document.getElementById('bulanGaji');
+            const bln = blnEl ? blnEl.value : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+            const now = new Date();
+
+            const jMap = new Map();
+            (state.jabatan || []).forEach(j => {
+                jMap.set(j.id, j);
+                jMap.set(String(j.id), j);
+            });
+
+            const karyawanList = state.karyawan || [];
+            if (karyawanList.length === 0) {
+                return showToast('Peringatan', 'Belum ada data pegawai untuk dikonversi ke Excel.', 'warning');
+            }
+
+            // Pastikan jika belum dihitung, hitung dulu agar UI dan memori tersinkronisasi
+            if (Object.keys(window.dataGajiBulanIni).length === 0) {
+                window.hitungGaji();
+            }
+
+            try {
+                const wb = XLSX.utils.book_new();
+
+                if (mode === 'semua_periode') {
+                    // Kumpulkan semua periode yang tercatat di riwayat absensi dan cuti
+                    const periodSet = new Set();
+                    (state.absensi || []).forEach(a => {
+                        if (a.tanggal && a.tanggal.length >= 7) periodSet.add(a.tanggal.substring(0, 7));
+                    });
+                    (state.cuti || []).forEach(c => {
+                        if (c.tanggalMulai && c.tanggalMulai.length >= 7) periodSet.add(c.tanggalMulai.substring(0, 7));
+                    });
+                    periodSet.add(bln); // Masukkan periode yang aktif
+
+                    const sortedPeriods = Array.from(periodSet).sort((a, b) => b.localeCompare(a));
+                    
+                    const allDataRows = [];
+                    const periodSummaries = [];
+                    let globalGrandTHP = 0;
+                    let globalTotalHadir = 0;
+                    let globalTotalCuti = 0;
+                    let globalTotalDenda = 0;
+
+                    sortedPeriods.forEach(periodeVal => {
+                        const parts = periodeVal.split('-');
+                        const y = parseInt(parts[0], 10);
+                        const m = parseInt(parts[1], 10);
+                        const periodeLabel = new Date(y, m - 1, 1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+
+                        let pGajiPokok = 0;
+                        let pTunjangan = 0;
+                        let pDenda = 0;
+                        let pTHP = 0;
+                        let pHadir = 0;
+                        let pCuti = 0;
+
+                        karyawanList.forEach((k, idx) => {
+                            const res = hitungDataGajiPegawai(k, periodeVal, jMap, now);
+                            pGajiPokok += res.gajiPokok;
+                            pTunjangan += res.tunjangan;
+                            pDenda += res.denda;
+                            pTHP += res.totalBersih;
+                            pHadir += res.hadir;
+                            pCuti += res.totalCutiHari;
+
+                            allDataRows.push({
+                                "No": allDataRows.length + 1,
+                                "Periode Bulan": periodeLabel,
+                                "Kode Periode": periodeVal,
+                                "NIK Pegawai": res.nik,
+                                "Nama Pegawai": res.nama,
+                                "Jabatan / Divisi": res.jabatan,
+                                "Status Kepegawaian": res.statusKaryawan,
+                                "Shift Kerja": res.shiftNama,
+                                "Gaji Pokok (Rp)": res.gajiPokok,
+                                "Total Hadir (Hari)": res.hadir,
+                                "Valid Tepat Waktu (Hari)": res.hariValid,
+                                "Terlambat (Kali)": res.telat,
+                                "Pulang Awal / Lupa (Kali)": res.pulangAwal,
+                                "Total Cuti & Izin (Hari)": res.totalCutiHari,
+                                "Rincian Cuti": res.cutiRincian,
+                                "Tarif Tunjangan / Hari (Rp)": res.tarifTunjangan,
+                                "Tunjangan Hadir (Rp)": res.tunjangan,
+                                "Tarif Denda / Telat (Rp)": res.tarifDenda,
+                                "Denda Keterlambatan (Rp)": res.denda,
+                                "Total Penerimaan Kotor (Rp)": res.bruto,
+                                "Total Potongan (Rp)": res.denda,
+                                "Gaji Bersih / THP (Rp)": res.totalBersih,
+                                "No WhatsApp": res.noWa || '-',
+                                "Status Pembayaran": res.totalBersih > 0 ? 'Siap Ditransfer' : 'Nihil'
+                            });
+                        });
+
+                        globalGrandTHP += pTHP;
+                        globalTotalHadir += pHadir;
+                        globalTotalCuti += pCuti;
+                        globalTotalDenda += pDenda;
+
+                        periodSummaries.push({
+                            "Periode Bulan": periodeLabel,
+                            "Kode Periode": periodeVal,
+                            "Jumlah Pegawai": karyawanList.length,
+                            "Total Pengeluaran Gapok (Rp)": pGajiPokok,
+                            "Total Tunjangan Hadir (Rp)": pTunjangan,
+                            "Total Denda Telat (Rp)": pDenda,
+                            "Total Payroll Bersih / THP (Rp)": pTHP,
+                            "Total Kehadiran (Hari)": pHadir,
+                            "Total Cuti & Izin (Hari)": pCuti
+                        });
+                    });
+
+                    // Sheet 1: Semua Data Kalkulasi Penggajian
+                    const wsAll = XLSX.utils.json_to_sheet(allDataRows);
+                    autoFitExcelColumns(wsAll, allDataRows);
+                    XLSX.utils.book_append_sheet(wb, wsAll, "Semua Data Penggajian");
+
+                    // Sheet 2: Rekap Per Periode Bulan
+                    const wsPeriodSummary = XLSX.utils.json_to_sheet(periodSummaries);
+                    autoFitExcelColumns(wsPeriodSummary, periodSummaries);
+                    XLSX.utils.book_append_sheet(wb, wsPeriodSummary, "Rekap Per Periode");
+
+                    const fileName = `Kalkulasi_Penggajian_SEMUA_DATA_${Date.now()}.xlsx`;
+                    XLSX.writeFile(wb, fileName);
+                    showToast('Berhasil', `Semua data penggajian (${allDataRows.length} entri) berhasil dikonversi ke Excel.`);
+
+                } else {
+                    // Mode 'bulan_ini' atau 'lengkap_multi_sheet'
+                    const dateObj = new Date(bln + '-01');
+                    const namaBulan = dateObj.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+                    
+                    const rowsGaji = [];
+                    let sumGapok = 0;
+                    let sumHadir = 0;
+                    let sumValid = 0;
+                    let sumTelat = 0;
+                    let sumPAwal = 0;
+                    let sumCuti = 0;
+                    let sumCutiTahunan = 0;
+                    let sumSakit = 0;
+                    let sumIzin = 0;
+                    let sumPending = 0;
+                    let sumTunjangan = 0;
+                    let sumDenda = 0;
+                    let sumBruto = 0;
+                    let sumTHP = 0;
+
+                    const perJabatanStats = {};
+
+                    karyawanList.forEach((k, index) => {
+                        const d = hitungDataGajiPegawai(k, bln, jMap, now);
+
+                        sumGapok += d.gajiPokok;
+                        sumHadir += d.hadir;
+                        sumValid += d.hariValid;
+                        sumTelat += d.telat;
+                        sumPAwal += d.pulangAwal;
+                        sumCuti += d.totalCutiHari;
+                        sumCutiTahunan += d.cutiHari;
+                        sumSakit += d.sakitHari;
+                        sumIzin += d.izinHari;
+                        sumPending += d.pendingCutiHari;
+                        sumTunjangan += d.tunjangan;
+                        sumDenda += d.denda;
+                        sumBruto += d.bruto;
+                        sumTHP += d.totalBersih;
+
+                        const jName = d.jabatan || 'Lainnya';
+                        if (!perJabatanStats[jName]) {
+                            perJabatanStats[jName] = { count: 0, gapok: 0, tunj: 0, denda: 0, thp: 0 };
+                        }
+                        perJabatanStats[jName].count++;
+                        perJabatanStats[jName].gapok += d.gajiPokok;
+                        perJabatanStats[jName].tunj += d.tunjangan;
+                        perJabatanStats[jName].denda += d.denda;
+                        perJabatanStats[jName].thp += d.totalBersih;
+
+                        rowsGaji.push({
+                            "No": index + 1,
+                            "NIK Pegawai": d.nik,
+                            "Nama Pegawai": d.nama,
+                            "Jabatan / Divisi": d.jabatan,
+                            "Status Kepegawaian": d.statusKaryawan,
+                            "Shift Kerja": d.shiftNama,
+                            "Periode Gaji": namaBulan,
+                            "Gaji Pokok (Rp)": d.gajiPokok,
+                            "Total Hadir (Hari)": d.hadir,
+                            "Tepat Waktu / Valid (Hari)": d.hariValid,
+                            "Terlambat (Kali)": d.telat,
+                            "Pulang Awal / Lupa (Kali)": d.pulangAwal,
+                            "Total Cuti & Izin (Hari)": d.totalCutiHari,
+                            "Cuti Tahunan (Hari)": d.cutiHari,
+                            "Sakit (Hari)": d.sakitHari,
+                            "Izin (Hari)": d.izinHari,
+                            "Pending Cuti (Hari)": d.pendingCutiHari,
+                            "Tarif Tunjangan / Hari (Rp)": d.tarifTunjangan,
+                            "Total Tunjangan Hadir (Rp)": d.tunjangan,
+                            "Tarif Denda / Telat (Rp)": d.tarifDenda,
+                            "Total Denda Telat (Rp)": d.denda,
+                            "Total Penerimaan Kotor (Rp)": d.bruto,
+                            "Total Potongan (Rp)": d.denda,
+                            "Gaji Bersih / THP (Rp)": d.totalBersih,
+                            "No WhatsApp": d.noWa || '-',
+                            "Status Pembayaran": d.totalBersih > 0 ? 'Siap Ditransfer' : 'Nihil'
+                        });
+                    });
+
+                    // Baris TOTAL KESELURUHAN di bawah tabel data
+                    rowsGaji.push({
+                        "No": "TOTAL KESELURUHAN",
+                        "NIK Pegawai": "",
+                        "Nama Pegawai": `${karyawanList.length} Orang Pegawai`,
+                        "Jabatan / Divisi": "",
+                        "Status Kepegawaian": "",
+                        "Shift Kerja": "",
+                        "Periode Gaji": namaBulan,
+                        "Gaji Pokok (Rp)": sumGapok,
+                        "Total Hadir (Hari)": sumHadir,
+                        "Tepat Waktu / Valid (Hari)": sumValid,
+                        "Keterlambatan (Kali)": sumTelat,
+                        "Pulang Awal / Lupa (Kali)": sumPAwal,
+                        "Total Cuti & Izin (Hari)": sumCuti,
+                        "Cuti Tahunan (Hari)": sumCutiTahunan,
+                        "Sakit (Hari)": sumSakit,
+                        "Izin (Hari)": sumIzin,
+                        "Pending Cuti (Hari)": sumPending,
+                        "Tarif Tunjangan / Hari (Rp)": "",
+                        "Total Tunjangan Hadir (Rp)": sumTunjangan,
+                        "Tarif Denda / Telat (Rp)": "",
+                        "Total Denda Telat (Rp)": sumDenda,
+                        "Total Penerimaan Kotor (Rp)": sumBruto,
+                        "Total Potongan (Rp)": sumDenda,
+                        "Gaji Bersih / THP (Rp)": sumTHP,
+                        "No WhatsApp": "",
+                        "Status Pembayaran": ""
+                    });
+
+                    // Sheet 1: Kalkulasi Penggajian Lengkap
+                    const wsGaji = XLSX.utils.json_to_sheet(rowsGaji);
+                    autoFitExcelColumns(wsGaji, rowsGaji);
+                    XLSX.utils.book_append_sheet(wb, wsGaji, "Kalkulasi Penggajian");
+
+                    // Sheet 2: Ringkasan KPI Payroll Eksekutif
+                    const rowsKPI = [
+                        { "Indikator Payroll": "Periode Penggajian", "Nilai": namaBulan + ` (${bln})` },
+                        { "Indikator Payroll": "Tanggal & Waktu Dokumen Digenerate", "Nilai": new Date().toLocaleString('id-ID') },
+                        { "Indikator Payroll": "Total Pegawai Terdaftar", "Nilai": `${karyawanList.length} Pegawai` },
+                        { "Indikator Payroll": "Total Pengeluaran Payroll Bersih (THP)", "Nilai": formatRupiah(sumTHP) },
+                        { "Indikator Payroll": "Rata-Rata Gaji Bersih / Pegawai", "Nilai": formatRupiah(karyawanList.length > 0 ? Math.round(sumTHP / karyawanList.length) : 0) },
+                        { "Indikator Payroll": "Total Alokasi Gaji Pokok", "Nilai": formatRupiah(sumGapok) },
+                        { "Indikator Payroll": "Total Tunjangan Kehadiran Dibayarkan", "Nilai": formatRupiah(sumTunjangan) },
+                        { "Indikator Payroll": "Total Pemotongan Denda Terlambat", "Nilai": formatRupiah(sumDenda) },
+                        { "Indikator Payroll": "Total Kehadiran Pegawai", "Nilai": `${sumHadir} Hari Kerja` },
+                        { "Indikator Payroll": "Kehadiran Tepat Waktu (Valid)", "Nilai": `${sumValid} Hari` },
+                        { "Indikator Payroll": "Total Keterlambatan Masuk", "Nilai": `${sumTelat} Kali` },
+                        { "Indikator Payroll": "Total Pulang Lebih Awal / Lupa Absen", "Nilai": `${sumPAwal} Kali` },
+                        { "Indikator Payroll": "Total Hari Cuti & Izin", "Nilai": `${sumCuti} Hari` },
+                        { "Indikator Payroll": "Rincian Cuti Tahunan", "Nilai": `${sumCutiTahunan} Hari` },
+                        { "Indikator Payroll": "Rincian Izin Sakit", "Nilai": `${sumSakit} Hari` },
+                        { "Indikator Payroll": "Rincian Izin Lainnya", "Nilai": `${sumIzin} Hari` },
+                        { "Indikator Payroll": "Pengajuan Cuti Berstatus Menunggu (Pending)", "Nilai": `${sumPending} Hari` },
+                        { "Indikator Payroll": "Ketentuan Tunjangan Hadir / Hari", "Nilai": formatRupiah(state.pengaturan.tunjanganHadir || 0) },
+                        { "Indikator Payroll": "Ketentuan Denda Telat / Kasus", "Nilai": formatRupiah(state.pengaturan.dendaTelat || 0) }
+                    ];
+                    const wsKPI = XLSX.utils.json_to_sheet(rowsKPI);
+                    autoFitExcelColumns(wsKPI, rowsKPI);
+                    XLSX.utils.book_append_sheet(wb, wsKPI, "Ringkasan KPI Payroll");
+
+                    // Sheet 3: Rekap Per Jabatan
+                    const rowsJabatan = Object.keys(perJabatanStats).map((jName, idx) => {
+                        const s = perJabatanStats[jName];
+                        return {
+                            "No": idx + 1,
+                            "Jabatan / Departemen": jName,
+                            "Jumlah Pegawai": s.count,
+                            "Total Gaji Pokok (Rp)": s.gapok,
+                            "Total Tunjangan Hadir (Rp)": s.tunj,
+                            "Total Denda (Rp)": s.denda,
+                            "Total Gaji Bersih / THP (Rp)": s.thp,
+                            "Rata-Rata THP / Pegawai (Rp)": Math.round(s.thp / s.count)
+                        };
+                    });
+                    const wsJabatan = XLSX.utils.json_to_sheet(rowsJabatan);
+                    autoFitExcelColumns(wsJabatan, rowsJabatan);
+                    XLSX.utils.book_append_sheet(wb, wsJabatan, "Rekap Per Jabatan");
+
+                    const cleanBulan = namaBulan.replace(/\s+/g, '_');
+                    const fileName = `Kalkulasi_Penggajian_${cleanBulan}_${bln}.xlsx`;
+                    XLSX.writeFile(wb, fileName);
+                    showToast('Berhasil', `File Excel kalkulasi penggajian ${namaBulan} (${karyawanList.length} pegawai) berhasil diunduh.`);
+                }
+            } catch(e) {
+                console.error("Gagal ekspor Excel:", e);
+                showToast('Gagal', 'Terjadi kesalahan saat membuat file Excel: ' + (e.message || ''), 'error');
             }
         };
 
