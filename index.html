@@ -271,9 +271,14 @@
             <!-- TOMBOL AKSI (Disembunyikan saat di-print) -->
             <div class="px-8 py-5 border-b flex justify-between items-center bg-slate-50 sm:rounded-t-3xl no-print sticky top-0 z-10 shadow-sm">
                 <h3 class="font-bold text-slate-700 text-lg"><i class="fas fa-file-invoice-dollar mr-2 text-indigo-600"></i> Pratinjau Slip Gaji</h3>
-                <div class="flex gap-2">
-                    <button onclick="window.tutupSlipGaji()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-5 py-2.5 rounded-xl font-bold text-sm transition">Batal</button>
-                    <button onclick="window.cetakPDFSlip()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-indigo-500/30 transition flex items-center"><i class="fas fa-print mr-2"></i> Cetak ke PDF</button>
+                <div class="flex items-center gap-2">
+                    <button onclick="window.kirimSlipWA(window.currentSlipKaryawanId)" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm shadow-sm transition flex items-center">
+                        <i class="fab fa-whatsapp mr-2 text-base"></i> Kirim ke WA
+                    </button>
+                    <button onclick="window.tutupSlipGaji()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm transition">Tutup</button>
+                    <button onclick="window.cetakPDFSlip()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm shadow-lg shadow-indigo-500/30 transition flex items-center">
+                        <i class="fas fa-print mr-2"></i> Cetak ke PDF
+                    </button>
                 </div>
             </div>
 
@@ -302,13 +307,15 @@
                         <table class="text-sm">
                             <tr><td class="font-bold text-slate-500 w-24 pb-2">Nama</td><td class="font-bold text-slate-800 pb-2">: <span id="slip_nama">-</span></td></tr>
                             <tr><td class="font-bold text-slate-500 w-24 pb-2">NIK / ID</td><td class="font-semibold text-slate-700 pb-2">: <span id="slip_nik">-</span></td></tr>
-                            <tr><td class="font-bold text-slate-500 w-24">Status</td><td class="font-bold text-emerald-600">: <span id="slip_status_karyawan">Tetap</span></td></tr>
+                            <tr><td class="font-bold text-slate-500 w-24 pb-2">Status</td><td class="font-bold text-emerald-600 pb-2">: <span id="slip_status_karyawan">Tetap</span></td></tr>
+                            <tr><td class="font-bold text-slate-500 w-24">Tgl Cetak</td><td class="font-semibold text-slate-600">: <span id="slip_tanggal_cetak">-</span></td></tr>
                         </table>
                     </div>
                     <div>
                         <table class="text-sm">
                             <tr><td class="font-bold text-slate-500 w-24 pb-2">Jabatan</td><td class="font-semibold text-slate-700 pb-2">: <span id="slip_jabatan">-</span></td></tr>
-                            <tr><td class="font-bold text-slate-500 w-24">Cetak</td><td class="font-semibold text-slate-700">: <span id="slip_tanggal_cetak">-</span></td></tr>
+                            <tr><td class="font-bold text-slate-500 w-24 pb-2">Kehadiran</td><td class="font-semibold text-slate-700 pb-2">: <span id="slip_kehadiran">-</span></td></tr>
+                            <tr><td class="font-bold text-slate-500 w-24">Cuti & Izin</td><td class="font-bold text-amber-700">: <span id="slip_cuti_izin">0 Hari</span></td></tr>
                         </table>
                     </div>
                 </div>
@@ -837,13 +844,24 @@
         }
 
         function showToast(title, message, type = 'success') {
-            const toast = document.getElementById('toast'); const toastContent = document.getElementById('toastContent'); const toastIcon = document.getElementById('toastIcon');
-            document.getElementById('toastTitle').innerText = title; document.getElementById('toastMessage').innerText = message;
-            toastContent.className = 'bg-white border-l-4 p-4 rounded-xl shadow-2xl flex items-center space-x-3 pointer-events-auto'; toastIcon.className = 'fas text-2xl';
-            if (type === 'success') { toastContent.classList.add('border-emerald-500'); toastIcon.classList.add('fa-check-circle', 'text-emerald-500'); } 
-            else if (type === 'error') { toastContent.classList.add('border-red-500'); toastIcon.classList.add('fa-exclamation-circle', 'text-red-500'); } 
-            else if (type === 'warning') { toastContent.classList.add('border-amber-500'); toastIcon.classList.add('fa-exclamation-triangle', 'text-amber-500'); }
-            toast.classList.remove('translate-x-full'); setTimeout(() => { toast.classList.add('translate-x-full'); }, 3500);
+            const toast = document.getElementById('toast'); 
+            const toastContent = document.getElementById('toastContent'); 
+            const toastIcon = document.getElementById('toastIcon');
+            const titleEl = document.getElementById('toastTitle');
+            const msgEl = document.getElementById('toastMessage');
+            if (titleEl) titleEl.innerText = title; 
+            if (msgEl) msgEl.innerText = message;
+            if (toastContent && toastIcon) {
+                toastContent.className = 'bg-white border-l-4 p-4 rounded-xl shadow-2xl flex items-center space-x-3 pointer-events-auto'; 
+                toastIcon.className = 'fas text-2xl';
+                if (type === 'success') { toastContent.classList.add('border-emerald-500'); toastIcon.classList.add('fa-check-circle', 'text-emerald-500'); } 
+                else if (type === 'error') { toastContent.classList.add('border-red-500'); toastIcon.classList.add('fa-exclamation-circle', 'text-red-500'); } 
+                else if (type === 'warning') { toastContent.classList.add('border-amber-500'); toastIcon.classList.add('fa-exclamation-triangle', 'text-amber-500'); }
+            }
+            if (toast) {
+                toast.classList.remove('translate-x-full'); 
+                setTimeout(() => { toast.classList.add('translate-x-full'); }, 3500);
+            }
         }
 
         function pastikanDataMigrasi() {
@@ -852,6 +870,66 @@
             if (!state.pengaturan.liburNasional) state.pengaturan.liburNasional = [];
             if (!state.imk) state.imk = [];
             if (!state.cuti) state.cuti = [];
+            if (!state.karyawan) state.karyawan = [];
+            if (!state.jabatan) state.jabatan = [];
+            if (!state.absensi) state.absensi = [];
+
+            // Self-healing: Cek dan perbaiki relasi data karyawan pada Cuti, Absensi, dan IMK
+            const cariPegawai = (id, nik, nama) => {
+                if (!id && !nik && !nama) return null;
+                const idStr = id !== undefined && id !== null ? String(id).trim() : '';
+                const nikStr = nik ? String(nik).trim().toLowerCase() : '';
+                const namaStr = nama ? String(nama).trim().toLowerCase() : '';
+                return state.karyawan.find(k => 
+                    (idStr && (String(k.id).trim() === idStr || k.id == id)) ||
+                    (nikStr && k.nik && String(k.nik).trim().toLowerCase() === nikStr) ||
+                    (idStr && k.nik && String(k.nik).trim().toLowerCase() === idStr.toLowerCase()) ||
+                    (namaStr && k.nama && String(k.nama).trim().toLowerCase() === namaStr)
+                ) || null;
+            };
+
+            // 1. Normalisasi Cuti & Izin
+            state.cuti.forEach(c => {
+                if (!c) return;
+                const k = cariPegawai(c.karyawanId, c.karyawanNik || c.nik, c.karyawanNama || c.nama);
+                if (k) {
+                    c.karyawanId = k.id;
+                    if (!c.karyawanNama || c.karyawanNama === 'Karyawan Dihapus') c.karyawanNama = k.nama;
+                    if (!c.karyawanNik) c.karyawanNik = k.nik || '';
+                    const j = state.jabatan.find(x => x.id == k.jabatanId);
+                    if (j) c.jabatanNama = j.nama;
+                } else if (!c.karyawanNama || c.karyawanNama === 'Karyawan Dihapus') {
+                    // Cari nama pemohon dari riwayat absensi atau imk yang punya ID sama
+                    const riwayatLain = state.absensi.find(a => (a.karyawanId == c.karyawanId || String(a.karyawanId) === String(c.karyawanId)) && a.karyawanNama) ||
+                                       state.imk.find(i => (i.karyawanId == c.karyawanId || String(i.karyawanId) === String(c.karyawanId)) && i.karyawanNama);
+                    if (riwayatLain) {
+                        c.karyawanNama = riwayatLain.karyawanNama;
+                        c.karyawanNik = riwayatLain.karyawanNik || '';
+                    }
+                }
+            });
+
+            // 2. Normalisasi Riwayat Absensi
+            state.absensi.forEach(a => {
+                if (!a) return;
+                const k = cariPegawai(a.karyawanId, a.karyawanNik || a.nik, a.karyawanNama || a.nama);
+                if (k) {
+                    a.karyawanId = k.id;
+                    if (!a.karyawanNama || a.karyawanNama === 'Karyawan Dihapus') a.karyawanNama = k.nama;
+                    if (!a.karyawanNik) a.karyawanNik = k.nik || '';
+                }
+            });
+
+            // 3. Normalisasi Riwayat IMK
+            state.imk.forEach(i => {
+                if (!i) return;
+                const k = cariPegawai(i.karyawanId, i.karyawanNik || i.nik, i.karyawanNama || i.nama);
+                if (k) {
+                    i.karyawanId = k.id;
+                    if (!i.karyawanNama || i.karyawanNama === 'Karyawan Dihapus') i.karyawanNama = k.nama;
+                    if (!i.karyawanNik) i.karyawanNik = k.nik || '';
+                }
+            });
         }
 
         async function saveData() {
@@ -1341,13 +1419,13 @@
             if (mode === 'imk') {
                 btnImk.className = "flex-1 bg-amber-500 text-white font-bold py-2.5 rounded-xl shadow transition text-xs border border-amber-600"; 
                 btnAbsen.className = "flex-1 text-slate-500 bg-slate-100 hover:bg-slate-200 font-semibold py-2.5 rounded-xl transition text-xs border border-slate-200";
-                titleEl.innerText = "Terminal IMK (Keluar/Masuk)"; 
-                subtitleEl.innerText = "Scan 1x = Keluar Kantor | Scan ke-2 = Kembali";
+                if (titleEl) titleEl.innerText = "Terminal IMK (Keluar/Masuk)"; 
+                if (subtitleEl) subtitleEl.innerText = "Scan 1x = Keluar Kantor | Scan ke-2 = Kembali";
             } else {
                 btnAbsen.className = "flex-1 bg-emerald-600 text-white font-bold py-2.5 rounded-xl shadow transition text-xs border border-emerald-700"; 
                 btnImk.className = "flex-1 text-slate-500 bg-slate-100 hover:bg-slate-200 font-semibold py-2.5 rounded-xl transition text-xs border border-slate-200";
-                titleEl.innerText = "Terminal Mesin QR & Barcode"; 
-                subtitleEl.innerText = "Arahkan Barcode ID Card atau QR Code ke Kamera";
+                if (titleEl) titleEl.innerText = "Terminal Mesin QR & Barcode"; 
+                if (subtitleEl) subtitleEl.innerText = "Arahkan Barcode ID Card atau QR Code ke Kamera";
             }
         };
 
@@ -1560,12 +1638,21 @@
             const modal = document.getElementById('globalDeleteModal'); 
             const content = document.getElementById('globalDeleteModalContent'); 
             const msg = document.getElementById('deleteModalMessage');
-            if (type === 'semua_absensi') msg.innerText = "Kosongkan SELURUH riwayat absensi secara permanen?";
-            else if (type === 'semua_imk') msg.innerText = "Kosongkan SELURUH riwayat IMK secara permanen?";
-            else if (type === 'imk') msg.innerText = "Hapus riwayat Izin Keluar Masuk ini?";
-            else msg.innerText = `Yakin menghapus data ${type} ini?`;
-            modal.classList.remove('hidden'); 
-            setTimeout(() => { modal.classList.add('opacity-100'); content.classList.remove('scale-95'); content.classList.add('scale-100'); }, 10);
+            if (msg) {
+                if (type === 'semua_absensi') msg.innerText = "Kosongkan SELURUH riwayat absensi secara permanen?";
+                else if (type === 'semua_cuti') msg.innerText = "Kosongkan SELURUH riwayat cuti & izin secara permanen?";
+                else if (type === 'semua_imk') msg.innerText = "Kosongkan SELURUH riwayat IMK secara permanen?";
+                else if (type === 'cuti') msg.innerText = "Hapus permohonan cuti / izin ini?";
+                else if (type === 'imk') msg.innerText = "Hapus riwayat Izin Keluar Masuk ini?";
+                else msg.innerText = `Yakin menghapus data ${type} ini?`;
+            }
+            if (modal) {
+                modal.classList.remove('hidden'); 
+                setTimeout(() => { 
+                    modal.classList.add('opacity-100'); 
+                    if (content) { content.classList.remove('scale-95'); content.classList.add('scale-100'); }
+                }, 10);
+            }
         };
 
         window.closeDeleteModal = function() {
@@ -1576,14 +1663,42 @@
 
         document.getElementById('btnConfirmDelete')?.addEventListener('click', () => {
             if(!deleteTarget) return; const { type, id } = deleteTarget;
-            if (type === 'karyawan') state.karyawan = state.karyawan.filter(x => x.id !== id);
+            if (type === 'karyawan') {
+                const targetK = (state.karyawan || []).find(x => x.id === id || String(x.id) === String(id));
+                if (targetK) {
+                    (state.cuti || []).forEach(c => {
+                        if (c.karyawanId == id || String(c.karyawanId) === String(id)) {
+                            c.karyawanNama = targetK.nama;
+                            c.karyawanNik = targetK.nik || '';
+                            c.isDeletedKaryawan = true;
+                        }
+                    });
+                    (state.absensi || []).forEach(a => {
+                        if (a.karyawanId == id || String(a.karyawanId) === String(id)) {
+                            a.karyawanNama = targetK.nama;
+                            a.karyawanNik = targetK.nik || '';
+                            a.isDeletedKaryawan = true;
+                        }
+                    });
+                    (state.imk || []).forEach(i => {
+                        if (i.karyawanId == id || String(i.karyawanId) === String(id)) {
+                            i.karyawanNama = targetK.nama;
+                            i.karyawanNik = targetK.nik || '';
+                            i.isDeletedKaryawan = true;
+                        }
+                    });
+                }
+                state.karyawan = (state.karyawan || []).filter(x => x.id !== id && String(x.id) !== String(id));
+            }
             else if (type === 'jabatan') {
                 if (state.karyawan.some(k => k.jabatanId == id)) { showToast('Gagal', 'Jabatan masih digunakan Karyawan.', 'error'); window.closeDeleteModal(); return; }
                 state.jabatan = state.jabatan.filter(x => x.id !== id);
             }
             else if (type === 'absensi') state.absensi = state.absensi.filter(x => x.id !== id);
+            else if (type === 'cuti') state.cuti = (state.cuti || []).filter(x => x.id !== id);
             else if (type === 'imk') state.imk = state.imk.filter(x => x.id !== id);
             else if (type === 'semua_absensi') state.absensi = [];
+            else if (type === 'semua_cuti') state.cuti = [];
             else if (type === 'semua_imk') state.imk = [];
             else if (type === 'shift') state.pengaturan.shifts = state.pengaturan.shifts.filter(x => x.id !== id);
             else if (type === 'libur') state.pengaturan.liburNasional = state.pengaturan.liburNasional.filter(x => x.id !== id);
@@ -1592,11 +1707,19 @@
         });
 
         window.tampilkanQR = function(nik, nama) {
-            const modal = document.getElementById('modalQR'); const content = document.getElementById('modalQRContent');
-            document.getElementById('qrKaryawanNama').innerText = nama; 
-            document.getElementById('qrImage').src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(nik)}`;
-            modal.classList.remove('hidden'); 
-            setTimeout(() => { modal.classList.add('opacity-100'); content.classList.remove('scale-95'); content.classList.add('scale-100'); }, 10);
+            const modal = document.getElementById('modalQR'); 
+            const content = document.getElementById('modalQRContent');
+            const qrNamaEl = document.getElementById('qrKaryawanNama');
+            if (qrNamaEl) qrNamaEl.innerText = nama; 
+            const qrImg = document.getElementById('qrImage');
+            if (qrImg) qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(nik)}`;
+            if (modal) {
+                modal.classList.remove('hidden'); 
+                setTimeout(() => { 
+                    modal.classList.add('opacity-100'); 
+                    if (content) { content.classList.remove('scale-95'); content.classList.add('scale-100'); }
+                }, 10);
+            }
         };
         
         window.tutupQR = function() {
@@ -2026,12 +2149,18 @@
 
         window.bukaModalHapusTanggal = function(mode = 'absensi') {
             activeHapusMode = mode; 
-            document.getElementById('del_startDate').value = ''; 
-            document.getElementById('del_endDate').value = '';
-            document.getElementById('modalHapusTanggalTitle').innerText = mode === 'imk' ? 'Hapus IMK via Tanggal' : 'Hapus Absen via Tanggal';
+            const sEl = document.getElementById('del_startDate'); if (sEl) sEl.value = ''; 
+            const eEl = document.getElementById('del_endDate'); if (eEl) eEl.value = '';
+            const tEl = document.getElementById('modalHapusTanggalTitle');
+            if (tEl) tEl.innerText = mode === 'imk' ? 'Hapus IMK via Tanggal' : (mode === 'cuti' ? 'Hapus Cuti & Izin via Tanggal' : 'Hapus Absen via Tanggal');
             const modal = document.getElementById('modalHapusTanggal'); const content = document.getElementById('modalHapusTanggalContent');
-            modal.classList.remove('hidden'); 
-            setTimeout(() => { modal.classList.add('opacity-100'); content.classList.remove('scale-95'); content.classList.add('scale-100'); }, 10);
+            if (modal) {
+                modal.classList.remove('hidden'); 
+                setTimeout(() => { 
+                    modal.classList.add('opacity-100'); 
+                    if (content) { content.classList.remove('scale-95'); content.classList.add('scale-100'); }
+                }, 10);
+            }
         };
         
         window.tutupModalHapusTanggal = function() {
@@ -2047,6 +2176,12 @@
             if (activeHapusMode === 'imk') {
                 state.imk = state.imk.filter(i => i.tanggal < start || i.tanggal > end);
                 showToast('Sukses', 'Riwayat IMK rentang tanggal telah dibersihkan.');
+            } else if (activeHapusMode === 'cuti') {
+                state.cuti = (state.cuti || []).filter(c => {
+                    const t = c.tanggalPengajuan ? c.tanggalPengajuan.split('T')[0] : (c.mulai || '');
+                    return t < start || t > end;
+                });
+                showToast('Sukses', 'Riwayat Cuti & Izin rentang tanggal telah dibersihkan.');
             } else {
                 state.absensi = state.absensi.filter(a => a.tanggal < start || a.tanggal > end);
                 showToast('Sukses', 'Riwayat Absensi rentang tanggal telah dibersihkan.');
@@ -4032,7 +4167,39 @@
             if(!tbody) return;
 
             const allAbsensi = state.absensi || [];
-            const kMap = new Map((state.karyawan || []).map(k => [k.id, k]));
+            const kMap = new Map();
+            (state.karyawan || []).forEach(k => {
+                kMap.set(k.id, k);
+                kMap.set(String(k.id), k);
+                if (!isNaN(k.id) && k.id !== null && k.id !== '') {
+                    kMap.set(Number(k.id), k);
+                }
+                if (k.nik) {
+                    kMap.set(k.nik, k);
+                    kMap.set(String(k.nik).toLowerCase(), k);
+                }
+            });
+
+            const getKaryawanAbsen = (a) => {
+                if (!a) return null;
+                const id = a.karyawanId;
+                let found = kMap.get(id) || kMap.get(String(id));
+                if (!found && !isNaN(id) && id !== null && id !== '') {
+                    found = kMap.get(Number(id));
+                }
+                if (!found && a.karyawanNik) {
+                    found = kMap.get(a.karyawanNik) || kMap.get(String(a.karyawanNik).toLowerCase());
+                }
+                if (!found) {
+                    found = (state.karyawan || []).find(x => 
+                        x.id == id || 
+                        String(x.id) === String(id) || 
+                        (x.nik && x.nik === String(id)) ||
+                        (a.karyawanNama && x.nama && x.nama.toLowerCase() === a.karyawanNama.toLowerCase())
+                    );
+                }
+                return found;
+            };
             
             // 1. FILTERING
             const { search, tanggal, status, page, perPage } = window.absensiPagination;
@@ -4041,9 +4208,9 @@
 
             if (search) {
                 filtered = filtered.filter(a => {
-                    const k = kMap.get(a.karyawanId);
-                    const nama = (k ? k.nama : '').toLowerCase();
-                    const nik = (k ? k.nik : '').toLowerCase();
+                    const k = getKaryawanAbsen(a);
+                    const nama = (k ? k.nama : (a.karyawanNama || '')).toLowerCase();
+                    const nik = (k ? (k.nik || '') : (a.karyawanNik || '')).toLowerCase();
                     return nama.includes(search) || nik.includes(search);
                 });
             }
@@ -4086,7 +4253,7 @@
 
             // 4. RENDER ROWS (Satu kali assignment innerHTML)
             const rowsHTML = pageItems.map(a => {
-                const k = kMap.get(a.karyawanId);
+                const k = getKaryawanAbsen(a);
                 const badge = (a.statusMasuk === 'Tepat Waktu' || a.statusMasuk?.includes('Libur')) 
                     ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
                     : 'bg-rose-50 text-rose-700 border border-rose-200';
@@ -4097,7 +4264,10 @@
                         ? `<span class="text-indigo-600 bg-indigo-50 border border-indigo-200 px-2 py-1 rounded-md text-xs font-bold inline-flex items-center"><i class="fas fa-keyboard mr-1"></i>Manual</span>` 
                         : `<span class="text-slate-600 bg-slate-100 border border-slate-200 px-2 py-1 rounded-md text-xs font-bold inline-flex items-center"><i class="fas fa-qrcode mr-1"></i>Kiosk QR</span>`);
 
-                const initial = k ? (k.nama.charAt(0) || 'P').toUpperCase() : '?';
+                const namaTampil = k ? k.nama : (a.karyawanNama || 'Karyawan Non-Aktif');
+                const nikTampil = k ? (k.nik || '-') : (a.karyawanNik || '-');
+                const initial = (namaTampil.charAt(0) || 'P').toUpperCase();
+                const isOrphan = !k;
 
                 return `
                     <tr class="hover:bg-slate-50/80 transition">
@@ -4106,12 +4276,12 @@
                         </td>
                         <td class="py-3.5 px-6">
                             <div class="flex items-center space-x-3">
-                                <div class="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-100 flex items-center justify-center text-xs font-black shrink-0">
+                                <div class="w-8 h-8 rounded-xl ${isOrphan ? 'bg-slate-100 text-slate-500 border border-slate-200' : 'bg-indigo-50 text-indigo-700 border border-indigo-100'} flex items-center justify-center text-xs font-black shrink-0">
                                     ${initial}
                                 </div>
                                 <div>
-                                    <span class="font-bold text-slate-800 block text-sm leading-tight">${k ? k.nama : 'Karyawan Dihapus'}</span>
-                                    <span class="text-[11px] text-slate-400 font-mono">${k ? (k.nik || '-') : '-'}</span>
+                                    <span class="font-bold ${isOrphan ? 'text-slate-600' : 'text-slate-800'} block text-sm leading-tight">${namaTampil}</span>
+                                    <span class="text-[11px] text-slate-400 font-mono">${nikTampil} ${isOrphan ? '<span class="text-[9px] text-amber-700 bg-amber-50 border border-amber-200 px-1 py-0.5 rounded font-sans ml-1 font-semibold">Non-Aktif</span>' : ''}</span>
                                 </div>
                             </div>
                         </td>
@@ -4275,42 +4445,555 @@
             const sorted = [...(state.imk || [])].sort((a,b) => b.id - a.id);
             if(sorted.length === 0) { tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-slate-400">Belum ada riwayat IMK tercatat.</td></tr>'; return; }
             sorted.forEach(i => {
-                const k = state.karyawan.find(x => x.id == i.karyawanId); const statusKembali = i.jamKembali ? `<span class="font-mono">${i.jamKembali}</span>` : `<span class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-xs font-bold animate-pulse">Sedang di Luar</span>`;
-                tbody.innerHTML += `<tr class="hover:bg-slate-50"><td class="py-4 px-6 text-slate-600 whitespace-nowrap">${formatDateID(i.tanggal)}</td><td class="py-4 px-6 font-bold text-slate-800">${k ? k.nama : 'Dihapus'}</td><td class="py-4 px-6 font-mono text-amber-600">${i.jamKeluar}</td><td class="py-4 px-6">${statusKembali}</td><td class="py-4 px-6 font-semibold text-slate-700">${i.durasi}</td><td class="py-4 px-6 text-center"><button onclick="window.confirmDelete('imk', ${i.id})" class="text-red-500 bg-red-50 hover:bg-red-500 hover:text-white p-2 rounded-lg transition"><i class="fas fa-trash"></i></button></td></tr>`;
+                const k = (state.karyawan || []).find(x => x.id == i.karyawanId || String(x.id) === String(i.karyawanId)); 
+                const namaImk = k ? k.nama : (i.karyawanNama || 'Karyawan Non-Aktif');
+                const statusKembali = i.jamKembali ? `<span class="font-mono">${i.jamKembali}</span>` : `<span class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-xs font-bold animate-pulse">Sedang di Luar</span>`;
+                tbody.innerHTML += `<tr class="hover:bg-slate-50"><td class="py-4 px-6 text-slate-600 whitespace-nowrap">${formatDateID(i.tanggal)}</td><td class="py-4 px-6 font-bold text-slate-800">${namaImk} ${!k ? '<span class="text-[10px] text-amber-600 bg-amber-50 border border-amber-200 px-1 py-0.2 rounded font-normal ml-1">Non-Aktif</span>' : ''}</td><td class="py-4 px-6 font-mono text-amber-600">${i.jamKeluar}</td><td class="py-4 px-6">${statusKembali}</td><td class="py-4 px-6 font-semibold text-slate-700">${i.durasi}</td><td class="py-4 px-6 text-center"><button onclick="window.confirmDelete('imk', ${i.id})" class="text-red-500 bg-red-50 hover:bg-red-500 hover:text-white p-2 rounded-lg transition"><i class="fas fa-trash"></i></button></td></tr>`;
             });
         }
 
-        function getCutiHTML() { return `<div class="mb-8"><h1 class="text-3xl font-bold">Cuti & Izin</h1></div><div class="bg-white rounded-2xl border overflow-x-auto shadow-sm"><table class="min-w-full text-sm text-left"><thead class="bg-slate-50 border-b"><tr><th class="py-4 px-6">Tgl Kirim</th><th class="py-4 px-6">Karyawan</th><th class="py-4 px-6">Jenis</th><th class="py-4 px-6">Periode</th><th class="py-4 px-6">Status</th><th class="py-4 px-6 text-center">Aksi</th></tr></thead><tbody id="tabelCutiBody" class="divide-y"></tbody></table></div><div id="modalDetailCuti" class="fixed inset-0 bg-slate-900 bg-opacity-60 hidden z-[100] flex justify-center items-center p-4"><div class="bg-white rounded-3xl shadow-2xl w-full max-w-md"><div class="px-6 py-5 border-b flex justify-between"><h3 class="font-bold text-xl">Detail Pengajuan</h3><button onclick="window.tutupModalDetailCuti()"><i class="fas fa-times"></i></button></div><div class="p-6 bg-slate-50 space-y-4"><div><p class="text-xs font-bold text-slate-400 uppercase">Pemohon</p><p class="font-bold text-lg" id="dc_nama">-</p></div><div class="grid grid-cols-2 gap-4"><div class="bg-white p-3 rounded-xl border"><p class="text-xs font-bold text-slate-400 uppercase">Jenis</p><p class="font-bold text-amber-600" id="dc_jenis">-</p></div><div class="bg-white p-3 rounded-xl border"><p class="text-xs font-bold text-slate-400 uppercase">Status</p><p class="font-bold" id="dc_status">-</p></div></div><div class="bg-white p-3 rounded-xl border"><p class="text-xs font-bold text-slate-400 uppercase">Periode</p><p class="font-semibold" id="dc_periode">-</p></div><div class="bg-white p-3 rounded-xl border"><p class="text-xs font-bold text-slate-400 uppercase">Alasan</p><p class="text-sm" id="dc_alasan">-</p></div></div><div id="dc_action_buttons" class="px-6 py-5 border-t flex-col gap-3 hidden"><button onclick="window.forwardWAKepsek()" class="w-full bg-slate-50 hover:bg-emerald-50 text-emerald-600 border font-bold py-3 rounded-xl mb-1 flex justify-center items-center"><i class="fab fa-whatsapp mr-2 text-xl"></i> Minta ACC Atasan via WA</button><div class="flex gap-3"><button onclick="window.updateStatusCuti('Ditolak')" class="flex-1 bg-red-100 text-red-700 font-bold py-3 rounded-xl">Tolak</button><button onclick="window.updateStatusCuti('Disetujui')" class="flex-1 bg-emerald-500 text-white font-bold py-3 rounded-xl">Setujui</button></div></div></div></div>`; }
-        function renderCutiTable() {
-            const tbody = document.getElementById('tabelCutiBody'); if(!tbody) return; tbody.innerHTML = '';
-            const sorted = [...(state.cuti||[])].sort((a,b) => (b.tanggalPengajuan ? new Date(b.tanggalPengajuan).getTime() : b.id) - (a.tanggalPengajuan ? new Date(a.tanggalPengajuan).getTime() : a.id));
-            if(sorted.length === 0) return tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8">Kosong</td></tr>';
-            sorted.forEach(c => {
-                const k = state.karyawan.find(x => x.id == c.karyawanId); const bs = c.status === 'Menunggu' ? 'bg-amber-100 text-amber-700' : (c.status === 'Disetujui' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700');
-                tbody.innerHTML += `<tr><td class="py-4 px-6">${c.tanggalPengajuan ? formatDateID(c.tanggalPengajuan) : '-'}</td><td class="py-4 px-6 font-bold">${k?k.nama:'Dihapus'}</td><td class="py-4 px-6">${c.jenis}</td><td class="py-4 px-6 text-sm whitespace-nowrap">${formatDateID(c.mulai)} - ${formatDateID(c.selesai)}</td><td class="py-4 px-6"><span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase ${bs}">${c.status}</span></td><td class="py-4 px-6 text-center"><button onclick="window.bukaModalDetailCuti(${c.id})" class="text-blue-500 bg-blue-50 p-2.5 rounded-lg"><i class="fas fa-eye"></i></button></td></tr>`;
-            });
+        window.cutiPagination = {
+            page: 1,
+            perPage: 25,
+            search: '',
+            tanggal: '',
+            jenis: '',
+            status: ''
+        };
+
+        window.gantiHalamanCuti = function(halaman) {
+            window.cutiPagination.page = halaman;
+            renderCutiTable();
+        };
+
+        window.gantiPerPageCuti = function(perPage) {
+            window.cutiPagination.perPage = parseInt(perPage, 10) || 25;
+            window.cutiPagination.page = 1;
+            renderCutiTable();
+        };
+
+        window.filterCutiSearch = function(val) {
+            window.cutiPagination.search = (val || '').toLowerCase().trim();
+            window.cutiPagination.page = 1;
+            renderCutiTable();
+        };
+
+        window.filterCutiTanggal = function(val) {
+            window.cutiPagination.tanggal = val || '';
+            window.cutiPagination.page = 1;
+            renderCutiTable();
+        };
+
+        window.filterCutiJenis = function(val) {
+            window.cutiPagination.jenis = val || '';
+            window.cutiPagination.page = 1;
+            renderCutiTable();
+        };
+
+        window.filterCutiStatus = function(val) {
+            window.cutiPagination.status = val || '';
+            window.cutiPagination.page = 1;
+            renderCutiTable();
+        };
+
+        window.resetFilterCuti = function() {
+            window.cutiPagination.search = '';
+            window.cutiPagination.tanggal = '';
+            window.cutiPagination.jenis = '';
+            window.cutiPagination.status = '';
+            window.cutiPagination.page = 1;
+            const sInp = document.getElementById('filterCutiSearch'); if(sInp) sInp.value = '';
+            const tInp = document.getElementById('filterCutiTanggal'); if(tInp) tInp.value = '';
+            const jInp = document.getElementById('filterCutiJenis'); if(jInp) jInp.value = '';
+            const stInp = document.getElementById('filterCutiStatus'); if(stInp) stInp.value = '';
+            renderCutiTable();
+        };
+
+        function getCutiHTML() {
+            const allCount = (state.cuti || []).length;
+            const menungguCount = (state.cuti || []).filter(c => c.status === 'Menunggu').length;
+
+            return `
+                <div class="space-y-6 mb-8">
+                    <!-- HEADER & ACTION BUTTONS -->
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <div class="flex items-center gap-3">
+                                <h1 class="text-3xl font-bold text-slate-800 tracking-tight">Cuti & Izin</h1>
+                                <span class="bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-bold px-2.5 py-1 rounded-full">
+                                    ${allCount} Total Data
+                                </span>
+                                ${menungguCount > 0 ? `
+                                <span class="bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold px-2.5 py-1 rounded-full flex items-center animate-pulse">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5"></span>${menungguCount} Menunggu ACC
+                                </span>` : ''}
+                            </div>
+                            <p class="text-xs text-slate-500 mt-1">Sistem pagination cepat & pencarian instan (25 data per halaman).</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="window.bukaModalPengajuanCuti()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2.5 rounded-xl shadow-sm text-xs sm:text-sm transition flex items-center">
+                                <i class="fas fa-plus mr-2"></i>Tambah Pengajuan
+                            </button>
+                            <button onclick="window.bukaModalHapusTanggal('cuti')" class="bg-amber-500 hover:bg-amber-600 text-white font-semibold px-4 py-2.5 rounded-xl shadow-sm text-xs sm:text-sm transition flex items-center">
+                                <i class="fas fa-calendar-times mr-2"></i>Hapus per Tanggal
+                            </button>
+                            <button onclick="window.confirmDelete('semua_cuti', 'all')" class="bg-rose-500 hover:bg-rose-600 text-white font-semibold px-4 py-2.5 rounded-xl shadow-sm text-xs sm:text-sm transition flex items-center">
+                                <i class="fas fa-trash-alt mr-2"></i>Kosongkan
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- FILTER & SEARCH TOOLBAR -->
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+                        <!-- SEARCH INPUT -->
+                        <div class="relative flex-1">
+                            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                <i class="fas fa-search text-xs"></i>
+                            </span>
+                            <input type="text" id="filterCutiSearch" value="${window.cutiPagination.search || ''}" oninput="window.filterCutiSearch(this.value)" placeholder="Cari nama karyawan / NIK / alasan..." class="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
+                        </div>
+
+                        <div class="flex flex-wrap items-center gap-2.5">
+                            <!-- FILTER TANGGAL -->
+                            <div class="relative">
+                                <input type="date" id="filterCutiTanggal" value="${window.cutiPagination.tanggal || ''}" onchange="window.filterCutiTanggal(this.value)" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 transition" title="Filter Tanggal">
+                            </div>
+
+                            <!-- FILTER JENIS -->
+                            <select id="filterCutiJenis" onchange="window.filterCutiJenis(this.value)" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 font-medium outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                                <option value="" ${!window.cutiPagination.jenis ? 'selected' : ''}>Semua Jenis</option>
+                                <option value="Cuti" ${window.cutiPagination.jenis === 'Cuti' ? 'selected' : ''}>Cuti Tahunan</option>
+                                <option value="Izin" ${window.cutiPagination.jenis === 'Izin' ? 'selected' : ''}>Izin (Pribadi)</option>
+                                <option value="Sakit" ${window.cutiPagination.jenis === 'Sakit' ? 'selected' : ''}>Sakit</option>
+                            </select>
+
+                            <!-- FILTER STATUS -->
+                            <select id="filterCutiStatus" onchange="window.filterCutiStatus(this.value)" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 font-medium outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                                <option value="" ${!window.cutiPagination.status ? 'selected' : ''}>Semua Status</option>
+                                <option value="Menunggu" ${window.cutiPagination.status === 'Menunggu' ? 'selected' : ''}>Menunggu</option>
+                                <option value="Disetujui" ${window.cutiPagination.status === 'Disetujui' ? 'selected' : ''}>Disetujui</option>
+                                <option value="Ditolak" ${window.cutiPagination.status === 'Ditolak' ? 'selected' : ''}>Ditolak</option>
+                            </select>
+
+                            <!-- PER PAGE SELECTOR -->
+                            <div class="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+                                <span class="hidden sm:inline">Tampilkan:</span>
+                                <select id="filterCutiPerPage" onchange="window.gantiPerPageCuti(this.value)" class="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs text-slate-800 font-bold outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                                    <option value="25" ${window.cutiPagination.perPage === 25 ? 'selected' : ''}>25 / hal</option>
+                                    <option value="50" ${window.cutiPagination.perPage === 50 ? 'selected' : ''}>50 / hal</option>
+                                    <option value="100" ${window.cutiPagination.perPage === 100 ? 'selected' : ''}>100 / hal</option>
+                                </select>
+                            </div>
+
+                            <!-- RESET FILTER -->
+                            <button type="button" onclick="window.resetFilterCuti()" class="px-3 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition flex items-center" title="Reset Filter">
+                                <i class="fas fa-rotate-left mr-1.5 text-[10px]"></i> Reset
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TABLE CARD -->
+                <div class="bg-white rounded-3xl border border-slate-200/90 overflow-hidden shadow-sm">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full text-sm text-left">
+                            <thead class="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                <tr>
+                                    <th class="py-4 px-6">Tgl Kirim</th>
+                                    <th class="py-4 px-6">Karyawan</th>
+                                    <th class="py-4 px-6">Jenis</th>
+                                    <th class="py-4 px-6">Periode / Durasi</th>
+                                    <th class="py-4 px-6">Alasan</th>
+                                    <th class="py-4 px-6">Status</th>
+                                    <th class="py-4 px-6 text-center">Tindakan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabelCutiBody" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+
+                    <!-- PAGINATION FOOTER -->
+                    <div id="cutiPaginationContainer" class="p-4 sm:p-5 border-t border-slate-200 bg-slate-50/70 flex flex-col sm:flex-row items-center justify-between gap-3">
+                    </div>
+                </div>
+
+                <!-- MODAL DETAIL CUTI & IZIN -->
+                <div id="modalDetailCuti" class="fixed inset-0 bg-slate-900 bg-opacity-70 hidden z-[200] flex justify-center items-center p-4 backdrop-blur-sm transition-opacity duration-300 opacity-0">
+                    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden transform scale-95 transition-all duration-300" id="modalDetailCutiContent">
+                        <div class="px-6 py-5 border-b bg-slate-50 flex justify-between items-center">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center text-sm font-black">
+                                    <i class="fas fa-envelope-open-text"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-base sm:text-lg text-slate-800 leading-tight">Detail Pengajuan Izin/Cuti</h3>
+                                    <p class="text-[11px] text-slate-400">Verifikasi & tanggapan persetujuan atasan</p>
+                                </div>
+                            </div>
+                            <button onclick="window.tutupModalDetailCuti()" class="text-slate-400 hover:text-rose-500 transition p-1.5 rounded-xl hover:bg-slate-100"><i class="fas fa-times text-lg"></i></button>
+                        </div>
+                        <div class="p-6 bg-slate-50/60 space-y-3.5 text-left">
+                            <div class="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs">
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Pemohon</p>
+                                <div class="flex items-center gap-3">
+                                    <div id="dc_avatar" class="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-200 text-indigo-700 font-black text-sm flex items-center justify-center shrink-0">
+                                        P
+                                    </div>
+                                    <div>
+                                        <p class="font-bold text-base text-slate-800 leading-tight" id="dc_nama">-</p>
+                                        <p class="text-xs text-slate-500 font-mono mt-0.5" id="dc_nik_jabatan">-</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-2xs">
+                                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Jenis Pengajuan</p>
+                                    <div id="dc_jenis_badge" class="font-bold text-sm text-slate-800">-</div>
+                                </div>
+                                <div class="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-2xs">
+                                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Status Verifikasi</p>
+                                    <div id="dc_status_badge" class="font-bold text-sm text-slate-800">-</div>
+                                </div>
+                            </div>
+
+                            <div class="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-2xs">
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Periode & Durasi</p>
+                                <div class="flex items-center justify-between">
+                                    <p class="font-bold text-slate-800 text-xs sm:text-sm" id="dc_periode">-</p>
+                                    <span id="dc_durasi" class="bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-bold px-2.5 py-0.5 rounded-lg">-</span>
+                                </div>
+                            </div>
+
+                            <div class="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-2xs">
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Alasan / Catatan Pemohon</p>
+                                <p class="text-xs sm:text-sm text-slate-700 bg-slate-50 p-3 rounded-xl border border-slate-200/70 italic leading-relaxed" id="dc_alasan">-</p>
+                            </div>
+                        </div>
+                        
+                        <div class="px-6 py-4 border-t bg-white flex flex-col gap-2.5">
+                            <button onclick="window.forwardWAKepsek()" class="w-full bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 font-bold py-2.5 px-4 rounded-xl text-xs sm:text-sm transition flex items-center justify-center shadow-2xs">
+                                <i class="fab fa-whatsapp mr-2 text-base text-emerald-600"></i> Minta ACC Atasan via WA
+                            </button>
+                            <button id="dc_btn_wa_karyawan" onclick="window.kirimWAKaryawanCuti()" class="w-full bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-300 font-bold py-2.5 px-4 rounded-xl text-xs sm:text-sm transition flex items-center justify-center shadow-2xs">
+                                <i class="fab fa-whatsapp mr-2 text-base text-emerald-600"></i> Kirim Status ke WA Pemohon
+                            </button>
+                            <div id="dc_action_buttons" class="flex gap-2.5">
+                                <button onclick="window.updateStatusCuti('Ditolak')" class="flex-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold py-2.5 rounded-xl text-xs sm:text-sm transition flex items-center justify-center">
+                                    <i class="fas fa-times-circle mr-1.5"></i> Tolak
+                                </button>
+                                <button onclick="window.updateStatusCuti('Disetujui')" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-xs sm:text-sm shadow-sm transition flex items-center justify-center">
+                                    <i class="fas fa-check-circle mr-1.5"></i> Setujui
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
         }
-        
+
+        function renderCutiTable() {
+            const tbody = document.getElementById('tabelCutiBody');
+            const pageContainer = document.getElementById('cutiPaginationContainer');
+            if(!tbody) return;
+
+            const allCuti = state.cuti || [];
+            
+            // Buat Map serbaguna (Number, String, NIK) untuk pencarian instan & aman
+            const kMap = new Map();
+            (state.karyawan || []).forEach(k => {
+                kMap.set(k.id, k);
+                kMap.set(String(k.id), k);
+                if (!isNaN(k.id) && k.id !== null && k.id !== '') {
+                    kMap.set(Number(k.id), k);
+                }
+                if (k.nik) {
+                    kMap.set(k.nik, k);
+                    kMap.set(String(k.nik).toLowerCase(), k);
+                }
+            });
+
+            const jMap = new Map();
+            (state.jabatan || []).forEach(j => {
+                jMap.set(j.id, j);
+                jMap.set(String(j.id), j);
+                if (!isNaN(j.id) && j.id !== null && j.id !== '') {
+                    jMap.set(Number(j.id), j);
+                }
+            });
+
+            // Resolver karyawan yang tahan banting (string vs integer vs NIK vs nama)
+            const getKaryawanCuti = (item) => {
+                if (!item) return null;
+                const id = item.karyawanId;
+                let found = kMap.get(id) || kMap.get(String(id));
+                if (!found && !isNaN(id) && id !== null && id !== '') {
+                    found = kMap.get(Number(id));
+                }
+                if (!found && item.karyawanNik) {
+                    found = kMap.get(item.karyawanNik) || kMap.get(String(item.karyawanNik).toLowerCase());
+                }
+                if (!found) {
+                    found = (state.karyawan || []).find(x => 
+                        x.id == id || 
+                        String(x.id) === String(id) || 
+                        (x.nik && x.nik === String(id)) ||
+                        (item.karyawanNama && x.nama && x.nama.toLowerCase() === item.karyawanNama.toLowerCase()) ||
+                        (item.nama && x.nama && x.nama.toLowerCase() === item.nama.toLowerCase())
+                    );
+                }
+                return found;
+            };
+
+            // 1. FILTERING
+            const { search, tanggal, jenis, status, page, perPage } = window.cutiPagination;
+
+            let filtered = allCuti;
+
+            if (search) {
+                filtered = filtered.filter(c => {
+                    const k = getKaryawanCuti(c);
+                    const nama = (k ? k.nama : (c.karyawanNama || c.nama || '')).toLowerCase();
+                    const nik = (k ? (k.nik || '') : (c.karyawanNik || '')).toLowerCase();
+                    const alasan = (c.alasan || '').toLowerCase();
+                    return nama.includes(search) || nik.includes(search) || alasan.includes(search);
+                });
+            }
+
+            if (tanggal) {
+                filtered = filtered.filter(c => {
+                    const tglP = c.tanggalPengajuan ? c.tanggalPengajuan.split('T')[0] : '';
+                    return tglP === tanggal || (c.mulai <= tanggal && c.selesai >= tanggal);
+                });
+            }
+
+            if (jenis) {
+                filtered = filtered.filter(c => (c.jenis || '').toLowerCase().includes(jenis.toLowerCase()));
+            }
+
+            if (status) {
+                filtered = filtered.filter(c => (c.status || '').toLowerCase() === status.toLowerCase());
+            }
+
+            // 2. SORTING (Paling baru di atas)
+            const sorted = [...filtered].sort((a, b) => {
+                const dateA = a.tanggalPengajuan ? new Date(a.tanggalPengajuan).getTime() : a.id;
+                const dateB = b.tanggalPengajuan ? new Date(b.tanggalPengajuan).getTime() : b.id;
+                return dateB - dateA;
+            });
+
+            const totalRecords = sorted.length;
+            const totalPages = Math.max(1, Math.ceil(totalRecords / perPage));
+            const currentPage = Math.min(Math.max(1, page), totalPages);
+            window.cutiPagination.page = currentPage;
+
+            // 3. PAGINATION SLICE (25 per halaman sesuai pengaturan)
+            const startIndex = (currentPage - 1) * perPage;
+            const endIndex = Math.min(startIndex + perPage, totalRecords);
+            const pageItems = sorted.slice(startIndex, endIndex);
+
+            if (totalRecords === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="py-12 text-center text-slate-400">
+                            <div class="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-2 text-lg">
+                                <i class="fas fa-inbox"></i>
+                            </div>
+                            <span class="font-bold text-slate-600 block text-sm">Tidak ada data cuti & izin ditemukan</span>
+                            <span class="text-xs text-slate-400 mt-0.5">Coba ubah kata kunci pencarian atau reset filter.</span>
+                        </td>
+                    </tr>
+                `;
+                if (pageContainer) pageContainer.innerHTML = '';
+                return;
+            }
+
+            // 4. RENDER ROWS
+            const rowsHTML = pageItems.map(c => {
+                const k = getKaryawanCuti(c);
+                const j = k ? (jMap.get(k.jabatanId) || (state.jabatan || []).find(x => x.id == k.jabatanId)) : null;
+                const namaTampil = k ? k.nama : (c.karyawanNama || c.nama || 'Karyawan Non-Aktif');
+                const nikTampil = k ? (k.nik || '-') : (c.karyawanNik || '-');
+                const jabatanTampil = j ? j.nama : (c.jabatanNama || (k ? '' : 'Arsip'));
+                const initial = (namaTampil.charAt(0) || 'P').toUpperCase();
+                const isOrphan = !k;
+
+                let statusBadge = '';
+                if (c.status === 'Disetujui') {
+                    statusBadge = '<span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider inline-flex items-center bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fas fa-check-circle mr-1"></i>Disetujui</span>';
+                } else if (c.status === 'Ditolak') {
+                    statusBadge = '<span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider inline-flex items-center bg-rose-50 text-rose-700 border border-rose-200"><i class="fas fa-times-circle mr-1"></i>Ditolak</span>';
+                } else {
+                    statusBadge = '<span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider inline-flex items-center bg-amber-50 text-amber-700 border border-amber-200 animate-pulse"><i class="fas fa-hourglass-half mr-1"></i>Menunggu</span>';
+                }
+
+                let jenisBadge = '';
+                const jLower = (c.jenis || '').toLowerCase();
+                if (jLower.includes('sakit')) {
+                    jenisBadge = '<span class="bg-rose-50 text-rose-700 border border-rose-200 px-2 py-0.5 rounded-lg text-xs font-bold inline-flex items-center"><i class="fas fa-notes-medical mr-1 text-[11px]"></i>Sakit</span>';
+                } else if (jLower.includes('cuti')) {
+                    jenisBadge = '<span class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded-lg text-xs font-bold inline-flex items-center"><i class="fas fa-calendar-alt mr-1 text-[11px]"></i>Cuti</span>';
+                } else {
+                    jenisBadge = '<span class="bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-lg text-xs font-bold inline-flex items-center"><i class="fas fa-clipboard-user mr-1 text-[11px]"></i>Izin</span>';
+                }
+
+                // Kalkulasi Durasi Hari
+                let durasiText = '1 Hari';
+                if (c.mulai && c.selesai) {
+                    const diffMs = new Date(c.selesai) - new Date(c.mulai);
+                    const diffDays = Math.max(1, Math.round(diffMs / (1000 * 60 * 60 * 24)) + 1);
+                    durasiText = `${diffDays} Hari`;
+                }
+
+                const tglPengajuanFormatted = c.tanggalPengajuan ? formatDateID(c.tanggalPengajuan.split('T')[0]) : (c.mulai ? formatDateID(c.mulai) : '-');
+
+                return `
+                    <tr class="hover:bg-slate-50/80 transition">
+                        <td class="py-3.5 px-6 text-slate-600 font-medium whitespace-nowrap">
+                            ${tglPengajuanFormatted}
+                        </td>
+                        <td class="py-3.5 px-6">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 rounded-xl ${isOrphan ? 'bg-slate-100 text-slate-500 border border-slate-200' : 'bg-amber-50 text-amber-700 border border-amber-200'} flex items-center justify-center text-xs font-black shrink-0">
+                                    ${initial}
+                                </div>
+                                <div>
+                                    <span class="font-bold ${isOrphan ? 'text-slate-600' : 'text-slate-800'} block text-sm leading-tight">${namaTampil}</span>
+                                    <span class="text-[11px] text-slate-400 font-mono">${nikTampil} ${jabatanTampil ? '• ' + jabatanTampil : ''} ${isOrphan ? '<span class="text-[9px] text-amber-700 bg-amber-50 border border-amber-200 px-1 py-0.5 rounded font-sans ml-1 font-semibold">Non-Aktif</span>' : ''}</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="py-3.5 px-6 whitespace-nowrap">
+                            ${jenisBadge}
+                        </td>
+                        <td class="py-3.5 px-6 whitespace-nowrap">
+                            <div class="font-medium text-xs text-slate-700">${c.mulai ? formatDateID(c.mulai) : '-'} s.d ${c.selesai ? formatDateID(c.selesai) : '-'}</div>
+                            <span class="text-[10px] text-indigo-600 font-bold bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded">${durasiText}</span>
+                        </td>
+                        <td class="py-3.5 px-6 text-xs text-slate-600 max-w-xs truncate" title="${c.alasan || '-'}">
+                            ${c.alasan || '-'}
+                        </td>
+                        <td class="py-3.5 px-6 whitespace-nowrap">
+                            ${statusBadge}
+                        </td>
+                        <td class="py-3.5 px-6 text-center whitespace-nowrap">
+                            <button onclick="window.bukaModalDetailCuti(${c.id})" class="text-blue-600 bg-blue-50 hover:bg-blue-600 hover:text-white p-2 rounded-xl transition mr-1.5 shadow-2xs" title="Lihat Detail & Konfirmasi">
+                                <i class="fas fa-eye text-xs"></i>
+                            </button>
+                            <button onclick="window.confirmDelete('cuti', ${c.id})" class="text-rose-600 bg-rose-50 hover:bg-rose-600 hover:text-white p-2 rounded-xl transition shadow-2xs" title="Hapus Catatan">
+                                <i class="fas fa-trash text-xs"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            tbody.innerHTML = rowsHTML;
+
+            // 5. RENDER PAGINATION FOOTER
+            if (pageContainer) {
+                let paginationButtonsHTML = '';
+                
+                // Prev button
+                paginationButtonsHTML += `
+                    <button type="button" onclick="window.gantiHalamanCuti(${currentPage - 1})" ${currentPage === 1 ? 'disabled class="px-3 py-1.5 text-xs rounded-xl border border-slate-200 text-slate-300 bg-slate-50 cursor-not-allowed"' : 'class="px-3 py-1.5 text-xs rounded-xl border border-slate-200 text-slate-700 bg-white hover:bg-slate-100 font-bold transition shadow-2xs"'}>
+                        <i class="fas fa-chevron-left mr-1"></i> Prev
+                    </button>
+                `;
+
+                // Page numbers (Windowed)
+                let startPage = Math.max(1, currentPage - 2);
+                let endPage = Math.min(totalPages, currentPage + 2);
+
+                if (startPage > 1) {
+                    paginationButtonsHTML += `
+                        <button type="button" onclick="window.gantiHalamanCuti(1)" class="w-8 h-8 text-xs rounded-xl border border-slate-200 text-slate-700 bg-white hover:bg-slate-100 font-semibold transition">1</button>
+                    `;
+                    if (startPage > 2) {
+                        paginationButtonsHTML += `<span class="px-1 text-slate-400 text-xs">...</span>`;
+                    }
+                }
+
+                for (let p = startPage; p <= endPage; p++) {
+                    const isActive = p === currentPage;
+                    paginationButtonsHTML += `
+                        <button type="button" onclick="window.gantiHalamanCuti(${p})" class="w-8 h-8 text-xs rounded-xl font-bold transition ${isActive ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/30' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'}">
+                            ${p}
+                        </button>
+                    `;
+                }
+
+                if (endPage < totalPages) {
+                    if (endPage < totalPages - 1) {
+                        paginationButtonsHTML += `<span class="px-1 text-slate-400 text-xs">...</span>`;
+                    }
+                    paginationButtonsHTML += `
+                        <button type="button" onclick="window.gantiHalamanCuti(${totalPages})" class="w-8 h-8 text-xs rounded-xl border border-slate-200 text-slate-700 bg-white hover:bg-slate-100 font-semibold transition">${totalPages}</button>
+                    `;
+                }
+
+                // Next button
+                paginationButtonsHTML += `
+                    <button type="button" onclick="window.gantiHalamanCuti(${currentPage + 1})" ${currentPage === totalPages ? 'disabled class="px-3 py-1.5 text-xs rounded-xl border border-slate-200 text-slate-300 bg-slate-50 cursor-not-allowed"' : 'class="px-3 py-1.5 text-xs rounded-xl border border-slate-200 text-slate-700 bg-white hover:bg-slate-100 font-bold transition shadow-2xs"'}>
+                        Next <i class="fas fa-chevron-right ml-1"></i>
+                    </button>
+                `;
+
+                pageContainer.innerHTML = `
+                    <div class="text-xs text-slate-500 font-medium">
+                        Menampilkan <b>${startIndex + 1} - ${endIndex}</b> dari <b>${totalRecords}</b> data cuti & izin
+                        <span class="text-slate-400 ml-1.5">(Hal. ${currentPage} dari ${totalPages})</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        ${paginationButtonsHTML}
+                    </div>
+                `;
+            }
+        }
+
         window.bukaModalPengajuanCuti = async function() {
-            if(state.karyawan.length === 0) return showToast('Peringatan', 'Belum ada data karyawan.', 'warning');
+            if(!state.karyawan || state.karyawan.length === 0) return showToast('Peringatan', 'Belum ada data karyawan.', 'warning');
             const pcK = document.getElementById('pc_karyawan');
-            if (pcK) pcK.innerHTML = '<option value="">-- Pilih Nama --</option>' + state.karyawan.map(k => `<option value="${k.id}">${k.nik} - ${k.nama}</option>`).join('');
+            if (pcK) {
+                const sortedK = [...state.karyawan].sort((a,b) => (a.nama || '').localeCompare(b.nama || ''));
+                pcK.innerHTML = '<option value="">-- Pilih Karyawan --</option>' + sortedK.map(k => `<option value="${k.id}">${k.nik || '-'} - ${k.nama}</option>`).join('');
+            }
             const form = document.getElementById('formPengajuanCuti');
             if (form) form.reset(); 
             
-            await stopScanner(); // Hentikan kamera agar performa terjaga saat ketik
-            const modal = document.getElementById('modalPengajuanCuti'); const content = document.getElementById('modalPengajuanCutiContent');
+            const today = new Date();
+            const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            const pcM = document.getElementById('pc_mulai'); if(pcM) pcM.value = dateStr;
+            const pcS = document.getElementById('pc_selesai'); if(pcS) pcS.value = dateStr;
+
+            if (state.currentView === 'scanWajah' && typeof stopScanner === 'function') {
+                await stopScanner(); // Hentikan kamera jika dibuka dari layar kiosk
+            }
+            
+            const modal = document.getElementById('modalPengajuanCuti'); 
+            const content = document.getElementById('modalPengajuanCutiContent');
             if (!modal) return;
-            modal.classList.remove('hidden'); setTimeout(() => { modal.classList.add('opacity-100'); if(content) { content.classList.remove('scale-95'); content.classList.add('scale-100'); } }, 10);
+            modal.classList.remove('hidden'); 
+            setTimeout(() => { 
+                modal.classList.add('opacity-100'); 
+                if(content) { content.classList.remove('scale-95'); content.classList.add('scale-100'); } 
+            }, 10);
         };
-        
+
         window.tutupModalPengajuanCuti = function() { 
-            const modal = document.getElementById('modalPengajuanCuti'); const content = document.getElementById('modalPengajuanCutiContent');
+            const modal = document.getElementById('modalPengajuanCuti'); 
+            const content = document.getElementById('modalPengajuanCutiContent');
             if (!modal) return;
-            modal.classList.remove('opacity-100'); if(content) { content.classList.remove('scale-100'); content.classList.add('scale-95'); }
-            setTimeout(() => { modal.classList.add('hidden'); window.startScanner(); }, 300); // Nyalakan kembali
+            modal.classList.remove('opacity-100'); 
+            if(content) { content.classList.remove('scale-100'); content.classList.add('scale-95'); }
+            setTimeout(() => { 
+                modal.classList.add('hidden'); 
+                if (state.currentView === 'scanWajah' && typeof window.startScanner === 'function') {
+                    window.startScanner(); 
+                }
+            }, 300);
         };
-        
+
         window.simpanPengajuanCuti = function() {
             const pcK = document.getElementById('pc_karyawan');
             const pcJ = document.getElementById('pc_jenis');
@@ -4318,72 +5001,488 @@
             const pcS = document.getElementById('pc_selesai');
             const pcA = document.getElementById('pc_alasan');
             if (!pcK || !pcJ || !pcM || !pcS || !pcA) return;
-            const d = { karyawanId: pcK.value, jenis: pcJ.value, mulai: pcM.value, selesai: pcS.value, alasan: pcA.value };
-            if(!d.karyawanId || !d.mulai || !d.selesai || !d.alasan) return showToast('Error', 'Lengkapi form!', 'error');
+
+            const rawKaryawanId = pcK.value;
+            if(!rawKaryawanId || !pcM.value || !pcS.value || !pcA.value.trim()) {
+                return showToast('Error', 'Lengkapi seluruh data formulir!', 'error');
+            }
+            if(pcS.value < pcM.value) {
+                return showToast('Error', 'Tanggal selesai tidak boleh sebelum tanggal mulai!', 'error');
+            }
+
+            // Temukan profil karyawan yang valid
+            const targetKaryawan = (state.karyawan || []).find(x => 
+                x.id == rawKaryawanId || 
+                String(x.id) === String(rawKaryawanId) || 
+                (x.nik && x.nik === String(rawKaryawanId))
+            );
+            if(!targetKaryawan) {
+                return showToast('Error', 'Karyawan yang dipilih tidak terdaftar di sistem!', 'error');
+            }
+
+            const targetJabatan = (state.jabatan || []).find(j => j.id == targetKaryawan.jabatanId);
+            
             if(!state.cuti) state.cuti = [];
-            state.cuti.push({ id: Date.now(), karyawanId: parseInt(d.karyawanId,10), tanggalPengajuan: new Date().toISOString(), ...d, status: 'Menunggu' });
-            saveData(); window.tutupModalPengajuanCuti(); showToast('Terkirim', 'Pengajuan masuk.'); window.playSound('notif_admin');
+            const newCuti = { 
+                id: Date.now(), 
+                karyawanId: targetKaryawan.id,
+                karyawanNama: targetKaryawan.nama,
+                karyawanNik: targetKaryawan.nik || '',
+                jabatanNama: targetJabatan ? targetJabatan.nama : '',
+                jenis: pcJ.value,
+                mulai: pcM.value,
+                selesai: pcS.value,
+                alasan: pcA.value.trim(),
+                tanggalPengajuan: new Date().toISOString(), 
+                status: 'Menunggu' 
+            };
+            
+            state.cuti.push(newCuti);
+            saveData(); 
+            window.tutupModalPengajuanCuti(); 
+            showToast('Sukses', `Pengajuan ${newCuti.jenis} atas nama ${targetKaryawan.nama} berhasil disimpan`); 
+            if(typeof window.playSound === 'function') window.playSound('notif_admin');
+            if (state.currentView === 'cuti') {
+                renderCutiTable();
+            } else if (typeof window.renderMainContent === 'function') {
+                window.renderMainContent();
+            }
         };
-        
+
         let idCutiAktif = null;
         window.bukaModalDetailCuti = function(id) {
-            idCutiAktif = id; const c = state.cuti.find(x => x.id === id); if(!c) return; const k = state.karyawan.find(x => x.id == c.karyawanId);
-            const dcNama = document.getElementById('dc_nama'); if (dcNama) dcNama.innerText = k ? k.nama : '-';
-            const dcJenis = document.getElementById('dc_jenis'); if (dcJenis) dcJenis.innerText = c.jenis;
-            const dcStatus = document.getElementById('dc_status'); if (dcStatus) dcStatus.innerText = c.status;
-            const dcPeriode = document.getElementById('dc_periode'); if (dcPeriode) dcPeriode.innerText = `${formatDateID(c.mulai)} - ${formatDateID(c.selesai)}`;
-            const dcAlasan = document.getElementById('dc_alasan'); if (dcAlasan) dcAlasan.innerText = c.alasan;
-            const b = document.getElementById('dc_action_buttons'); 
-            if (b) {
-                if(c.status === 'Menunggu') { b.classList.remove('hidden'); b.classList.add('flex'); } else { b.classList.add('hidden'); b.classList.remove('flex'); }
+            idCutiAktif = id; 
+            const c = (state.cuti || []).find(x => x.id === id); 
+            if(!c) return; 
+
+            // Cari karyawan dengan multi-field matching
+            const k = (state.karyawan || []).find(x => 
+                x.id == c.karyawanId || 
+                String(x.id) === String(c.karyawanId) || 
+                (x.nik && x.nik === String(c.karyawanId)) ||
+                (c.karyawanNik && x.nik && x.nik === c.karyawanNik) ||
+                (c.karyawanNama && x.nama && x.nama.toLowerCase() === c.karyawanNama.toLowerCase()) ||
+                (c.nama && x.nama && x.nama.toLowerCase() === c.nama.toLowerCase())
+            );
+            const j = k ? (state.jabatan || []).find(x => x.id == k.jabatanId) : null;
+            
+            const namaTampil = k ? k.nama : (c.karyawanNama || c.nama || 'Karyawan Non-Aktif');
+            const nikTampil = k ? (k.nik || '-') : (c.karyawanNik || '-');
+            const jabatanTampil = j ? j.nama : (c.jabatanNama || (k ? '' : 'Arsip'));
+
+            const dcNama = document.getElementById('dc_nama'); 
+            if (dcNama) dcNama.innerText = namaTampil;
+            
+            const dcNikJabatan = document.getElementById('dc_nik_jabatan');
+            if (dcNikJabatan) dcNikJabatan.innerText = `${nikTampil} ${jabatanTampil ? '• ' + jabatanTampil : ''}${!k ? ' (Non-Aktif / Terhapus)' : ''}`;
+
+            const dcAvatar = document.getElementById('dc_avatar');
+            if (dcAvatar) dcAvatar.innerText = (namaTampil.charAt(0) || 'P').toUpperCase();
+
+            const dcJenisBadge = document.getElementById('dc_jenis_badge');
+            if (dcJenisBadge) {
+                const jLower = (c.jenis || '').toLowerCase();
+                let bCls = 'bg-amber-50 text-amber-800 border-amber-200';
+                if (jLower.includes('cuti')) bCls = 'bg-indigo-50 text-indigo-800 border-indigo-200';
+                else if (jLower.includes('sakit')) bCls = 'bg-rose-50 text-rose-800 border-rose-200';
+                dcJenisBadge.innerHTML = `<span class="${bCls} border px-2.5 py-1 rounded-lg text-xs font-bold inline-flex items-center">${c.jenis || 'Izin'}</span>`;
             }
+
+            const dcStatusBadge = document.getElementById('dc_status_badge');
+            if (dcStatusBadge) {
+                const sColor = c.status === 'Disetujui' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : (c.status === 'Ditolak' ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-amber-50 text-amber-700 border-amber-200');
+                dcStatusBadge.innerHTML = `<span class="px-2.5 py-1 rounded-lg text-xs font-bold border ${sColor}">${c.status}</span>`;
+            }
+
+            const dcPeriode = document.getElementById('dc_periode'); 
+            if (dcPeriode) dcPeriode.innerText = `${formatDateID(c.mulai)} s.d ${formatDateID(c.selesai)}`;
+            
+            const dcDurasi = document.getElementById('dc_durasi');
+            if (dcDurasi) {
+                let diffDays = 1;
+                if (c.mulai && c.selesai) {
+                    const diffMs = new Date(c.selesai) - new Date(c.mulai);
+                    diffDays = Math.max(1, Math.round(diffMs / (1000 * 60 * 60 * 24)) + 1);
+                }
+                dcDurasi.innerText = `${diffDays} Hari`;
+            }
+
+            const dcAlasan = document.getElementById('dc_alasan'); 
+            if (dcAlasan) dcAlasan.innerText = c.alasan || '-';
+
+            // Update tombol WhatsApp pemohon
+            const btnWaKaryawan = document.getElementById('dc_btn_wa_karyawan');
+            if (btnWaKaryawan) {
+                if (k && k.noWa) {
+                    btnWaKaryawan.classList.remove('hidden');
+                    btnWaKaryawan.innerHTML = `<i class="fab fa-whatsapp mr-2 text-base text-emerald-600"></i> Kirim Status ke WA (${k.nama})`;
+                } else {
+                    btnWaKaryawan.classList.add('hidden');
+                }
+            }
+
+            // Update tombol tindakan persetujuan
+            const actionContainer = document.getElementById('dc_action_buttons');
+            if (actionContainer) {
+                if (c.status === 'Menunggu') {
+                    actionContainer.innerHTML = `
+                        <button onclick="window.updateStatusCuti('Ditolak')" class="flex-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold py-2.5 rounded-xl text-xs sm:text-sm transition flex items-center justify-center">
+                            <i class="fas fa-times-circle mr-1.5"></i> Tolak
+                        </button>
+                        <button onclick="window.updateStatusCuti('Disetujui')" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-xs sm:text-sm shadow-sm transition flex items-center justify-center">
+                            <i class="fas fa-check-circle mr-1.5"></i> Setujui
+                        </button>
+                    `;
+                } else if (c.status === 'Disetujui') {
+                    actionContainer.innerHTML = `
+                        <button onclick="window.updateStatusCuti('Ditolak')" class="flex-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold py-2.5 rounded-xl text-xs sm:text-sm transition flex items-center justify-center">
+                            <i class="fas fa-times-circle mr-1.5"></i> Ubah Jadi Tolak
+                        </button>
+                        <button onclick="window.updateStatusCuti('Menunggu')" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 font-bold py-2.5 rounded-xl text-xs sm:text-sm transition flex items-center justify-center">
+                            <i class="fas fa-undo mr-1.5"></i> Set ke Menunggu
+                        </button>
+                    `;
+                } else {
+                    actionContainer.innerHTML = `
+                        <button onclick="window.updateStatusCuti('Disetujui')" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-xs sm:text-sm shadow-sm transition flex items-center justify-center">
+                            <i class="fas fa-check-circle mr-1.5"></i> Ubah Jadi Setujui
+                        </button>
+                        <button onclick="window.updateStatusCuti('Menunggu')" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 font-bold py-2.5 rounded-xl text-xs sm:text-sm transition flex items-center justify-center">
+                            <i class="fas fa-undo mr-1.5"></i> Set ke Menunggu
+                        </button>
+                    `;
+                }
+            }
+
             const modal = document.getElementById('modalDetailCuti');
-            if (modal) modal.classList.remove('hidden');
+            const content = document.getElementById('modalDetailCutiContent');
+            if (!modal) return;
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.add('opacity-100');
+                if(content) {
+                    content.classList.remove('scale-95');
+                    content.classList.add('scale-100');
+                }
+            }, 10);
         };
+
         window.tutupModalDetailCuti = function() { 
             const modal = document.getElementById('modalDetailCuti');
-            if (modal) modal.classList.add('hidden'); 
-            idCutiAktif = null; 
+            const content = document.getElementById('modalDetailCutiContent');
+            if (!modal) return;
+            modal.classList.remove('opacity-100');
+            if(content) {
+                content.classList.remove('scale-100');
+                content.classList.add('scale-95');
+            }
+            setTimeout(() => { 
+                modal.classList.add('hidden'); 
+                idCutiAktif = null;
+            }, 300);
         };
         
         window.forwardWAKepsek = function() {
-            const c = state.cuti.find(x => x.id === idCutiAktif); if(!c) return; const k = state.karyawan.find(x => x.id == c.karyawanId);
-            const noWaKepsek = state.pengaturan?.waKepalaSekolah; if(!noWaKepsek) return showToast('Peringatan', 'Nomor WA Atasan belum diatur di Pengaturan!', 'warning');
-            window.open(`https://wa.me/${formatWANumber(noWaKepsek)}?text=Halo Bapak/Ibu,%0A%0ATerdapat pengajuan *${c.jenis}* baru:%0A*Nama:* ${k?k.nama:'-'}%0A*Periode:* ${formatDateID(c.mulai)} s.d ${formatDateID(c.selesai)}%0A*Alasan:* ${c.alasan}`, '_blank');
+            const c = (state.cuti || []).find(x => x.id === idCutiAktif); if(!c) return; 
+            const k = (state.karyawan || []).find(x => 
+                x.id == c.karyawanId || 
+                String(x.id) === String(c.karyawanId) || 
+                (x.nik && x.nik === String(c.karyawanId)) ||
+                (c.karyawanNama && x.nama && x.nama.toLowerCase() === c.karyawanNama.toLowerCase())
+            );
+            const noWaKepsek = state.pengaturan?.waKepalaSekolah; 
+            if(!noWaKepsek) return showToast('Peringatan', 'Nomor WA Atasan belum diatur di menu Pengaturan Sistem!', 'warning');
+            
+            let durasi = 1;
+            if (c.mulai && c.selesai) {
+                const diffMs = new Date(c.selesai) - new Date(c.mulai);
+                durasi = Math.max(1, Math.round(diffMs / (1000 * 60 * 60 * 24)) + 1);
+            }
+            const namaPemohon = k ? k.nama : (c.karyawanNama || c.nama || '-');
+            const nikPemohon = k ? (k.nik || '-') : (c.karyawanNik || '-');
+            const pesan = `Halo Bapak/Ibu Atasan,%0A%0AMohon persetujuan pengajuan *${c.jenis}* dari karyawan berikut:%0A*Nama:* ${namaPemohon}%0A*NIK:* ${nikPemohon}%0A*Periode:* ${formatDateID(c.mulai)} s.d ${formatDateID(c.selesai)} (${durasi} Hari)%0A*Alasan:* ${c.alasan}%0A*Status Saat Ini:* ${c.status}%0A%0ATerima kasih.`;
+            
+            const link = document.createElement('a');
+            link.href = `https://wa.me/${formatWANumber(noWaKepsek)}?text=${pesan}`;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
+
+        window.kirimWAKaryawanCuti = function() {
+            const c = (state.cuti || []).find(x => x.id === idCutiAktif); if(!c) return; 
+            const k = (state.karyawan || []).find(x => 
+                x.id == c.karyawanId || 
+                String(x.id) === String(c.karyawanId) || 
+                (x.nik && x.nik === String(c.karyawanId)) ||
+                (c.karyawanNama && x.nama && x.nama.toLowerCase() === c.karyawanNama.toLowerCase())
+            );
+            if (!k || !k.noWa) return showToast('Peringatan', 'Nomor WhatsApp karyawan belum tercatat!', 'warning');
+
+            let durasi = 1;
+            if (c.mulai && c.selesai) {
+                const diffMs = new Date(c.selesai) - new Date(c.mulai);
+                durasi = Math.max(1, Math.round(diffMs / (1000 * 60 * 60 * 24)) + 1);
+            }
+            const statusText = c.status === 'Disetujui' ? 'DISETUJUI ✅' : (c.status === 'Ditolak' ? 'DITOLAK ❌' : 'MENUNGGU VERIFIKASI ⏳');
+            const pesan = `Halo *${k.nama}*,%0A%0APengajuan *${c.jenis}* Anda untuk periode ${formatDateID(c.mulai)} s.d ${formatDateID(c.selesai)} (${durasi} Hari) berstatus *${statusText}*.%0A%0ACatatan: Sistem HR Presensi & Cuti.`;
+            
+            const link = document.createElement('a');
+            link.href = `https://wa.me/${formatWANumber(k.noWa)}?text=${pesan}`;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         };
         
         window.updateStatusCuti = function(status) {
-            const idx = state.cuti.findIndex(x => x.id === idCutiAktif); if(idx === -1) return; const c = state.cuti[idx]; const k = state.karyawan.find(x => x.id == c.karyawanId);
-            let url = null; if (k && k.noWa) url = `https://wa.me/${formatWANumber(k.noWa)}?text=Halo *${k.nama}*,%0A%0APengajuan *${c.jenis}* Anda telah *${status.toUpperCase()}*.`;
-            c.status = status; saveData(); showToast('Berhasil', `Status menjadi ${status}`); window.tutupModalDetailCuti(); window.renderMainContent(); if (url) window.open(url, '_blank');
+            const idx = (state.cuti || []).findIndex(x => x.id === idCutiAktif); 
+            if(idx === -1) return; 
+            const c = state.cuti[idx]; 
+            const k = (state.karyawan || []).find(x => 
+                x.id == c.karyawanId || 
+                String(x.id) === String(c.karyawanId) || 
+                (x.nik && x.nik === String(c.karyawanId)) ||
+                (c.karyawanNama && x.nama && x.nama.toLowerCase() === c.karyawanNama.toLowerCase())
+            );
+            c.status = status; 
+            saveData(); 
+            showToast('Berhasil', `Status pengajuan berhasil diubah menjadi ${status}`); 
+            window.tutupModalDetailCuti(); 
+            renderCutiTable();
         };
 
+        // ==========================================
+        // FITUR KALKULASI PENGGAJIAN & CUTI PEGAWAI
+        // ==========================================
+
+        // Menghitung jumlah hari cuti & izin karyawan dalam bulan terpilih (YYYY-MM)
+        function hitungHariCutiKaryawanBulan(karyawanId, bln) {
+            if (!state.cuti || state.cuti.length === 0) {
+                return { totalHari: 0, cuti: 0, sakit: 0, izin: 0, pendingHari: 0, rincian: '0 Hari' };
+            }
+            const [yearStr, monthStr] = bln.split('-');
+            const year = parseInt(yearStr, 10);
+            const month = parseInt(monthStr, 10);
+            const firstDayStr = `${year}-${String(month).padStart(2, '0')}-01`;
+            const lastDayOfMonth = new Date(year, month, 0).getDate();
+            const lastDayStr = `${year}-${String(month).padStart(2, '0')}-${String(lastDayOfMonth).padStart(2, '0')}`;
+
+            let totalHari = 0;
+            let cutiHari = 0;
+            let sakitHari = 0;
+            let izinHari = 0;
+            let pendingHari = 0;
+
+            (state.cuti || []).forEach(c => {
+                const matchKaryawan = c.karyawanId == karyawanId || String(c.karyawanId) === String(karyawanId);
+                if (!matchKaryawan) return;
+                const mulai = c.mulai;
+                const selesai = c.selesai || c.mulai;
+                if (!mulai) return;
+
+                // Cek apakah ada irisan tanggal dengan bulan yang dipilih
+                if (selesai < firstDayStr || mulai > lastDayStr) return;
+
+                const overlapStart = mulai < firstDayStr ? firstDayStr : mulai;
+                const overlapEnd = selesai > lastDayStr ? lastDayStr : selesai;
+
+                const d1 = new Date(overlapStart);
+                const d2 = new Date(overlapEnd);
+                const diffDays = Math.max(1, Math.round((d2 - d1) / (1000 * 60 * 60 * 24)) + 1);
+
+                if (c.status === 'Disetujui') {
+                    totalHari += diffDays;
+                    const jLower = (c.jenis || '').toLowerCase();
+                    if (jLower.includes('cuti')) cutiHari += diffDays;
+                    else if (jLower.includes('sakit')) sakitHari += diffDays;
+                    else izinHari += diffDays;
+                } else if (c.status === 'Menunggu') {
+                    pendingHari += diffDays;
+                }
+            });
+
+            const parts = [];
+            if (cutiHari > 0) parts.push(`${cutiHari} Cuti`);
+            if (sakitHari > 0) parts.push(`${sakitHari} Sakit`);
+            if (izinHari > 0) parts.push(`${izinHari} Izin`);
+            const rincian = parts.length > 0 ? parts.join(', ') : '0 Hari';
+
+            return { totalHari, cuti: cutiHari, sakit: sakitHari, izin: izinHari, pendingHari, rincian };
+        }
+
         function getGajiHTML() {
-            let mo = ''; const td = new Date(); for(let i=0; i<6; i++){ let m=td.getMonth()+1-i; let y=td.getFullYear(); if(m<=0){m+=12; y-=1;} mo+=`<option value="${y}-${String(m).padStart(2,'0')}">${new Date(y,m-1,1).toLocaleDateString('id-ID',{month:'long',year:'numeric'})}</option>`; }
-            return `<div class="mb-8"><h1 class="text-3xl font-bold">Kalkulasi Penggajian</h1></div><div class="bg-white p-6 rounded-2xl border mb-8 flex flex-col sm:flex-row gap-4 items-end"><div class="flex-1 w-full"><label class="block text-xs font-bold mb-2">Periode Bulan</label><select id="bulanGaji" class="w-full border rounded-xl p-3 outline-none">${mo}</select></div><div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto"><button onclick="window.hitungGaji()" class="bg-slate-800 text-white font-bold px-8 py-3.5 rounded-xl shadow hover:bg-slate-900 transition"><i class="fas fa-calculator mr-2"></i> Kalkulasi</button><button id="btnExp" onclick="window.eksporGaji()" style="display:none;" class="bg-emerald-600 text-white font-bold px-6 py-3.5 rounded-xl shadow hover:bg-emerald-700 transition"><i class="fas fa-file-excel mr-2"></i> Ekspor Data</button></div></div><div class="bg-white rounded-2xl border overflow-x-auto shadow-sm" id="gajiResult" style="display:none;"><table class="min-w-full text-sm text-left"><thead class="bg-slate-50 border-b text-xs uppercase text-slate-500"><tr><th class="py-4 px-6">Pegawai</th><th class="py-4 px-6 text-center">Hadir / Telat</th><th class="py-4 px-6 text-right">Gaji Pokok</th><th class="py-4 px-6 text-right">+ Tunj. / - Denda</th><th class="py-4 px-6 text-right font-bold text-slate-700">Total Bersih</th><th class="py-4 px-6 text-center border-l bg-slate-100">Slip PDF</th></tr></thead><tbody id="tg_body" class="divide-y"></tbody></table></div>`;
+            let mo = '';
+            const td = new Date();
+            for (let i = 0; i < 6; i++) {
+                let m = td.getMonth() + 1 - i;
+                let y = td.getFullYear();
+                if (m <= 0) { m += 12; y -= 1; }
+                const val = `${y}-${String(m).padStart(2, '0')}`;
+                mo += `<option value="${val}">${new Date(y, m - 1, 1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}</option>`;
+            }
+
+            const totalKaryawan = (state.karyawan || []).length;
+            const jabatanOptions = '<option value="">Semua Jabatan</option>' + (state.jabatan || []).map(j => `<option value="${j.nama}">${j.nama}</option>`).join('');
+
+            return `
+                <div class="space-y-6 mb-8">
+                    <!-- HEADER & SUMMARY -->
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <div class="flex items-center gap-3">
+                                <h1 class="text-3xl font-bold text-slate-800 tracking-tight">Kalkulasi Penggajian</h1>
+                                <span class="bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-bold px-2.5 py-1 rounded-full">
+                                    ${totalKaryawan} Pegawai Terdaftar
+                                </span>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-1">Sistem payroll otomatis: hitung gaji pokok, tunjangan kehadiran, denda telat, dan rekapitulasi cuti & izin karyawan.</p>
+                        </div>
+                    </div>
+
+                    <!-- CONTROL PANEL -->
+                    <div class="bg-white p-5 rounded-3xl border border-slate-200/90 shadow-sm flex flex-col md:flex-row items-stretch md:items-end justify-between gap-4">
+                        <div class="flex-1 w-full">
+                            <label class="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">
+                                <i class="fas fa-calendar-alt text-indigo-500 mr-1.5"></i>Periode Bulan Penggajian
+                            </label>
+                            <select id="bulanGaji" class="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3 text-sm font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
+                                ${mo}
+                            </select>
+                        </div>
+                        <div class="flex flex-wrap gap-2.5">
+                            <button onclick="window.hitungGaji()" class="flex-1 sm:flex-none bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-3 rounded-2xl shadow-sm hover:shadow text-sm transition flex items-center justify-center">
+                                <i class="fas fa-calculator mr-2"></i> Hitung Gaji Bulan Ini
+                            </button>
+                            <button id="btnExp" onclick="window.eksporGaji()" style="display:none;" class="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-3 rounded-2xl shadow-sm hover:shadow text-sm transition flex items-center justify-center">
+                                <i class="fas fa-file-excel mr-2"></i> Ekspor Excel
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- KPI SUMMARY CARDS (Muncul setelah kalkulasi) -->
+                    <div id="gajiSummaryCards" style="display:none;" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="bg-white p-5 rounded-3xl border border-slate-200/90 shadow-xs flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center text-xl shrink-0">
+                                <i class="fas fa-money-bill-wave"></i>
+                            </div>
+                            <div>
+                                <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Total Payroll Bersih</span>
+                                <span id="kpiTotalGaji" class="text-lg font-black text-slate-800 tracking-tight">Rp 0</span>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-5 rounded-3xl border border-slate-200/90 shadow-xs flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center text-xl shrink-0">
+                                <i class="fas fa-user-check"></i>
+                            </div>
+                            <div>
+                                <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Kehadiran Valid</span>
+                                <span id="kpiTotalHadir" class="text-lg font-black text-emerald-600 tracking-tight">0 Hari</span>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-5 rounded-3xl border border-slate-200/90 shadow-xs flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center text-xl shrink-0">
+                                <i class="fas fa-calendar-minus"></i>
+                            </div>
+                            <div>
+                                <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Total Cuti & Izin</span>
+                                <span id="kpiTotalCuti" class="text-lg font-black text-amber-600 tracking-tight">0 Hari</span>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-5 rounded-3xl border border-slate-200/90 shadow-xs flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 border border-rose-100 flex items-center justify-center text-xl shrink-0">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                            <div>
+                                <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Denda Keterlambatan</span>
+                                <span id="kpiTotalDenda" class="text-lg font-black text-rose-600 tracking-tight">Rp 0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SEARCH & FILTER TOOLBAR FOR TABLE -->
+                    <div id="gajiFilterToolbar" style="display:none;" class="bg-white p-3.5 rounded-2xl border border-slate-200/90 shadow-2xs flex flex-col md:flex-row items-center justify-between gap-3">
+                        <div class="relative flex-1 w-full">
+                            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                <i class="fas fa-search text-xs"></i>
+                            </span>
+                            <input type="text" id="cariPegawaiGaji" oninput="window.filterTabelGaji(this.value)" placeholder="Cari nama karyawan / NIK di tabel gaji..." class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
+                        </div>
+                        <div class="flex items-center gap-2 w-full md:w-auto">
+                            <select id="filterJabatanGaji" onchange="window.filterTabelGajiByJabatan(this.value)" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 font-medium outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                                ${jabatanOptions}
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- TABEL HASIL GAJI -->
+                    <div class="bg-white rounded-3xl border border-slate-200/90 overflow-hidden shadow-sm" id="gajiResult" style="display:none;">
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full text-sm text-left">
+                                <thead class="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                    <tr>
+                                        <th class="py-4 px-6">Pegawai</th>
+                                        <th class="py-4 px-6 text-center">Kehadiran</th>
+                                        <th class="py-4 px-6 text-center bg-amber-50/40 text-amber-900 border-x border-amber-100/80">Cuti & Izin</th>
+                                        <th class="py-4 px-6 text-right">Gaji Pokok</th>
+                                        <th class="py-4 px-6 text-right">+ Tunj. Hadir</th>
+                                        <th class="py-4 px-6 text-right">- Denda Telat</th>
+                                        <th class="py-4 px-6 text-right font-black text-slate-700">Total Bersih (THP)</th>
+                                        <th class="py-4 px-6 text-center border-l bg-slate-50/80">Slip Gaji</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tg_body" class="divide-y divide-slate-100"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
         }
         
-        // Memori global untuk menampung data kalkulasi bulan aktif (Untuk cetak PDF)
+        // Memori global untuk menampung data kalkulasi bulan aktif (Untuk cetak PDF & WhatsApp)
         window.dataGajiBulanIni = {};
+        window.currentSlipKaryawanId = null;
 
         window.hitungGaji = function() {
             const blnEl = document.getElementById('bulanGaji');
             if (!blnEl) return;
             const bln = blnEl.value; 
+
             const resEl = document.getElementById('gajiResult');
-            if (resEl) resEl.style.display='block'; 
+            if (resEl) resEl.style.display = 'block'; 
+            
             const expEl = document.getElementById('btnExp');
-            if (expEl) expEl.style.display='flex';
+            if (expEl) expEl.style.display = 'inline-flex';
+
+            const summaryEl = document.getElementById('gajiSummaryCards');
+            if (summaryEl) summaryEl.style.display = 'grid';
+
+            const filterToolbar = document.getElementById('gajiFilterToolbar');
+            if (filterToolbar) filterToolbar.style.display = 'flex';
+
             const tb = document.getElementById('tg_body');
             if (!tb) return;
             tb.innerHTML = '';
             
             const now = new Date();
             window.dataGajiBulanIni = {}; // Bersihkan data cetak lama
+
+            let grandTotalGaji = 0;
+            let grandTotalHadir = 0;
+            let grandTotalCuti = 0;
+            let grandTotalDenda = 0;
+
+            const jMap = new Map((state.jabatan || []).map(j => [j.id, j]));
             
             state.karyawan.forEach(k => {
-                const shift = state.pengaturan.shifts?.find(s => s.id === k.shiftId) || state.pengaturan.shifts[0];
-                const ab = state.absensi.filter(a => a.karyawanId === k.id && a.tanggal.startsWith(bln)); 
+                const shift = state.pengaturan.shifts?.find(s => s.id === k.shiftId) || state.pengaturan.shifts[0] || { jamMasuk: '08:00', jamPulang: '16:00' };
+                const ab = (state.absensi || []).filter(a => a.karyawanId === k.id && a.tanggal.startsWith(bln)); 
                 const h = ab.length; 
                 
                 let t = 0;
@@ -4419,53 +5518,203 @@
                         hTunjangan++;
                     }
                 });
+
+                // Rekapitulasi Cuti & Izin Pegawai
+                const dataCuti = hitungHariCutiKaryawanBulan(k.id, bln);
                 
                 const tunj = hTunjangan * (state.pengaturan.tunjanganHadir || 0); 
                 const den = t * (state.pengaturan.dendaTelat || 0); 
-                let tot = k.gajiPokok + tunj - den; if (tot < 0) tot = 0;
+                let tot = (k.gajiPokok || 0) + tunj - den; 
+                if (tot < 0) tot = 0;
+
+                grandTotalGaji += tot;
+                grandTotalHadir += h;
+                grandTotalCuti += dataCuti.totalHari;
+                grandTotalDenda += den;
+
+                const jabatanObj = jMap.get(k.jabatanId);
+                const jabatanNama = jabatanObj ? jabatanObj.nama : '-';
                 
-                // Simpan data untuk kebutuhan cetak Struk/PDF
+                // Simpan data untuk kebutuhan cetak Struk/PDF dan WhatsApp
                 window.dataGajiBulanIni[k.id] = {
-                    nama: k.nama, nik: k.nik,
-                    jabatan: state.jabatan.find(j => j.id == k.jabatanId)?.nama || '-',
-                    statusKaryawan: k.statusKaryawan || 'Karyawan',
-                    gajiPokok: k.gajiPokok, hadir: h, telat: t, pulangAwal: pAwal,
-                    hariValid: hTunjangan, tunjangan: tunj, denda: den, totalBersih: tot, bulan: bln
+                    nama: k.nama, 
+                    nik: k.nik,
+                    noWa: k.noWa || '',
+                    jabatan: jabatanNama,
+                    statusKaryawan: k.statusKaryawan || 'Tetap',
+                    gajiPokok: k.gajiPokok || 0, 
+                    hadir: h, 
+                    telat: t, 
+                    pulangAwal: pAwal,
+                    hariValid: hTunjangan, 
+                    tunjangan: tunj, 
+                    denda: den, 
+                    totalBersih: tot, 
+                    bulan: bln,
+                    totalCutiHari: dataCuti.totalHari,
+                    cutiRincian: dataCuti.rincian,
+                    cutiHari: dataCuti.cuti,
+                    sakitHari: dataCuti.sakit,
+                    izinHari: dataCuti.izin,
+                    pendingCutiHari: dataCuti.pendingHari
                 };
+
+                const initial = (k.nama || 'P').charAt(0).toUpperCase();
+
+                // Format Tampilan Kolom Cuti & Izin
+                let cutiBadgeHTML = '';
+                if (dataCuti.totalHari > 0) {
+                    cutiBadgeHTML = `
+                        <span class="bg-amber-50 text-amber-800 border border-amber-200 px-2.5 py-1 rounded-xl text-xs font-bold inline-flex items-center shadow-2xs">
+                            <i class="fas fa-calendar-check mr-1.5 text-amber-600"></i>${dataCuti.totalHari} Hari
+                        </span>
+                        <div class="text-[11px] text-slate-500 font-medium mt-1 leading-tight">${dataCuti.rincian}</div>
+                    `;
+                } else {
+                    cutiBadgeHTML = `<span class="text-xs text-slate-400 font-medium"><i class="fas fa-minus mr-1"></i>0 Hari</span>`;
+                }
+
+                if (dataCuti.pendingHari > 0) {
+                    cutiBadgeHTML += `
+                        <div class="text-[10px] text-amber-600 font-semibold mt-1 flex items-center justify-center">
+                            <i class="fas fa-hourglass-half mr-1"></i>${dataCuti.pendingHari} hari pending
+                        </div>
+                    `;
+                }
                 
-                tb.innerHTML += `<tr><td class="py-4 px-6"><b>${k.nama}</b><br><span class="text-xs text-slate-500">${k.nik}</span></td><td class="py-4 px-6 text-center"><span class="text-emerald-600 font-bold">${h} Hadir</span><br><span class="text-xs ${t>0?'text-red-500':'text-slate-400'}">${t} Telat</span><br><span class="text-xs ${pAwal>0?'text-amber-500':'text-slate-400'}">${pAwal} Pulang Awal</span></td><td class="py-4 px-6 text-right font-medium text-slate-600">${formatRupiah(k.gajiPokok)}</td><td class="py-4 px-6 text-right"><div class="text-emerald-600 text-xs font-bold">+ ${formatRupiah(tunj)} <span class="text-[9px] text-slate-400 font-normal">(${hTunjangan}x valid)</span></div><div class="text-red-500 text-xs font-bold mt-1">- ${formatRupiah(den)}</div></td><td class="py-4 px-6 text-right font-bold text-slate-800">${formatRupiah(tot)}</td><td class="py-4 px-6 text-center border-l bg-slate-50"><button onclick="window.bukaSlipGaji(${k.id})" class="bg-indigo-100 text-indigo-700 hover:bg-indigo-600 hover:text-white px-3 py-2 rounded-xl text-xs font-bold shadow-sm transition"><i class="fas fa-print mr-1"></i> Cetak</button></td></tr>`;
+                tb.innerHTML += `
+                    <tr class="hover:bg-slate-50/80 transition row-pegawai-gaji" data-nama="${(k.nama || '').toLowerCase()}" data-nik="${(k.nik || '').toLowerCase()}" data-jabatan="${jabatanNama.toLowerCase()}">
+                        <td class="py-3.5 px-6">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-9 h-9 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-700 font-black text-xs flex items-center justify-center shrink-0">
+                                    ${initial}
+                                </div>
+                                <div>
+                                    <span class="font-bold text-slate-800 block text-sm leading-tight">${k.nama}</span>
+                                    <span class="text-[11px] text-slate-400 font-mono">${k.nik} • ${jabatanNama}</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="py-3.5 px-6 text-center whitespace-nowrap">
+                            <span class="text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-lg text-xs font-bold inline-flex items-center">
+                                <i class="fas fa-check mr-1 text-[10px]"></i>${h} Hadir
+                            </span>
+                            <div class="flex items-center justify-center gap-1.5 mt-1 text-[11px]">
+                                <span class="${t > 0 ? 'text-rose-600 font-bold' : 'text-slate-400'}">${t} Telat</span>
+                                <span class="text-slate-300">•</span>
+                                <span class="${pAwal > 0 ? 'text-amber-600 font-medium' : 'text-slate-400'}">${pAwal} Pulang Awal</span>
+                            </div>
+                        </td>
+                        <td class="py-3.5 px-6 text-center whitespace-nowrap bg-amber-50/20 border-x border-amber-100/60">
+                            ${cutiBadgeHTML}
+                        </td>
+                        <td class="py-3.5 px-6 text-right font-medium text-slate-700 whitespace-nowrap">
+                            ${formatRupiah(k.gajiPokok || 0)}
+                        </td>
+                        <td class="py-3.5 px-6 text-right whitespace-nowrap">
+                            <div class="text-emerald-600 text-xs font-bold">+ ${formatRupiah(tunj)}</div>
+                            <span class="text-[10px] text-slate-400 font-normal">(${hTunjangan}x valid)</span>
+                        </td>
+                        <td class="py-3.5 px-6 text-right whitespace-nowrap">
+                            <div class="text-rose-600 text-xs font-bold">- ${formatRupiah(den)}</div>
+                            <span class="text-[10px] text-slate-400 font-normal">(${t}x denda)</span>
+                        </td>
+                        <td class="py-3.5 px-6 text-right font-black text-slate-800 whitespace-nowrap text-sm">
+                            ${formatRupiah(tot)}
+                        </td>
+                        <td class="py-3.5 px-6 text-center border-l bg-slate-50/80 whitespace-nowrap">
+                            <div class="flex items-center justify-center gap-1.5">
+                                <button onclick="window.bukaSlipGaji(${k.id})" class="bg-indigo-50 text-indigo-700 hover:bg-indigo-600 hover:text-white px-2.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center shadow-2xs" title="Pratinjau & Cetak PDF Slip Gaji">
+                                    <i class="fas fa-print mr-1"></i> Slip
+                                </button>
+                                <button onclick="window.kirimSlipWA(${k.id})" class="bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white px-2.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center shadow-2xs" title="Kirim Rincian Slip ke WhatsApp Karyawan">
+                                    <i class="fab fa-whatsapp mr-1 text-sm"></i> WA
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
             });
+
+            // Update KPI Metric Cards
+            const kpiGaji = document.getElementById('kpiTotalGaji');
+            if (kpiGaji) kpiGaji.innerText = formatRupiah(grandTotalGaji);
+
+            const kpiHadir = document.getElementById('kpiTotalHadir');
+            if (kpiHadir) kpiHadir.innerText = `${grandTotalHadir} Hari Hadir`;
+
+            const kpiCuti = document.getElementById('kpiTotalCuti');
+            if (kpiCuti) kpiCuti.innerText = `${grandTotalCuti} Hari Cuti/Izin`;
+
+            const kpiDenda = document.getElementById('kpiTotalDenda');
+            if (kpiDenda) kpiDenda.innerText = formatRupiah(grandTotalDenda);
+
+            showToast('Selesai', `Kalkulasi gaji berhasil untuk ${state.karyawan.length} pegawai.`);
+        };
+
+        // Filter tabel gaji real-time
+        window.filterTabelGaji = function(query) {
+            const q = (query || '').toLowerCase().trim();
+            const jFilter = (document.getElementById('filterJabatanGaji')?.value || '').toLowerCase();
+            const rows = document.querySelectorAll('.row-pegawai-gaji');
+            rows.forEach(r => {
+                const nama = r.getAttribute('data-nama') || '';
+                const nik = r.getAttribute('data-nik') || '';
+                const jab = r.getAttribute('data-jabatan') || '';
+                const matchQuery = !q || nama.includes(q) || nik.includes(q);
+                const matchJabatan = !jFilter || jab.includes(jFilter);
+                if (matchQuery && matchJabatan) {
+                    r.style.display = '';
+                } else {
+                    r.style.display = 'none';
+                }
+            });
+        };
+
+        window.filterTabelGajiByJabatan = function(jabatan) {
+            const q = (document.getElementById('cariPegawaiGaji')?.value || '').toLowerCase().trim();
+            window.filterTabelGaji(q);
         };
 
         // FUNGSI PENGENDALI SLIP GAJI
         window.bukaSlipGaji = function(idKaryawan) {
             const data = window.dataGajiBulanIni[idKaryawan];
-            if(!data) return showToast('Error', 'Data gaji tidak ditemukan. Silakan kalkulasi ulang.', 'error');
+            if(!data) return showToast('Error', 'Data gaji tidak ditemukan. Silakan klik tombol "Hitung Gaji Bulan Ini" terlebih dahulu.', 'error');
+
+            window.currentSlipKaryawanId = idKaryawan;
 
             // Format tanggal/periode
             const dateObj = new Date(data.bulan + '-01');
             const namaBulan = dateObj.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
             const today = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 
-            // Suntik data ke Struk HTML
-            document.getElementById('slip_nama').innerText = data.nama;
-            document.getElementById('slip_ttd_nama').innerText = data.nama;
-            document.getElementById('slip_nik').innerText = data.nik;
-            document.getElementById('slip_jabatan').innerText = data.jabatan;
-            document.getElementById('slip_status_karyawan').innerText = data.statusKaryawan;
-            document.getElementById('slip_periode').innerText = 'PERIODE ' + namaBulan.toUpperCase();
-            document.getElementById('slip_tanggal_cetak').innerText = today;
+            // Suntik data ke Struk HTML secara aman
+            const setElText = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) el.innerText = val;
+            };
 
-            document.getElementById('slip_gapok').innerText = formatRupiah(data.gajiPokok);
-            document.getElementById('slip_tunjangan').innerText = formatRupiah(data.tunjangan);
-            document.getElementById('slip_tunjangan_ket').innerText = `(x${data.hariValid} Valid)`;
-            document.getElementById('slip_total_penerimaan').innerText = formatRupiah(data.gajiPokok + data.tunjangan);
+            setElText('slip_nama', data.nama);
+            setElText('slip_ttd_nama', data.nama);
+            setElText('slip_nik', data.nik);
+            setElText('slip_jabatan', data.jabatan);
+            setElText('slip_status_karyawan', data.statusKaryawan);
+            setElText('slip_periode', 'PERIODE ' + namaBulan.toUpperCase());
+            setElText('slip_tanggal_cetak', today);
 
-            document.getElementById('slip_denda').innerText = formatRupiah(data.denda);
-            document.getElementById('slip_denda_ket').innerText = `(x${data.telat} Keterlambatan)`;
-            document.getElementById('slip_total_potongan').innerText = formatRupiah(data.denda);
+            setElText('slip_kehadiran', `${data.hadir} Hari Hadir (x${data.telat} Terlambat)`);
+            setElText('slip_cuti_izin', data.totalCutiHari > 0 ? `${data.totalCutiHari} Hari (${data.cutiRincian})` : '0 Hari (Nihil)');
 
-            document.getElementById('slip_thp').innerText = formatRupiah(data.totalBersih);
+            setElText('slip_gapok', formatRupiah(data.gajiPokok));
+            setElText('slip_tunjangan', formatRupiah(data.tunjangan));
+            setElText('slip_tunjangan_ket', `(x${data.hariValid} Valid)`);
+            setElText('slip_total_penerimaan', formatRupiah(data.gajiPokok + data.tunjangan));
+
+            setElText('slip_denda', formatRupiah(data.denda));
+            setElText('slip_denda_ket', `(x${data.telat} Keterlambatan)`);
+            setElText('slip_total_potongan', formatRupiah(data.denda));
+
+            setElText('slip_thp', formatRupiah(data.totalBersih));
 
             // Buka Modal dengan transisi
             const modal = document.getElementById('modalSlipGaji');
@@ -4485,13 +5734,52 @@
             window.print();
         };
 
+        window.kirimSlipWA = function(idKaryawan) {
+            const data = window.dataGajiBulanIni[idKaryawan];
+            const k = (state.karyawan || []).find(x => x.id == idKaryawan);
+            if (!data || !k) return showToast('Error', 'Data gaji tidak ditemukan', 'error');
+            if (!k.noWa) return showToast('Peringatan', 'Nomor WA karyawan belum terdaftar di Data Karyawan!', 'warning');
+            
+            const dateObj = new Date(data.bulan + '-01');
+            const namaBulan = dateObj.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+            
+            let cutiKet = data.totalCutiHari > 0 ? `\n- Cuti & Izin: ${data.totalCutiHari} Hari (${data.cutiRincian})` : '\n- Cuti & Izin: 0 Hari';
+
+            const pesan = `*SLIP GAJI KARYAWAN - DESTINY INSTITUTE*%0A` +
+                `Periode: ${namaBulan}%0A` +
+                `==============================%0A` +
+                `*Nama:* ${data.nama}%0A` +
+                `*NIK:* ${data.nik}%0A` +
+                `*Jabatan:* ${data.jabatan}%0A` +
+                `*Status:* ${data.statusKaryawan}%0A` +
+                `==============================%0A` +
+                `*RINGKASAN KEHADIRAN:*%0A` +
+                `- Total Hadir: ${data.hadir} Hari%0A` +
+                `- Tepat Waktu (Valid): ${data.hariValid} Hari%0A` +
+                `- Terlambat: ${data.telat} Kali%0A` +
+                `- Pulang Awal: ${data.pulangAwal} Kali` + cutiKet + `%0A` +
+                `==============================%0A` +
+                `*RINCIAN GAJI:*%0A` +
+                `- Gaji Pokok: ${formatRupiah(data.gajiPokok)}%0A` +
+                `- Tunjangan Hadir: +${formatRupiah(data.tunjangan)}%0A` +
+                `- Potongan / Denda: -${formatRupiah(data.denda)}%0A` +
+                `==============================%0A` +
+                `*TOTAL BERSIH (TAKE HOME PAY):*%0A` +
+                `*${formatRupiah(data.totalBersih)}*%0A` +
+                `==============================%0A` +
+                `_Slip ini resmi diterbitkan secara otomatis oleh Divisi HR Destiny Institute._`;
+
+            window.open(`https://wa.me/${formatWANumber(k.noWa)}?text=${pesan}`, '_blank');
+        };
+
         window.eksporGaji = function() {
             const bln = document.getElementById('bulanGaji').value; if(!bln) return;
             const now = new Date();
+            const jMap = new Map((state.jabatan || []).map(j => [j.id, j]));
             
             const data = state.karyawan.map(k => {
-                const shift = state.pengaturan.shifts?.find(s => s.id === k.shiftId) || state.pengaturan.shifts[0];
-                const ab = state.absensi.filter(a => a.karyawanId === k.id && a.tanggal.startsWith(bln)); 
+                const shift = state.pengaturan.shifts?.find(s => s.id === k.shiftId) || state.pengaturan.shifts[0] || { jamMasuk: '08:00', jamPulang: '16:00' };
+                const ab = (state.absensi || []).filter(a => a.karyawanId === k.id && a.tanggal.startsWith(bln)); 
                 const h = ab.length; 
                 const t = ab.filter(a => a.statusMasuk === 'Terlambat').length;
                 
@@ -4522,24 +5810,38 @@
                     if (sudahPulang && !isTelat && !isPulangAwal) hTunjangan++;
                 });
 
+                const dataCuti = hitungHariCutiKaryawanBulan(k.id, bln);
                 const tunj = hTunjangan * (state.pengaturan.tunjanganHadir || 0); 
                 const den = t * (state.pengaturan.dendaTelat || 0);
+                const jabObj = jMap.get(k.jabatanId);
                 
                 return { 
                     "NIK": k.nik, 
                     "Nama": k.nama, 
+                    "Jabatan": jabObj ? jabObj.nama : '-',
+                    "Status": k.statusKaryawan || 'Tetap',
                     "Bulan": bln, 
                     "Hadir Total": h, 
                     "Telat": t,
                     "Pulang Awal / Lupa": pAwal, 
                     "Tepat Waktu & Valid (Hari)": hTunjangan, 
-                    "Gaji Pokok": k.gajiPokok, 
+                    "Cuti & Izin Total (Hari)": dataCuti.totalHari,
+                    "Rincian Cuti & Izin": dataCuti.rincian,
+                    "Gaji Pokok": k.gajiPokok || 0, 
                     "Tunjangan Hadir": tunj, 
                     "Denda": den, 
-                    "Total Bersih": Math.max(0, k.gajiPokok + tunj - den) 
+                    "Total Bersih": Math.max(0, (k.gajiPokok || 0) + tunj - den) 
                 };
             });
-            try { const ws = XLSX.utils.json_to_sheet(data); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Gaji"); XLSX.writeFile(wb, `Gaji_${bln}.xlsx`); showToast('Berhasil', 'Excel diunduh'); } catch(e){ showToast('Gagal', 'Terjadi kesalahan excel', 'error'); }
+            try { 
+                const ws = XLSX.utils.json_to_sheet(data); 
+                const wb = XLSX.utils.book_new(); 
+                XLSX.utils.book_append_sheet(wb, ws, "Gaji"); 
+                XLSX.writeFile(wb, `Gaji_${bln}.xlsx`); 
+                showToast('Berhasil', 'Excel perhitungan gaji berhasil diunduh'); 
+            } catch(e){ 
+                showToast('Gagal', 'Terjadi kesalahan ekspor excel', 'error'); 
+            }
         };
 
         function getLaporanHTML() {
