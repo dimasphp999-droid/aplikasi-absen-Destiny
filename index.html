@@ -26,10 +26,8 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
-    <!-- React, ReactDOM & Recharts -->
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/recharts/umd/Recharts.min.js"></script>
+    <!-- Chart.js Engine untuk Visualisasi Dashboard Presensi -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc; }
@@ -1044,6 +1042,165 @@
             });
         }
 
+        // ==========================================
+        // PENDING SYNC QUEUE & ATOMIC FIREBASE SYNC
+        // ==========================================
+        function getPendingSyncQueue() {
+            try {
+                const raw = localStorage.getItem('destiny_pending_sync');
+                return raw ? JSON.parse(raw) : { absensi: [], imk: [] };
+            } catch(e) {
+                return { absensi: [], imk: [] };
+            }
+        }
+
+        function savePendingSyncQueue(q) {
+            try {
+                localStorage.setItem('destiny_pending_sync', JSON.stringify(q));
+            } catch(e) {}
+        }
+
+        function queuePendingSync(type, record, isUpdate = false, targetId = null) {
+            const q = getPendingSyncQueue();
+            if (!q[type]) q[type] = [];
+            // Hindari duplikasi di queue
+            const idx = q[type].findIndex(item => item.record && String(item.record.id) === String(record.id));
+            const queueItem = { record, isUpdate, targetId: targetId || record.id, timestamp: Date.now() };
+            if (idx !== -1) {
+                q[type][idx] = queueItem;
+            } else {
+                q[type].push(queueItem);
+            }
+            savePendingSyncQueue(q);
+        }
+
+        function removePendingSync(type, recordId) {
+            const q = getPendingSyncQueue();
+            if (q[type]) {
+                q[type] = q[type].filter(item => item.record && String(item.record.id) !== String(recordId));
+                savePendingSyncQueue(q);
+            }
+        }
+
+        // Sinkronisasi atomik Absensi menggunakan Firebase RTDB transaction
+        // Mencegah penimpaan (data race condition) saat puluhan karyawan scan bersamaan
+        function syncAbsensiAtomic(record, isUpdate = false, targetId = null) {
+            if (!isFirebaseConnected) {
+                queuePendingSync('absensi', record, isUpdate, targetId);
+                return;
+            }
+
+            try {
+                const absRef = firebase.database().ref('hr_system_data/absensi');
+                absRef.transaction((currentList) => {
+                    let arr = [];
+                    if (Array.isArray(currentList)) {
+                        arr = [...currentList];
+                    } else if (currentList && typeof currentList === 'object') {
+                        arr = Object.values(currentList);
+                    }
+
+                    const tId = String(targetId || record.id);
+                    if (isUpdate) {
+                        const idx = arr.findIndex(a => a && (String(a.id) === tId || (a.karyawanId === record.karyawanId && a.tanggal === record.tanggal)));
+                        if (idx !== -1) {
+                            arr[idx] = { ...arr[idx], ...record };
+                        } else {
+                            arr.push(record);
+                        }
+                    } else {
+                        // Cek apakah sudah ada untuk mencegah duplikasi identik
+                        const exists = arr.some(a => a && (
+                            String(a.id) === tId ||
+                            (a.karyawanId === record.karyawanId && a.tanggal === record.tanggal && a.jamMasuk === record.jamMasuk)
+                        ));
+                        if (!exists) {
+                            arr.push(record);
+                        }
+                    }
+                    return arr;
+                }, (error, committed) => {
+                    if (error || !committed) {
+                        console.warn("Absensi transaction gagal atau konflik, simpan ke offline queue:", error);
+                        queuePendingSync('absensi', record, isUpdate, targetId);
+                    } else {
+                        removePendingSync('absensi', record.id);
+                    }
+                });
+            } catch(err) {
+                console.warn("syncAbsensiAtomic exception:", err);
+                queuePendingSync('absensi', record, isUpdate, targetId);
+            }
+        }
+
+        // Sinkronisasi atomik IMK
+        function syncImkAtomic(record, isUpdate = false, targetId = null) {
+            if (!isFirebaseConnected) {
+                queuePendingSync('imk', record, isUpdate, targetId);
+                return;
+            }
+
+            try {
+                const imkRef = firebase.database().ref('hr_system_data/imk');
+                imkRef.transaction((currentList) => {
+                    let arr = [];
+                    if (Array.isArray(currentList)) {
+                        arr = [...currentList];
+                    } else if (currentList && typeof currentList === 'object') {
+                        arr = Object.values(currentList);
+                    }
+
+                    const tId = String(targetId || record.id);
+                    if (isUpdate) {
+                        const idx = arr.findIndex(i => i && (String(i.id) === tId || (i.karyawanId === record.karyawanId && i.tanggal === record.tanggal)));
+                        if (idx !== -1) {
+                            arr[idx] = { ...arr[idx], ...record };
+                        } else {
+                            arr.push(record);
+                        }
+                    } else {
+                        const exists = arr.some(i => i && (
+                            String(i.id) === tId ||
+                            (i.karyawanId === record.karyawanId && i.tanggal === record.tanggal && i.jamKeluar === record.jamKeluar)
+                        ));
+                        if (!exists) {
+                            arr.push(record);
+                        }
+                    }
+                    return arr;
+                }, (error, committed) => {
+                    if (error || !committed) {
+                        queuePendingSync('imk', record, isUpdate, targetId);
+                    } else {
+                        removePendingSync('imk', record.id);
+                    }
+                });
+            } catch(err) {
+                queuePendingSync('imk', record, isUpdate, targetId);
+            }
+        }
+
+        // Mengirimkan antrean offline ke server Firebase saat koneksi pulih
+        function flushPendingSyncQueue() {
+            if (!isFirebaseConnected) return;
+            const q = getPendingSyncQueue();
+            if (q.absensi && q.absensi.length > 0) {
+                const itemsToSync = [...q.absensi];
+                itemsToSync.forEach(item => {
+                    syncAbsensiAtomic(item.record, item.isUpdate, item.targetId);
+                });
+            }
+            if (q.imk && q.imk.length > 0) {
+                const itemsToSync = [...q.imk];
+                itemsToSync.forEach(item => {
+                    syncImkAtomic(item.record, item.isUpdate, item.targetId);
+                });
+            }
+        }
+
+        // Interval pemeriksaan antrean offline
+        setInterval(flushPendingSyncQueue, 8000);
+
         async function saveData() {
             pastikanDataMigrasi(); 
             const dataToSave = {
@@ -1066,6 +1223,46 @@
                 role: state.currentUserRole,
                 view: state.currentView
             }));
+        }
+
+        // SMART MERGE: Menggabungkan snapshot server dan record lokal
+        // Mencegah data presensi lokal terhapus jika snapshot baru dari Firebase belum merefleksikannya
+        function mergeLists(serverList, localList, idField = 'id') {
+            const map = new Map();
+            const sArr = Array.isArray(serverList) ? serverList : (serverList && typeof serverList === 'object' ? Object.values(serverList) : []);
+            
+            // 1. Masukkan semua data dari server
+            sArr.forEach(item => {
+                if (item && item[idField] !== undefined) {
+                    map.set(String(item[idField]), item);
+                } else if (item && item.karyawanId && item.tanggal) {
+                    map.set(`${item.karyawanId}_${item.tanggal}_${item.jamMasuk || item.jamKeluar || ''}`, item);
+                }
+            });
+
+            // 2. Gabungkan data lokal yang belum tersinkron
+            (localList || []).forEach(localItem => {
+                if (!localItem) return;
+                const key = localItem[idField] !== undefined 
+                    ? String(localItem[idField]) 
+                    : `${localItem.karyawanId}_${localItem.tanggal}_${localItem.jamMasuk || localItem.jamKeluar || ''}`;
+                
+                if (!map.has(key)) {
+                    // Item presensi yang baru discan di device ini dan belum masuk snapshot server -> PERTAHANKAN!
+                    map.set(key, localItem);
+                } else {
+                    const serverItem = map.get(key);
+                    // Pertahankan update lokal jamPulang/jamKembali jika server belum punya
+                    if (localItem.jamPulang && !serverItem.jamPulang) {
+                        map.set(key, { ...serverItem, ...localItem });
+                    }
+                    if (localItem.jamKembali && !serverItem.jamKembali) {
+                        map.set(key, { ...serverItem, ...localItem });
+                    }
+                }
+            });
+
+            return Array.from(map.values()).sort((a, b) => (b.id || 0) - (a.id || 0));
         }
 
         function loadData() {
@@ -1097,11 +1294,43 @@
                         // Preserve current UI state
                         const activeView = state.currentView;
                         const activeRole = state.currentUserRole;
-                        state = { ...state, ...data }; 
+
+                        // Smart Merge untuk Absensi, IMK, dan Cuti agar scan bersamaan tidak hilang
+                        const mergedAbsensi = mergeLists(data.absensi, state.absensi, 'id');
+                        const mergedImk = mergeLists(data.imk, state.imk, 'id');
+                        const mergedCuti = mergeLists(data.cuti, state.cuti, 'id');
+
+                        state = { 
+                            ...state, 
+                            ...data,
+                            absensi: mergedAbsensi,
+                            imk: mergedImk,
+                            cuti: mergedCuti
+                        }; 
                         state.currentView = activeView;
                         state.currentUserRole = activeRole;
                         pastikanDataMigrasi(); 
-                        if(!isInitialLoad && state.currentUserRole === 'admin') window.renderMainContent();
+
+                        // Simpan backup lokal ter-update
+                        try {
+                            localStorage.setItem('destinyAbsensiData', JSON.stringify({
+                                karyawan: state.karyawan || [],
+                                jabatan: state.jabatan || [],
+                                absensi: state.absensi || [],
+                                imk: state.imk || [],
+                                cuti: state.cuti || [],
+                                pengaturan: state.pengaturan || {}
+                            }));
+                        } catch(e) {}
+
+                        // Flush antrean offline jika ada
+                        flushPendingSyncQueue();
+
+                        if (state.currentUserRole === 'kiosk' || state.currentUserRole === 'gps') {
+                            if (typeof window.renderRecentKioskScans === 'function') window.renderRecentKioskScans();
+                        } else if (!isInitialLoad && state.currentUserRole === 'admin') {
+                            window.renderMainContent();
+                        }
                     } 
                     else fallbackLocalLoad();
                     
@@ -1130,10 +1359,18 @@
             }
         }
 
-        window.prosesKehadiran = function(nikScanned, metode = 'QR', lat = null, lng = null) {
-            if (isProcessingQR) return; // Mencegah double scan
-            isProcessingQR = true;
+        // ==========================================
+        // SISTEM ANTRIAN SCAN CEPAT & STABIL (HIGH THROUGHPUT)
+        // ==========================================
+        const scanCooldownPerCode = new Map(); // cleanCode -> timestamp
+        const scanQueue = [];
+        let isProcessingQueue = false;
 
+        window.prosesKehadiran = function(nikScanned, metode = 'QR', lat = null, lng = null) {
+            window.enqueueScan(nikScanned, metode, lat, lng);
+        };
+
+        window.enqueueScan = function(nikScanned, metode = 'QR', lat = null, lng = null) {
             let code = String(nikScanned || '').trim();
             // Handle URL / JSON barcode format
             if (code.startsWith('{') && code.endsWith('}')) {
@@ -1150,7 +1387,41 @@
             // Bersihkan dari karakter carriage return atau newline (dari barcode scanner gun)
             code = code.replace(/[\r\n]+/g, '').trim();
             const cleanCode = code.toLowerCase();
+            if (!cleanCode) return;
 
+            // Debounce per-karyawan (2.5 detik) agar frame kamera yang sama tidak spam,
+            // TETAPI karyawan BERIKUTNYA bisa langsung scan seketika tanpa tertahan lock global!
+            const now = Date.now();
+            const lastScanTime = scanCooldownPerCode.get(cleanCode) || 0;
+            if (now - lastScanTime < 2500) {
+                // Duplicate frame dari kartu yang sama diabaikan dengan aman
+                return;
+            }
+
+            scanCooldownPerCode.set(cleanCode, now);
+            scanQueue.push({ code, cleanCode, metode, lat, lng });
+            processScanQueue();
+        };
+
+        async function processScanQueue() {
+            if (isProcessingQueue || scanQueue.length === 0) return;
+            isProcessingQueue = true;
+
+            while (scanQueue.length > 0) {
+                const item = scanQueue.shift();
+                try {
+                    await executeKehadiran(item.code, item.cleanCode, item.metode, item.lat, item.lng);
+                } catch (err) {
+                    console.error("Kesalahan eksekusi scan kehadiran:", err);
+                }
+                // Delay mikro 180ms antar pemrosesan agar performa tetap responsif dan bebas jank
+                await new Promise(r => setTimeout(r, 180));
+            }
+
+            isProcessingQueue = false;
+        }
+
+        async function executeKehadiran(code, cleanCode, metode = 'QR', lat = null, lng = null) {
             const karyawan = (state.karyawan || []).find(k => 
                 (k.nik && k.nik.trim().toLowerCase() === cleanCode) ||
                 (k.nip && k.nip.trim().toLowerCase() === cleanCode) ||
@@ -1162,13 +1433,12 @@
             const readerDiv = document.getElementById('reader');
             if (readerDiv) {
                 readerDiv.classList.add('ring-4', 'ring-emerald-400');
-                setTimeout(() => readerDiv.classList.remove('ring-4', 'ring-emerald-400'), 600);
+                setTimeout(() => readerDiv.classList.remove('ring-4', 'ring-emerald-400'), 500);
             }
 
             if(!karyawan) {
                 window.playSound('error'); 
                 showToast('Akses Ditolak', `Kode "${code}" tidak terdaftar di sistem.`, 'error');
-                setTimeout(() => { isProcessingQR = false; }, 3000);
                 return;
             }
 
@@ -1189,10 +1459,25 @@
                 }
 
                 if (!isMasihDiLuar) {
-                    state.imk.push({ id: Date.now(), karyawanId: karyawan.id, tanggal: dateString, jamKeluar: timeString, jamKembali: null, durasi: '-' });
+                    const uniqueId = Date.now() * 1000 + Math.floor(Math.random() * 1000);
+                    const newImk = {
+                        id: uniqueId, 
+                        karyawanId: karyawan.id, 
+                        karyawanNama: karyawan.nama,
+                        karyawanNik: karyawan.nik || '',
+                        tanggal: dateString, 
+                        jamKeluar: timeString, 
+                        jamKembali: null, 
+                        durasi: '-' 
+                    };
+                    state.imk.push(newImk);
+                    syncImkAtomic(newImk, false);
                     saveData(); 
                     window.playSound('imk_keluar'); 
                     showToast('IMK: Izin Keluar', `${karyawan.nama} tercatat KELUAR kantor pukul ${timeString}`);
+                    if (typeof window.tampilkanOverlayScanBerhasil === 'function') {
+                        window.tampilkanOverlayScanBerhasil(karyawan, 'IMK: KELUAR', timeString, 'Izin Keluar', metode);
+                    }
                 } else {
                     imkTerakhir.jamKembali = timeString;
                     
@@ -1204,9 +1489,13 @@
                     if(diffMins < 0) diffMins = 0;
                     imkTerakhir.durasi = `${Math.floor(diffMins / 60) > 0 ? Math.floor(diffMins / 60) + ' jam ' : ''}${diffMins % 60} menit`;
                     
+                    syncImkAtomic(imkTerakhir, true, imkTerakhir.id);
                     saveData(); 
                     window.playSound('imk_kembali'); 
                     showToast('IMK: Kembali', `${karyawan.nama} KEMBALI ke kantor. Durasi: ${imkTerakhir.durasi}`);
+                    if (typeof window.tampilkanOverlayScanBerhasil === 'function') {
+                        window.tampilkanOverlayScanBerhasil(karyawan, 'IMK: KEMBALI', timeString, imkTerakhir.durasi, metode);
+                    }
                 }
             } else {
                 // LOGIKA ABSENSI NORMAL - SUPPORT SHIFT MALAM LINTAS TANGGAL
@@ -1225,17 +1514,41 @@
                     // TERCATAT SEBAGAI JAM PULANG SHIFT
                     absenTerakhir.jamPulang = timeString; 
                     absenTerakhir.metodePulang = metode;
+                    absenTerakhir.karyawanNama = karyawan.nama;
+                    absenTerakhir.karyawanNik = karyawan.nik || '';
+                    syncAbsensiAtomic(absenTerakhir, true, absenTerakhir.id);
                     saveData(); 
                     window.playSound('pulang'); 
                     showToast('Pulang Berhasil', `Hati-hati di jalan, ${karyawan.nama}! (${metode})`);
+                    if (typeof window.tampilkanOverlayScanBerhasil === 'function') {
+                        window.tampilkanOverlayScanBerhasil(karyawan, 'PULANG', timeString, 'Selesai Bekerja', metode);
+                    }
                 } else { 
                     let absenHariIni = state.absensi.find(a => a.karyawanId === karyawan.id && a.tanggal === dateString);
                     if (!absenHariIni) {
                         let status = isLibur ? 'Hadir (Libur)' : (timeString > (shiftKaryawan?.jamMasuk || '08:00') ? 'Terlambat' : 'Tepat Waktu');
-                        state.absensi.push({ id: Date.now(), karyawanId: karyawan.id, tanggal: dateString, jamMasuk: timeString, jamPulang: null, statusMasuk: status, metode: metode, lat: lat, lng: lng });
+                        const uniqueId = Date.now() * 1000 + Math.floor(Math.random() * 1000);
+                        const recordBaru = { 
+                            id: uniqueId, 
+                            karyawanId: karyawan.id, 
+                            karyawanNama: karyawan.nama,
+                            karyawanNik: karyawan.nik || '',
+                            tanggal: dateString, 
+                            jamMasuk: timeString, 
+                            jamPulang: null, 
+                            statusMasuk: status, 
+                            metode: metode, 
+                            lat: lat, 
+                            lng: lng 
+                        };
+                        state.absensi.push(recordBaru);
+                        syncAbsensiAtomic(recordBaru, false);
                         saveData(); 
                         window.playSound('masuk'); 
                         showToast('Masuk Berhasil', `Selamat bekerja, ${karyawan.nama}! (${status})`);
+                        if (typeof window.tampilkanOverlayScanBerhasil === 'function') {
+                            window.tampilkanOverlayScanBerhasil(karyawan, 'MASUK', timeString, status, metode);
+                        }
                     } else {
                         window.playSound('error'); 
                         showToast('Informasi', `${karyawan.nama} sudah merampungkan absen hari ini.`, 'warning'); 
@@ -1243,9 +1556,13 @@
                 }
             }
 
-            // Cooldown scanner 3.5 detik untuk menghindari spam
-            setTimeout(() => { isProcessingQR = false; }, 3500);
-        };
+            if (typeof window.renderRecentKioskScans === 'function') {
+                window.renderRecentKioskScans();
+            }
+            if (state.currentUserRole === 'admin' && state.currentView === 'absensi' && typeof renderAbsensiTable === 'function') {
+                renderAbsensiTable();
+            }
+        }
 
         // PENGELOLAAN INSTANCE SCANNER YANG BERSIH & ROBUST
         async function stopScannerInternal() { 
@@ -1322,31 +1639,132 @@
             renderCameraSelectUI();
         }
 
+        function updateCameraModeButtonsUI() {
+            const btnBelakang = document.getElementById('btnCamBelakang');
+            const btnDepan = document.getElementById('btnCamDepan');
+            const statusEl = document.getElementById('cameraStatus');
+
+            if (btnBelakang && btnDepan) {
+                if (cameraFacingMode === 'environment') {
+                    btnBelakang.className = "flex-1 bg-emerald-600 text-white font-bold py-2.5 px-3 rounded-xl shadow transition text-xs border border-emerald-700 flex items-center justify-center gap-1.5";
+                    btnDepan.className = "flex-1 text-slate-600 bg-white hover:bg-slate-50 font-semibold py-2.5 px-3 rounded-xl transition text-xs border border-slate-200 flex items-center justify-center gap-1.5";
+                } else {
+                    btnDepan.className = "flex-1 bg-emerald-600 text-white font-bold py-2.5 px-3 rounded-xl shadow transition text-xs border border-emerald-700 flex items-center justify-center gap-1.5";
+                    btnBelakang.className = "flex-1 text-slate-600 bg-white hover:bg-slate-50 font-semibold py-2.5 px-3 rounded-xl transition text-xs border border-slate-200 flex items-center justify-center gap-1.5";
+                }
+            }
+
+            if (statusEl) {
+                statusEl.innerText = cameraFacingMode === 'environment' ? "Kamera Belakang (Aktif)" : "Kamera Depan (Aktif)";
+            }
+        }
+
+        window.setCameraMode = async function(mode) {
+            if (isScannerStarting) {
+                showToast("Mohon Tunggu", "Sedang menghubungkan kamera...", "warning");
+                return;
+            }
+            cameraFacingMode = mode; // 'environment' (Belakang) atau 'user' (Depan)
+            
+            // Cari device id yang cocok jika kamera sudah pernah di-enumerate
+            if (availableCameras && availableCameras.length > 0) {
+                if (mode === 'user') {
+                    const frontIdx = availableCameras.findIndex(c => {
+                        const l = (c.label || '').toLowerCase();
+                        return l.includes('front') || l.includes('depan') || l.includes('user') || l.includes('selfie') || l.includes('facetime');
+                    });
+                    if (frontIdx !== -1) {
+                        currentCameraIndex = frontIdx;
+                        selectedCameraId = availableCameras[frontIdx].id;
+                    } else {
+                        selectedCameraId = null;
+                    }
+                } else {
+                    const backIdx = availableCameras.findIndex(c => {
+                        const l = (c.label || '').toLowerCase();
+                        return l.includes('back') || l.includes('belakang') || l.includes('rear') || l.includes('environment');
+                    });
+                    if (backIdx !== -1) {
+                        currentCameraIndex = backIdx;
+                        selectedCameraId = availableCameras[backIdx].id;
+                    } else {
+                        selectedCameraId = null;
+                    }
+                }
+            } else {
+                selectedCameraId = null;
+            }
+
+            updateCameraModeButtonsUI();
+            showToast("Mode Kamera", mode === 'environment' ? "Beralih ke Kamera Belakang" : "Beralih ke Kamera Depan");
+            await window.startScanner();
+        };
+
+        async function updateCameraList() {
+            try {
+                if (typeof Html5Qrcode !== 'undefined' && Html5Qrcode.getCameras) {
+                    const devices = await Html5Qrcode.getCameras();
+                    if (devices && Array.isArray(devices) && devices.length > 0) {
+                        availableCameras = devices;
+                        
+                        // Sinkronkan camera target sesuai mode aktif
+                        if (cameraFacingMode === 'user') {
+                            const frontIdx = availableCameras.findIndex(c => {
+                                const l = (c.label || '').toLowerCase();
+                                return l.includes('front') || l.includes('depan') || l.includes('user') || l.includes('selfie') || l.includes('facetime');
+                            });
+                            if (frontIdx !== -1) {
+                                currentCameraIndex = frontIdx;
+                                selectedCameraId = availableCameras[frontIdx].id;
+                            }
+                        } else {
+                            const backIdx = availableCameras.findIndex(c => {
+                                const l = (c.label || '').toLowerCase();
+                                return l.includes('back') || l.includes('belakang') || l.includes('rear') || l.includes('environment');
+                            });
+                            if (backIdx !== -1) {
+                                currentCameraIndex = backIdx;
+                                selectedCameraId = availableCameras[backIdx].id;
+                            }
+                        }
+                    }
+                }
+            } catch(e) {
+                console.warn("Gagal enumerasi kamera:", e);
+            }
+            renderCameraSelectUI();
+            updateCameraModeButtonsUI();
+        }
+
         function renderCameraSelectUI() {
             const selectEl = document.getElementById('cameraSelect');
             const containerEl = document.getElementById('cameraSelectContainer');
             const statusEl = document.getElementById('cameraStatus');
             const badgeEl = document.getElementById('cameraCountBadge');
-            const toggleTextEl = document.getElementById('toggleCameraText');
 
             if (!availableCameras || availableCameras.length === 0) {
                 if (containerEl) containerEl.classList.add('hidden');
                 if (badgeEl) badgeEl.classList.add('hidden');
                 if (statusEl) {
-                    statusEl.innerText = cameraFacingMode === 'environment' ? 'Kamera Belakang' : 'Kamera Depan';
+                    statusEl.innerText = cameraFacingMode === 'environment' ? 'Kamera Belakang (Aktif)' : 'Kamera Depan (Aktif)';
                 }
+                updateCameraModeButtonsUI();
                 return;
             }
 
             // Tampilkan badge jumlah kamera
             if (badgeEl) {
                 badgeEl.classList.remove('hidden');
-                badgeEl.innerText = `${availableCameras.length} Kamera`;
+                badgeEl.innerText = `${availableCameras.length} Kamera Terdeteksi`;
             }
 
-            // Tampilkan selector dropdown
+            // Tampilkan selector dropdown jika ada lebih dari 2 kamera (misal lensa ultrawide, webcam eksternal)
             if (containerEl) {
-                containerEl.classList.remove('hidden');
+                if (availableCameras.length > 2) {
+                    containerEl.classList.remove('hidden');
+                } else {
+                    containerEl.classList.add('hidden');
+                }
             }
 
             // Update isi dropdown
@@ -1362,17 +1780,13 @@
                 });
             }
 
-            // Update status & teks tombol putar
-            const currentCam = availableCameras[currentCameraIndex];
-            if (currentCam) {
-                const labelFormatted = formatCameraLabel(currentCam.label, currentCameraIndex);
-                if (statusEl) {
-                    statusEl.innerText = `${labelFormatted} (${currentCameraIndex + 1}/${availableCameras.length})`;
-                }
-                if (toggleTextEl) {
-                    toggleTextEl.innerText = availableCameras.length > 2 ? `Ganti Kamera (${currentCameraIndex + 1}/${availableCameras.length})` : 'Putar Kamera';
-                }
+            if (statusEl) {
+                const currentCam = availableCameras[currentCameraIndex];
+                const labelFormatted = currentCam ? formatCameraLabel(currentCam.label, currentCameraIndex) : (cameraFacingMode === 'environment' ? 'Kamera Belakang' : 'Kamera Depan');
+                statusEl.innerText = `${labelFormatted} (Aktif)`;
             }
+
+            updateCameraModeButtonsUI();
         }
 
         window.startScanner = async function() {
@@ -1399,15 +1813,6 @@
                             const devs = await Html5Qrcode.getCameras();
                             if (devs && devs.length > 0) {
                                 availableCameras = devs;
-                                if (!selectedCameraId) {
-                                    // Default prioritaskan kamera belakang jika ada
-                                    const backIdx = availableCameras.findIndex(c => {
-                                        const l = (c.label || '').toLowerCase();
-                                        return l.includes('back') || l.includes('belakang') || l.includes('rear') || l.includes('0');
-                                    });
-                                    currentCameraIndex = backIdx !== -1 ? backIdx : 0;
-                                    selectedCameraId = availableCameras[currentCameraIndex].id;
-                                }
                             }
                         }
                     } catch(e) {}
@@ -1441,17 +1846,16 @@
 
                 // Konfigurasi viewport scan yang fleksibel untuk Barcode panjang maupun QR Code
                 const scanConfig = {
-                    fps: 15,
+                    fps: 22,
                     qrbox: (viewfinderWidth, viewfinderHeight) => {
-                        const w = Math.min(Math.floor(viewfinderWidth * 0.85), 320);
-                        const h = Math.min(Math.floor(viewfinderHeight * 0.75), 240);
-                        return { width: Math.max(w, 220), height: Math.max(h, 160) };
+                        const w = Math.min(Math.floor(viewfinderWidth * 0.88), 340);
+                        const h = Math.min(Math.floor(viewfinderHeight * 0.78), 260);
+                        return { width: Math.max(w, 230), height: Math.max(h, 160) };
                     },
                     aspectRatio: 1.333333
                 };
 
                 const onScanSuccess = (decodedText) => {
-                    if (isProcessingQR) return;
                     if (state.currentView === 'absenGPS') {
                         window.prosesGPSLaluAbsen(decodedText);
                     } else {
@@ -1459,38 +1863,56 @@
                     }
                 };
 
+                // Tentukan target kamera secara spesifik (Kamera Depan vs Kamera Belakang)
                 let cameraTarget;
-                if (selectedCameraId) {
-                    cameraTarget = selectedCameraId;
-                } else if (availableCameras && availableCameras.length > 0 && availableCameras[currentCameraIndex]) {
-                    cameraTarget = availableCameras[currentCameraIndex].id;
+                if (cameraFacingMode === 'user') {
+                    const frontCam = availableCameras.find(c => {
+                        const l = (c.label || '').toLowerCase();
+                        return l.includes('front') || l.includes('depan') || l.includes('user') || l.includes('selfie') || l.includes('facetime');
+                    });
+                    if (frontCam) {
+                        cameraTarget = frontCam.id;
+                        selectedCameraId = frontCam.id;
+                    } else {
+                        cameraTarget = { facingMode: "user" };
+                    }
                 } else {
-                    cameraTarget = { facingMode: cameraFacingMode };
+                    const backCam = availableCameras.find(c => {
+                        const l = (c.label || '').toLowerCase();
+                        return l.includes('back') || l.includes('belakang') || l.includes('rear') || l.includes('environment');
+                    });
+                    if (backCam) {
+                        cameraTarget = backCam.id;
+                        selectedCameraId = backCam.id;
+                    } else {
+                        cameraTarget = { facingMode: "environment" };
+                    }
                 }
 
+                updateCameraModeButtonsUI();
                 renderCameraSelectUI();
 
                 try {
                     await html5QrCode.start(cameraTarget, scanConfig, onScanSuccess, () => {});
                     if (errEl) errEl.classList.add('hidden');
-                    // Perbarui daftar seluruh kamera setelah izin aktif untuk mendapatkan nama label resmi
                     await updateCameraList();
+                    updateCameraModeButtonsUI();
                 } catch(firstErr) {
-                    console.warn("Mencoba fallback kamera:", firstErr);
-                    let fallbackTarget = { facingMode: cameraFacingMode === "environment" ? "user" : "environment" };
+                    console.warn("Mencoba fallback constraint kamera murni:", firstErr);
+                    let fallbackTarget = { facingMode: cameraFacingMode };
                     try {
-                        cameraFacingMode = cameraFacingMode === "environment" ? "user" : "environment";
                         await html5QrCode.start(fallbackTarget, scanConfig, onScanSuccess, () => {});
                         if (errEl) errEl.classList.add('hidden');
                         await updateCameraList();
+                        updateCameraModeButtonsUI();
                     } catch(secondErr) {
                         console.warn("Kamera gagal diakses:", secondErr);
-                        let pesanError = "Kamera tidak dapat diakses.";
+                        let pesanError = `Kamera (${cameraFacingMode === 'environment' ? 'Belakang' : 'Depan'}) tidak dapat diakses.`;
                         const errStr = String(secondErr || '');
                         if (errStr.includes("NotAllowedError") || errStr.includes("Permission")) {
                             pesanError = "Izin akses kamera diblokir browser. Harap izinkan akses kamera di setelan situs.";
                         } else if (errStr.includes("NotFoundError") || errStr.includes("DevicesNotFoundError")) {
-                            pesanError = "Tidak ditemukan perangkat kamera yang terhubung pada sistem.";
+                            pesanError = "Perangkat kamera tidak ditemukan pada sistem ini.";
                         } else if (errStr.includes("NotReadableError") || errStr.includes("TrackStartError")) {
                             pesanError = "Kamera sedang digunakan aplikasi atau tab browser lain.";
                         }
@@ -1502,11 +1924,11 @@
                                     <i class="fas fa-video-slash text-3xl mb-2 text-rose-400"></i>
                                     <p class="text-white text-xs font-semibold mb-3 leading-relaxed">${pesanError}</p>
                                     <div class="flex flex-col gap-2">
-                                        <button onclick="window.startScanner()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 px-4 rounded-xl shadow transition">
-                                            <i class="fas fa-redo mr-1.5"></i> Coba Buka Kamera Lagi
+                                        <button onclick="window.setCameraMode('${cameraFacingMode === 'environment' ? 'user' : 'environment'}')" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-2.5 px-4 rounded-xl shadow transition">
+                                            <i class="fas fa-camera-rotate mr-1.5"></i> Coba Beralih ke ${cameraFacingMode === 'environment' ? 'Kamera Depan' : 'Kamera Belakang'}
                                         </button>
-                                        <button onclick="document.getElementById('inputManualNIK')?.focus();" class="bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold py-2.5 px-4 rounded-xl transition">
-                                            <i class="fas fa-keyboard mr-1.5"></i> Gunakan Input NIK / Scanner Gun
+                                        <button onclick="window.startScanner()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 px-4 rounded-xl shadow transition">
+                                            <i class="fas fa-redo mr-1.5"></i> Coba Buka Lagi
                                         </button>
                                     </div>
                                 </div>
@@ -1546,26 +1968,8 @@
                 showToast("Mohon Tunggu", "Sedang menghubungkan kamera...", "warning");
                 return;
             }
-
-            if (!availableCameras || availableCameras.length === 0) {
-                await updateCameraList();
-            }
-
-            if (availableCameras && availableCameras.length > 1) {
-                // Rotasi melalui SEMUA kamera yang terdeteksi (Kamera 1 -> 2 -> 3 -> 4 -> ...)
-                currentCameraIndex = (currentCameraIndex + 1) % availableCameras.length;
-                selectedCameraId = availableCameras[currentCameraIndex].id;
-                const curCam = availableCameras[currentCameraIndex];
-                const namaKamera = formatCameraLabel(curCam.label, currentCameraIndex);
-                showToast("Ganti Kamera", `Beralih ke: ${namaKamera} (${currentCameraIndex + 1}/${availableCameras.length})`);
-            } else {
-                cameraFacingMode = (cameraFacingMode === "environment") ? "user" : "environment"; 
-                selectedCameraId = null;
-                showToast("Putar Kamera", `Beralih ke: ${cameraFacingMode === "environment" ? "Kamera Belakang" : "Kamera Depan"}`);
-            }
-
-            renderCameraSelectUI();
-            await window.startScanner(); 
+            const nextMode = (cameraFacingMode === "environment") ? "user" : "environment";
+            await window.setCameraMode(nextMode);
         };
 
         window.selectCamera = async function(cameraId) {
@@ -1578,10 +1982,18 @@
             const idx = availableCameras.findIndex(c => c.id === cameraId);
             if (idx !== -1) {
                 currentCameraIndex = idx;
-                const namaKamera = formatCameraLabel(availableCameras[idx].label, idx);
+                const cam = availableCameras[idx];
+                const lower = (cam.label || '').toLowerCase();
+                if (lower.includes('front') || lower.includes('depan') || lower.includes('user') || lower.includes('selfie')) {
+                    cameraFacingMode = 'user';
+                } else if (lower.includes('back') || lower.includes('belakang') || lower.includes('rear') || lower.includes('environment')) {
+                    cameraFacingMode = 'environment';
+                }
+                const namaKamera = formatCameraLabel(cam.label, idx);
                 showToast("Kamera Dipilih", `Menggunakan: ${namaKamera}`);
             }
             renderCameraSelectUI();
+            updateCameraModeButtonsUI();
             await window.startScanner();
         };
 
@@ -1697,9 +2109,6 @@
         });
 
         window.prosesGPSLaluAbsen = function(nik) {
-            if (isProcessingQR) return; 
-            isProcessingQR = true;
-            
             let code = String(nik || '').trim();
             if (code.startsWith('{') && code.endsWith('}')) {
                 try {
@@ -1720,29 +2129,56 @@
             if(!karyawan) { 
                 window.playSound('error'); 
                 showToast('Akses Ditolak', `Kode "${code}" tidak terdaftar di sistem.`, 'error'); 
-                setTimeout(() => { isProcessingQR = false; }, 3000); 
-                return; 
-            }
-            if (!navigator.geolocation) { 
-                window.playSound('error'); 
-                showToast('Gagal', 'Sistem GPS tidak didukung perangkat ini.', 'error'); 
-                setTimeout(() => { isProcessingQR = false; }, 3000); 
                 return; 
             }
 
-            showToast('Memindai GPS...', 'Mohon tunggu, mengunci titik koordinat lokasi...', 'warning');
+            const gpsStatusEl = document.getElementById('gpsLockStatus');
+            if (gpsStatusEl) {
+                gpsStatusEl.innerHTML = '<span class="text-amber-500 font-bold"><i class="fas fa-spinner fa-spin mr-1"></i> Mengunci koordinat GPS...</span>';
+            }
+
+            showToast('Memindai GPS...', `Mengunci titik koordinat untuk ${karyawan.nama}...`, 'warning');
+
+            if (!navigator.geolocation) { 
+                if (gpsStatusEl) gpsStatusEl.innerHTML = '<span class="text-rose-500 font-bold"><i class="fas fa-exclamation-triangle mr-1"></i> GPS tidak didukung</span>';
+                window.prosesKehadiran(code, 'GPS-Manual');
+                return; 
+            }
+
+            // Upaya 1: Akurasi Tinggi (High Accuracy)
             navigator.geolocation.getCurrentPosition(
                 (pos) => { 
-                    isProcessingQR = false; 
+                    if (gpsStatusEl) gpsStatusEl.innerHTML = `<span class="text-emerald-500 font-bold"><i class="fas fa-check-circle mr-1"></i> GPS Terkunci: ${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}</span>`;
                     window.prosesKehadiran(code, 'GPS', pos.coords.latitude, pos.coords.longitude); 
                 },
-                () => { 
-                    window.playSound('error'); 
-                    showToast('Gagal', 'Izin lokasi (GPS) ditolak atau sinyal lemah.', 'error'); 
-                    setTimeout(() => { isProcessingQR = false; }, 3000); 
+                (firstErr) => { 
+                    console.warn("GPS Akurasi tinggi timeout/gagal, beralih ke toleransi indoor...", firstErr);
+                    // Upaya 2: Fallback Akurasi Standar (Sangat penting saat karyawan berada di dalam gedung/ruangan kantor)
+                    navigator.geolocation.getCurrentPosition(
+                        (fallbackPos) => {
+                            if (gpsStatusEl) gpsStatusEl.innerHTML = `<span class="text-emerald-500 font-bold"><i class="fas fa-check-circle mr-1"></i> GPS Terkunci (Indoor): ${fallbackPos.coords.latitude.toFixed(4)}, ${fallbackPos.coords.longitude.toFixed(4)}</span>`;
+                            window.prosesKehadiran(code, 'GPS', fallbackPos.coords.latitude, fallbackPos.coords.longitude);
+                        },
+                        (secondErr) => {
+                            console.error("Gagal mendapatkan koordinat GPS:", secondErr);
+                            if (gpsStatusEl) gpsStatusEl.innerHTML = '<span class="text-rose-500 font-bold"><i class="fas fa-times-circle mr-1"></i> Sinyal GPS lemah / Izin ditolak</span>';
+                            window.playSound('error'); 
+                            showToast('Gagal GPS', 'Izin lokasi (GPS) ditolak atau sinyal lemah di perangkat Anda. Harap aktifkan Lokasi.', 'error'); 
+                        },
+                        { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 }
+                    );
                 },
-                { enableHighAccuracy: true, timeout: 10000 }
+                { enableHighAccuracy: true, timeout: 5000, maximumAge: 30000 }
             );
+        };
+
+        window.absenGPSKaryawanTerpilih = function() {
+            const sel = document.getElementById('selectKaryawanGPS');
+            if (!sel || !sel.value) {
+                showToast('Peringatan', 'Silakan pilih nama karyawan terlebih dahulu.', 'warning');
+                return;
+            }
+            window.prosesGPSLaluAbsen(sel.value);
         };
 
         window.confirmDelete = function(type, id) {
@@ -2455,6 +2891,89 @@
             }).join('');
         }
 
+        // ==========================================
+        // UI FEEDBACK PRESENSI REAL-TIME (KIOSK & GPS)
+        // ==========================================
+        window.renderRecentKioskScans = function() {
+            const container = document.getElementById('kioskRecentScansList');
+            if (!container) return;
+            const today = new Date();
+            const dateString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            
+            const recent = (state.absensi || [])
+                .filter(a => a && a.tanggal === dateString)
+                .slice(-5)
+                .reverse();
+
+            if (recent.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-3 text-xs text-slate-400 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+                        <i class="fas fa-fingerprint mr-1.5 text-slate-300"></i> Belum ada presensi tercatat hari ini.
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = recent.map(r => {
+                const isLate = r.statusMasuk === 'Terlambat';
+                const badgeColor = isLate ? 'bg-amber-100 text-amber-800 border-amber-200' : 'bg-emerald-100 text-emerald-800 border-emerald-200';
+                const kFound = state.karyawan?.find(k => k.id == r.karyawanId || String(k.id) === String(r.karyawanId));
+                const nama = r.karyawanNama || (kFound ? kFound.nama : 'Karyawan');
+                const pulangInfo = r.jamPulang ? `<span class="text-slate-500 font-mono ml-2">Pulang: <b class="text-slate-700">${r.jamPulang}</b></span>` : '';
+                return `
+                    <div class="flex items-center justify-between p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/90 rounded-xl transition text-xs shadow-2xs">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <div class="w-7 h-7 rounded-lg bg-emerald-600 text-white font-bold flex items-center justify-center text-[10px] shrink-0 shadow-xs">
+                                ${nama.charAt(0).toUpperCase()}
+                            </div>
+                            <div class="min-w-0 truncate">
+                                <div class="font-bold text-slate-800 truncate">${nama}</div>
+                                <div class="text-[11px] text-slate-500 flex items-center gap-1.5 flex-wrap">
+                                    <span>Masuk: <b class="font-mono text-slate-700">${r.jamMasuk}</b></span>
+                                    ${pulangInfo}
+                                    <span class="text-[10px] text-slate-400">(${r.metode || 'QR'})</span>
+                                </div>
+                            </div>
+                        </div>
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-md border ${badgeColor} shrink-0">
+                            ${r.statusMasuk || 'Hadir'}
+                        </span>
+                    </div>
+                `;
+            }).join('');
+        };
+
+        window.tampilkanOverlayScanBerhasil = function(karyawan, tipe, jam, status, metode) {
+            const overlay = document.getElementById('kioskSuccessOverlay');
+            if (!overlay) return;
+            
+            const namaEl = document.getElementById('kioskSuccessNama');
+            const statusEl = document.getElementById('kioskSuccessStatus');
+            const waktuEl = document.getElementById('kioskSuccessWaktu');
+            const badgeEl = document.getElementById('kioskSuccessBadge');
+            const initialEl = document.getElementById('kioskSuccessInitial');
+
+            if (namaEl) namaEl.innerText = karyawan.nama || 'Karyawan';
+            if (initialEl) initialEl.innerText = (karyawan.nama || 'K').charAt(0).toUpperCase();
+            if (waktuEl) waktuEl.innerText = `${tipe} Pukul ${jam} WIB`;
+            if (statusEl) statusEl.innerText = status || 'Tercatat';
+            if (badgeEl) badgeEl.innerText = metode || 'QR/Barcode';
+
+            overlay.classList.remove('hidden');
+            // Trigger transition
+            setTimeout(() => {
+                overlay.classList.remove('opacity-0', 'scale-95');
+                overlay.classList.add('opacity-100', 'scale-100');
+            }, 10);
+
+            clearTimeout(window.__overlayScanTimer);
+            window.__overlayScanTimer = setTimeout(() => {
+                overlay.classList.remove('opacity-100', 'scale-100');
+                overlay.classList.add('opacity-0', 'scale-95');
+                setTimeout(() => overlay.classList.add('hidden'), 300);
+            }, 2300);
+        };
+
         window.render = function() {
             const container = document.getElementById('appContainer');
             
@@ -2492,7 +3011,7 @@
                                     </div>
                                     <div>
                                         <h1 class="text-lg sm:text-xl font-bold text-white leading-tight" id="kioskTitle">${isKiosk ? 'Terminal Mesin QR & Barcode' : 'Absen Personal GPS'}</h1>
-                                        <p class="text-xs text-emerald-400 font-medium" id="kioskSubtitle">${isKiosk ? 'Dekatkan Barcode ID Card atau QR Code ke Kamera' : 'Scan ID Card via Kamera untuk mengunci Titik Lokasi'}</p>
+                                        <p class="text-xs text-emerald-400 font-medium" id="kioskSubtitle">${isKiosk ? 'Dekatkan Barcode ID Card atau QR Code ke Kamera' : 'Scan ID Card atau Pilih Nama untuk Kunci Titik Lokasi'}</p>
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-2">
@@ -2514,15 +3033,49 @@
                                     <button id="btnModeImk" onclick="window.toggleKioskMode('imk')" class="flex-1 text-slate-500 bg-slate-100 hover:bg-slate-200 font-semibold py-2.5 rounded-xl transition text-xs border border-slate-200">Izin Keluar Masuk (IMK)</button>
                                 </div>
                                 ` : `
-                                <div class="bg-blue-50 border border-blue-200 p-3 rounded-xl mb-4 text-blue-700 text-xs font-bold flex items-center justify-center">
-                                    <i class="fas fa-satellite-dish mr-2 animate-pulse text-lg"></i> Membutuhkan Akses Lokasi (GPS) & Scan ID Card
+                                <div class="bg-blue-50 border border-blue-200 p-3 rounded-2xl mb-4 text-blue-700 text-xs font-bold">
+                                    <div class="flex items-center justify-center gap-2 mb-1">
+                                        <i class="fas fa-satellite-dish mr-1 animate-pulse text-base"></i> 
+                                        <span>Mode Presensi GPS Personal (HP)</span>
+                                    </div>
+                                    <div id="gpsLockStatus" class="text-[11px] text-slate-600 font-normal">
+                                        <span class="inline-flex items-center text-emerald-600 font-semibold"><i class="fas fa-circle-check mr-1"></i> GPS Otomatis Aktif saat Scan / Klik Absen</span>
+                                    </div>
+                                </div>
+
+                                <!-- PILIH KARYAWAN ABSEN CEPAT (GPS) -->
+                                <div class="bg-gradient-to-r from-blue-50/90 to-indigo-50/90 border border-blue-200 rounded-2xl p-3.5 mb-4 text-left shadow-2xs">
+                                    <label class="block text-[11px] font-bold text-blue-900 uppercase tracking-wider mb-1.5 flex items-center">
+                                        <i class="fas fa-user-check text-blue-600 mr-1.5"></i> Absen Langsung via Nama (Cepat & Akurat):
+                                    </label>
+                                    <div class="flex flex-col sm:flex-row gap-2">
+                                        <select id="selectKaryawanGPS" class="flex-1 bg-white border border-blue-200 rounded-xl px-3 py-2 text-xs text-slate-800 font-semibold outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs">
+                                            <option value="">-- Pilih Nama Anda --</option>
+                                            ${(state.karyawan || []).map(k => `<option value="${k.nik || k.id}">${k.nama} (${k.nik || '-'})</option>`).join('')}
+                                        </select>
+                                        <button type="button" onclick="window.absenGPSKaryawanTerpilih()" class="bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm transition text-xs flex items-center justify-center shrink-0">
+                                            <i class="fas fa-location-crosshairs mr-1.5 text-amber-300"></i> KLIK ABSEN SEKARANG
+                                        </button>
+                                    </div>
                                 </div>
                                 `}
+
+                                <!-- DUA MODE KAMERA: KAMERA BELAKANG & KAMERA DEPAN -->
+                                <div class="grid grid-cols-2 gap-2 mb-3 bg-slate-100 p-1.5 rounded-2xl border border-slate-200 shadow-2xs">
+                                    <button type="button" id="btnCamBelakang" onclick="window.setCameraMode('environment')" class="py-2.5 px-3 rounded-xl font-bold text-xs transition flex items-center justify-center gap-2 ${cameraFacingMode === 'environment' ? 'bg-emerald-600 text-white shadow-sm border border-emerald-700' : 'text-slate-600 bg-white hover:bg-slate-50 border border-slate-200'}">
+                                        <i class="fas fa-camera text-sm"></i>
+                                        <span>Kamera Belakang</span>
+                                    </button>
+                                    <button type="button" id="btnCamDepan" onclick="window.setCameraMode('user')" class="py-2.5 px-3 rounded-xl font-bold text-xs transition flex items-center justify-center gap-2 ${cameraFacingMode === 'user' ? 'bg-emerald-600 text-white shadow-sm border border-emerald-700' : 'text-slate-600 bg-white hover:bg-slate-50 border border-slate-200'}">
+                                        <i class="fas fa-camera-rotate text-sm"></i>
+                                        <span>Kamera Depan</span>
+                                    </button>
+                                </div>
 
                                 <div class="flex items-center justify-between text-xs text-slate-500 mb-2 px-1">
                                     <div class="flex items-center gap-1.5 min-w-0">
                                         <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse flex-shrink-0"></span>
-                                        <span id="cameraStatus" class="font-medium text-slate-600 truncate">Menghubungkan kamera...</span>
+                                        <span id="cameraStatus" class="font-medium text-slate-600 truncate">${cameraFacingMode === 'environment' ? 'Kamera Belakang (Aktif)' : 'Kamera Depan (Aktif)'}</span>
                                     </div>
                                     <div class="flex items-center gap-1.5 flex-shrink-0">
                                         <span id="cameraCountBadge" class="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full border border-emerald-300 hidden"></span>
@@ -2545,13 +3098,37 @@
                                     <div class="scan-laser-line"></div>
                                     <div id="cameraError" class="text-amber-500 text-xs font-medium p-4 absolute inset-0 flex flex-col items-center justify-center hidden bg-slate-900/95 z-20"></div>
                                     <div id="reader" class="w-full h-full object-cover"></div>
+
+                                    <!-- OVERLAY NOTIFIKASI SUKSES SCAN TERKINI -->
+                                    <div id="kioskSuccessOverlay" class="absolute inset-0 bg-slate-900/95 backdrop-blur-md z-30 flex flex-col items-center justify-center p-6 text-white text-center rounded-2xl transition-all duration-300 opacity-0 scale-95 hidden pointer-events-none">
+                                        <div class="w-14 h-14 rounded-full bg-emerald-500 text-white flex items-center justify-center text-2xl mb-2.5 shadow-lg shadow-emerald-500/50">
+                                            <i class="fas fa-check"></i>
+                                        </div>
+                                        <div id="kioskSuccessInitial" class="w-10 h-10 rounded-xl bg-emerald-600/50 text-white font-bold text-lg flex items-center justify-center mb-1.5 border border-emerald-400">
+                                            K
+                                        </div>
+                                        <h3 id="kioskSuccessNama" class="text-lg font-black text-white leading-tight mb-1 truncate max-w-full px-2">
+                                            Nama Karyawan
+                                        </h3>
+                                        <div id="kioskSuccessWaktu" class="text-xs text-emerald-300 font-mono font-semibold mb-2">
+                                            MASUK Pukul 07:45 WIB
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <span id="kioskSuccessStatus" class="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[11px] font-bold px-3 py-1 rounded-full">
+                                                Tepat Waktu
+                                            </span>
+                                            <span id="kioskSuccessBadge" class="bg-white/10 text-slate-300 text-[11px] font-medium px-2.5 py-1 rounded-full">
+                                                QR Code
+                                            </span>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <input type="file" id="fileQrInput" accept="image/*" class="hidden" onchange="window.scanBarcodeFile(event)">
 
                                 <div class="flex gap-2 mb-2">
-                                    <button type="button" id="btnToggleCamera" onclick="window.toggleCamera()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 px-3 rounded-xl transition flex items-center justify-center border border-slate-300 text-xs shadow-sm" title="Putar & rotasikan ke kamera berikutnya">
-                                        <i class="fas fa-camera-rotate mr-1.5 text-emerald-600"></i> <span id="toggleCameraText">Putar Kamera</span>
+                                    <button type="button" id="btnToggleCamera" onclick="window.toggleCamera()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 px-3 rounded-xl transition flex items-center justify-center border border-slate-300 text-xs shadow-sm" title="Putar ke mode kamera lainnya">
+                                        <i class="fas fa-arrows-rotate mr-1.5 text-emerald-600"></i> <span id="toggleCameraText">Putar Kamera</span>
                                     </button>
                                     <button type="button" id="btnScanGambar" onclick="document.getElementById('fileQrInput').click()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 px-3 rounded-xl transition flex items-center justify-center border border-slate-300 text-xs shadow-sm" title="Scan dari foto/gambar barcode">
                                         <i class="fas fa-image mr-1.5 text-indigo-600"></i> Scan Gambar
@@ -2575,11 +3152,21 @@
                                     </button>
                                 </form>
                                 <p class="text-[11px] text-slate-400 mt-2 text-center"><i class="fas fa-info-circle mr-1 text-slate-400"></i> Mendukung Barcode Scanner Gun USB/Bluetooth, Webcam & Kamera HP</p>
+
+                                <!-- 5 PRESENSI TERAKHIR HARI INI -->
+                                <div class="mt-4 pt-3 border-t border-slate-100 text-left">
+                                    <div class="flex items-center justify-between text-xs font-bold text-slate-700 mb-2">
+                                        <span><i class="fas fa-list-check text-emerald-600 mr-1.5"></i> 5 Presensi Terakhir Hari Ini:</span>
+                                        <span class="text-[10px] text-slate-400 font-normal">Sinkronisasi Real-Time</span>
+                                    </div>
+                                    <div id="kioskRecentScansList" class="space-y-1.5"></div>
+                                </div>
                             </div>
                         </div>
                     </div>`;
                 startRealTimeClock(); 
                 renderCameraSelectUI();
+                window.renderRecentKioskScans();
                 window.startScanner(); 
                 return;
             }
@@ -2602,78 +3189,419 @@
             window.renderMainContent();
         };
 
-        window.renderRechartsMonthly = function() {
-            const container = document.getElementById('monthlyChartContainer');
-            if (!container || !window.React || !window.ReactDOM || !window.Recharts) return;
+        // ==========================================
+        // TREN KEHADIRAN & KETERLAMBATAN BULANAN (CHART.JS & INTERAKTIF)
+        // ==========================================
+        window.dashboardChartState = window.dashboardChartState || {
+            year: new Date().getFullYear(),
+            type: 'bar' // 'bar', 'line', 'table'
+        };
 
-            // Generate Monthly Data
-            const now = new Date();
-            const year = now.getFullYear();
-            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'];
+        window.setDashboardChartYear = function(year) {
+            window.dashboardChartState.year = parseInt(year, 10) || new Date().getFullYear();
+            window.renderMonthlyAttendanceChart();
+        };
+
+        window.setDashboardChartType = function(type) {
+            window.dashboardChartState.type = type || 'bar';
+            window.renderMonthlyAttendanceChart();
+        };
+
+        function renderNativeMonthlyChartFallback(container, monthlyData, activeYear) {
+            const maxVal = Math.max(1, ...monthlyData.map(d => d.total));
+            container.innerHTML = `
+                <div class="w-full py-2 flex flex-col justify-end">
+                    <div class="flex items-center justify-end gap-4 mb-3 text-xs font-semibold text-slate-600">
+                        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-emerald-500"></span> Tepat Waktu</span>
+                        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-amber-500"></span> Terlambat</span>
+                    </div>
+                    <div class="grid grid-cols-12 gap-1 sm:gap-2 items-end h-[240px] pt-6 border-b border-slate-200">
+                        ${monthlyData.map(m => {
+                            const tepatH = maxVal > 0 ? Math.round((m.tepat / maxVal) * 180) : 0;
+                            const telatH = maxVal > 0 ? Math.round((m.telat / maxVal) * 180) : 0;
+                            return `
+                                <div class="group relative flex flex-col items-center justify-end h-full">
+                                    <div class="opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-full mb-2 bg-slate-900 text-white text-[11px] p-2.5 rounded-xl shadow-xl pointer-events-none z-30 whitespace-nowrap">
+                                        <p class="font-bold border-b border-slate-700 pb-1 mb-1 text-slate-200">${m.nameFull} ${activeYear}</p>
+                                        <p class="text-emerald-400 font-medium">Tepat Waktu: <b>${m.tepat}</b></p>
+                                        <p class="text-amber-400 font-medium">Terlambat: <b>${m.telat}</b></p>
+                                        <p class="text-slate-300 font-bold mt-1 pt-1 border-t border-slate-800">Total: ${m.total} (${m.disiplinPct}%)</p>
+                                    </div>
+                                    <div class="w-full max-w-[32px] flex flex-col justify-end items-center rounded-t-lg overflow-hidden bg-slate-100 h-full">
+                                        <div class="w-full bg-amber-500 transition-all duration-300 rounded-t" style="height: ${telatH}px;"></div>
+                                        <div class="w-full bg-emerald-500 transition-all duration-300" style="height: ${tepatH}px;"></div>
+                                    </div>
+                                    <span class="text-[10px] sm:text-xs font-semibold text-slate-600 mt-2 truncate">${m.nameShort}</span>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        window.renderMonthlyAttendanceChart = function() {
+            const container = document.getElementById('monthlyChartContainer');
+            if (!container) return;
+
+            const absensiList = state.absensi || [];
             
-            const chartData = months.map((monthName, index) => {
-                const monthNum = String(index + 1).padStart(2, '0');
-                const prefix = `${year}-${monthNum}`;
+            // Dapatkan tahun yang valid
+            const yearsSet = new Set();
+            const currentYearNow = new Date().getFullYear();
+            yearsSet.add(currentYearNow);
+            absensiList.forEach(a => {
+                if (a.tanggal && a.tanggal.length >= 4) {
+                    const y = parseInt(a.tanggal.substring(0, 4), 10);
+                    if (!isNaN(y) && y > 2000 && y < 2100) yearsSet.add(y);
+                }
+            });
+            const availableYears = Array.from(yearsSet).sort((a, b) => b - a);
+            
+            if (!window.dashboardChartState.year || !availableYears.includes(window.dashboardChartState.year)) {
+                window.dashboardChartState.year = availableYears[0] || currentYearNow;
+            }
+            const activeYear = window.dashboardChartState.year;
+            const activeType = window.dashboardChartState.type || 'bar';
+
+            // Sinkronkan elemen dropdown tahun jika ada di DOM
+            const yearSelect = document.getElementById('dashboardChartYearSelect');
+            if (yearSelect && yearSelect.value != activeYear) {
+                yearSelect.value = activeYear;
+            }
+
+            // Hitung data 12 bulan
+            const monthNamesShort = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'];
+            const monthNamesFull = [
+                'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+                'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+            ];
+
+            let totalTahunTepat = 0;
+            let totalTahunTelat = 0;
+            let maxBulanHadir = 0;
+            let peakMonthName = '-';
+
+            const monthlyData = monthNamesShort.map((mShort, idx) => {
+                const monthNumStr = String(idx + 1).padStart(2, '0');
+                const prefix = `${activeYear}-${monthNumStr}`;
                 
                 let tepat = 0;
                 let telat = 0;
-                
-                (state.absensi || []).forEach(a => {
+
+                absensiList.forEach(a => {
                     if (a.tanggal && a.tanggal.startsWith(prefix)) {
-                        if (a.statusMasuk === 'Terlambat') telat++;
-                        else tepat++;
+                        if (a.statusMasuk === 'Terlambat') {
+                            telat++;
+                        } else {
+                            tepat++;
+                        }
                     }
                 });
-                
-                return { name: monthName, tepat, telat, total: tepat + telat };
+
+                const total = tepat + telat;
+                const disiplinPct = total > 0 ? Math.round((tepat / total) * 100) : 0;
+
+                totalTahunTepat += tepat;
+                totalTahunTelat += telat;
+
+                if (total > maxBulanHadir) {
+                    maxBulanHadir = total;
+                    peakMonthName = monthNamesFull[idx];
+                }
+
+                return {
+                    nameShort: mShort,
+                    nameFull: monthNamesFull[idx],
+                    monthNum: monthNumStr,
+                    tepat,
+                    telat,
+                    total,
+                    disiplinPct
+                };
             });
 
-            const e = React.createElement;
-            const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = window.Recharts;
+            const totalTahunSemua = totalTahunTepat + totalTahunTelat;
+            const persenDisiplinTahun = totalTahunSemua > 0 ? Math.round((totalTahunTepat / totalTahunSemua) * 100) : 0;
+            const persenTelatTahun = totalTahunSemua > 0 ? Math.round((totalTahunTelat / totalTahunSemua) * 100) : 0;
 
-            const CustomTooltip = ({ active, payload, label }) => {
-                if (active && payload && payload.length) {
-                    return e('div', { className: 'bg-slate-900 text-white text-xs p-3 rounded-xl shadow-xl border border-slate-700' },
-                        e('p', { className: 'font-bold mb-2 pb-2 border-b border-slate-700' }, label + ' ' + year),
-                        e('div', { className: 'flex flex-col gap-1' },
-                            e('span', { className: 'text-emerald-400' }, 'Tepat Waktu: ' + payload[0].value),
-                            e('span', { className: 'text-amber-400' }, 'Terlambat: ' + payload[1].value),
-                            e('span', { className: 'text-slate-300 font-bold mt-1' }, 'Total: ' + (payload[0].value + payload[1].value))
-                        )
-                    );
+            // Update KPI Mini Cards
+            const statTotalEl = document.getElementById('chartKpiTotal');
+            if (statTotalEl) statTotalEl.textContent = totalTahunSemua.toLocaleString('id-ID');
+
+            const statTepatEl = document.getElementById('chartKpiTepat');
+            if (statTepatEl) statTepatEl.innerHTML = `${totalTahunTepat.toLocaleString('id-ID')} <span class="text-xs font-normal text-emerald-600">(${persenDisiplinTahun}%)</span>`;
+
+            const statTelatEl = document.getElementById('chartKpiTelat');
+            if (statTelatEl) statTelatEl.innerHTML = `${totalTahunTelat.toLocaleString('id-ID')} <span class="text-xs font-normal text-amber-600">(${persenTelatTahun}%)</span>`;
+
+            const statPeakEl = document.getElementById('chartKpiPeak');
+            if (statPeakEl) statPeakEl.textContent = maxBulanHadir > 0 ? `${peakMonthName} (${maxBulanHadir})` : 'Belum Ada';
+
+            // Update Tab UI Styles
+            ['bar', 'line', 'table'].forEach(t => {
+                const btn = document.getElementById(`btnChartType_${t}`);
+                if (btn) {
+                    if (t === activeType) {
+                        btn.className = 'text-xs font-bold px-3 py-1.5 rounded-xl bg-indigo-600 text-white shadow-sm border border-indigo-600 flex items-center gap-1.5 transition';
+                    } else {
+                        btn.className = 'text-xs font-bold px-3 py-1.5 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200 flex items-center gap-1.5 transition';
+                    }
                 }
-                return null;
-            };
+            });
 
-            const ChartComponent = () => {
-                return e(ResponsiveContainer, { width: '100%', height: '100%' },
-                    e(BarChart, { data: chartData, margin: { top: 20, right: 20, left: -20, bottom: 5 } },
-                        e(CartesianGrid, { strokeDasharray: '3 3', vertical: false, stroke: '#e2e8f0' }),
-                        e(XAxis, { 
-                            dataKey: 'name', 
-                            axisLine: false, 
-                            tickLine: false, 
-                            tick: { fontSize: 12, fill: '#64748b' },
-                            dy: 10
-                        }),
-                        e(YAxis, { 
-                            axisLine: false, 
-                            tickLine: false, 
-                            tick: { fontSize: 12, fill: '#64748b' }
-                        }),
-                        e(Tooltip, { content: e(CustomTooltip), cursor: { fill: '#f1f5f9' } }),
-                        e(Legend, { 
-                            wrapperStyle: { fontSize: '12px', paddingTop: '20px' },
-                            iconType: 'circle'
-                        }),
-                        e(Bar, { dataKey: 'tepat', name: 'Tepat Waktu', stackId: 'a', fill: '#10b981', radius: [0, 0, 0, 0], barSize: 32 }),
-                        e(Bar, { dataKey: 'telat', name: 'Terlambat', stackId: 'a', fill: '#f59e0b', radius: [4, 4, 0, 0] })
-                    )
-                );
-            };
+            // Hancurkan instance chart sebelumnya jika ada
+            if (window.monthlyChartInstance) {
+                try {
+                    window.monthlyChartInstance.destroy();
+                } catch(e) {}
+                window.monthlyChartInstance = null;
+            }
 
-            const root = ReactDOM.createRoot(container);
-            root.render(e(ChartComponent));
+            // 1. TAMPILAN TABEL
+            if (activeType === 'table') {
+                container.innerHTML = `
+                    <div class="overflow-x-auto w-full custom-scrollbar">
+                        <table class="w-full text-left text-xs border border-slate-200 rounded-xl overflow-hidden">
+                            <thead class="bg-slate-100 text-slate-700 uppercase font-bold text-[11px] border-b border-slate-200">
+                                <tr>
+                                    <th class="px-4 py-3">Bulan</th>
+                                    <th class="px-4 py-3 text-center">Tepat Waktu</th>
+                                    <th class="px-4 py-3 text-center">Terlambat</th>
+                                    <th class="px-4 py-3 text-center">Total Presensi</th>
+                                    <th class="px-4 py-3 text-center">Tingkat Disiplin</th>
+                                    <th class="px-4 py-3 text-right">Status Kepatuhan</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 bg-white">
+                                ${monthlyData.map(m => `
+                                    <tr class="hover:bg-slate-50/80 transition ${m.total > 0 ? '' : 'opacity-60'}">
+                                        <td class="px-4 py-3 font-bold text-slate-800 flex items-center gap-2">
+                                            <span class="w-2 h-2 rounded-full ${m.total === 0 ? 'bg-slate-300' : (m.disiplinPct >= 90 ? 'bg-emerald-500' : (m.disiplinPct >= 75 ? 'bg-amber-500' : 'bg-rose-500'))}"></span>
+                                            ${m.nameFull} ${activeYear}
+                                        </td>
+                                        <td class="px-4 py-3 text-center font-semibold text-emerald-600">${m.tepat}</td>
+                                        <td class="px-4 py-3 text-center font-semibold text-amber-600">${m.telat}</td>
+                                        <td class="px-4 py-3 text-center font-bold text-slate-800">${m.total}</td>
+                                        <td class="px-4 py-3 text-center">
+                                            <div class="flex items-center justify-center gap-2">
+                                                <div class="w-16 bg-slate-100 rounded-full h-2 overflow-hidden">
+                                                    <div class="h-full rounded-full ${m.disiplinPct >= 90 ? 'bg-emerald-500' : (m.disiplinPct >= 75 ? 'bg-amber-500' : 'bg-rose-500')}" style="width: ${m.disiplinPct}%"></div>
+                                                </div>
+                                                <span class="font-bold text-[11px] text-slate-700 w-8">${m.total > 0 ? m.disiplinPct + '%' : '-'}</span>
+                                            </div>
+                                        </td>
+                                        <td class="px-4 py-3 text-right">
+                                            ${m.total === 0 ? `
+                                                <span class="text-[10px] font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">Belum Ada Data</span>
+                                            ` : (m.disiplinPct >= 90 ? `
+                                                <span class="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full"><i class="fas fa-circle-check mr-1"></i> Sangat Baik</span>
+                                            ` : (m.disiplinPct >= 75 ? `
+                                                <span class="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full"><i class="fas fa-triangle-exclamation mr-1"></i> Perlu Perhatian</span>
+                                            ` : `
+                                                <span class="text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full"><i class="fas fa-circle-exclamation mr-1"></i> Rendah</span>
+                                            `))}
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                            <tfoot class="bg-slate-50 font-bold border-t border-slate-200 text-slate-800">
+                                <tr>
+                                    <td class="px-4 py-3">Total Setahun (${activeYear})</td>
+                                    <td class="px-4 py-3 text-center text-emerald-700">${totalTahunTepat}</td>
+                                    <td class="px-4 py-3 text-center text-amber-700">${totalTahunTelat}</td>
+                                    <td class="px-4 py-3 text-center text-slate-900 font-black">${totalTahunSemua}</td>
+                                    <td class="px-4 py-3 text-center text-indigo-700">${persenDisiplinTahun}% Rata-rata</td>
+                                    <td class="px-4 py-3 text-right">
+                                        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-600">${totalTahunSemua} Total Data</span>
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                `;
+                return;
+            }
+
+            // 2. TAMPILAN GRAFIK (CANVAS CHART.JS ATAU FALLBACK)
+            container.innerHTML = `
+                <div class="relative w-full h-[320px]">
+                    <canvas id="monthlyAttendanceChartCanvas"></canvas>
+                </div>
+            `;
+
+            const canvas = document.getElementById('monthlyAttendanceChartCanvas');
+            if (!canvas) return;
+
+            if (typeof window.Chart === 'function') {
+                const ctx = canvas.getContext('2d');
+                const labels = monthlyData.map(d => d.nameShort);
+                const dataTepat = monthlyData.map(d => d.tepat);
+                const dataTelat = monthlyData.map(d => d.telat);
+                const dataTotal = monthlyData.map(d => d.total);
+
+                let datasets = [];
+
+                if (activeType === 'line') {
+                    datasets = [
+                        {
+                            label: 'Tepat Waktu',
+                            data: dataTepat,
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                            fill: true,
+                            tension: 0.35,
+                            borderWidth: 3,
+                            pointBackgroundColor: '#10b981',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        },
+                        {
+                            label: 'Terlambat',
+                            data: dataTelat,
+                            borderColor: '#f59e0b',
+                            backgroundColor: 'rgba(245, 158, 11, 0.15)',
+                            fill: true,
+                            tension: 0.35,
+                            borderWidth: 3,
+                            pointBackgroundColor: '#f59e0b',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        },
+                        {
+                            label: 'Total Kehadiran',
+                            data: dataTotal,
+                            borderColor: '#6366f1',
+                            borderDash: [5, 5],
+                            backgroundColor: 'transparent',
+                            fill: false,
+                            tension: 0.35,
+                            borderWidth: 2,
+                            pointBackgroundColor: '#6366f1',
+                            pointRadius: 3,
+                            pointHoverRadius: 5
+                        }
+                    ];
+                } else {
+                    // STACKED BAR
+                    datasets = [
+                        {
+                            label: 'Tepat Waktu',
+                            data: dataTepat,
+                            backgroundColor: '#10b981',
+                            hoverBackgroundColor: '#059669',
+                            borderRadius: activeType === 'bar' ? 4 : 0,
+                            stack: 'absensi',
+                            maxBarThickness: 38
+                        },
+                        {
+                            label: 'Terlambat',
+                            data: dataTelat,
+                            backgroundColor: '#f59e0b',
+                            hoverBackgroundColor: '#d97706',
+                            borderRadius: { topLeft: 6, topRight: 6, bottomLeft: 0, bottomRight: 0 },
+                            stack: 'absensi',
+                            maxBarThickness: 38
+                        }
+                    ];
+                }
+
+                window.monthlyChartInstance = new window.Chart(ctx, {
+                    type: activeType === 'line' ? 'line' : 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: datasets
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false
+                        },
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top',
+                                align: 'end',
+                                labels: {
+                                    boxWidth: 12,
+                                    boxHeight: 12,
+                                    usePointStyle: true,
+                                    pointStyle: 'circle',
+                                    font: {
+                                        size: 11,
+                                        weight: '600'
+                                    },
+                                    color: '#475569',
+                                    padding: 15
+                                }
+                            },
+                            tooltip: {
+                                backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                                titleColor: '#ffffff',
+                                bodyColor: '#e2e8f0',
+                                borderColor: 'rgba(255, 255, 255, 0.1)',
+                                borderWidth: 1,
+                                padding: 12,
+                                cornerRadius: 12,
+                                boxPadding: 6,
+                                titleFont: { size: 12, weight: 'bold' },
+                                bodyFont: { size: 11 },
+                                callbacks: {
+                                    title: function(items) {
+                                        if (!items.length) return '';
+                                        const idx = items[0].dataIndex;
+                                        return `${monthlyData[idx].nameFull} ${activeYear}`;
+                                    },
+                                    footer: function(items) {
+                                        if (!items.length) return '';
+                                        const idx = items[0].dataIndex;
+                                        const d = monthlyData[idx];
+                                        if (d.total === 0) return 'Belum ada presensi tercatat';
+                                        return `Total: ${d.total} presensi | Disiplin: ${d.disiplinPct}%`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: {
+                                    display: false
+                                },
+                                ticks: {
+                                    font: { size: 11, weight: '500' },
+                                    color: '#64748b'
+                                }
+                            },
+                            y: {
+                                stacked: activeType !== 'line',
+                                beginAtZero: true,
+                                grid: {
+                                    color: '#f1f5f9',
+                                    drawBorder: false
+                                },
+                                ticks: {
+                                    font: { size: 11 },
+                                    color: '#64748b',
+                                    precision: 0
+                                }
+                            }
+                        }
+                    }
+                });
+            } else {
+                renderNativeMonthlyChartFallback(container, monthlyData, activeYear);
+            }
+        };
+
+        // Alias untuk kompatibilitas
+        window.renderRechartsMonthly = function() {
+            window.renderMonthlyAttendanceChart();
         };
 
         window.renderMainContent = function() {
@@ -2708,6 +3636,20 @@
             const tetapCount = aktifPegawai.filter(k => k.statusKaryawan === 'Tetap' || (!k.statusKaryawan && !k.kontrakSelesai)).length;
             const kontrakCount = aktifPegawai.filter(k => k.statusKaryawan === 'Kontrak' || k.kontrakSelesai).length;
             const resignCount = semuaKaryawan.length - totalAktif;
+
+            // Tahun & Konfigurasi Grafik Tren Bulanan
+            const allYearsSet = new Set();
+            const thisYearNum = now.getFullYear();
+            allYearsSet.add(thisYearNum);
+            (state.absensi || []).forEach(a => {
+                if (a.tanggal && a.tanggal.length >= 4) {
+                    const y = parseInt(a.tanggal.substring(0, 4), 10);
+                    if (!isNaN(y) && y > 2000 && y < 2100) allYearsSet.add(y);
+                }
+            });
+            const listTahunChart = Array.from(allYearsSet).sort((a, b) => b - a);
+            const activeChartYear = window.dashboardChartState?.year || thisYearNum;
+            const activeChartType = window.dashboardChartState?.type || 'bar';
 
             const absenHariIni = (state.absensi || []).filter(a => a.tanggal === dateToday);
             const hadir = absenHariIni.length;
@@ -3439,18 +4381,74 @@
                     </div>
                 </div>
 
-                <!-- CHART RECHARTS BULANAN -->
+                <!-- GRAFIK TREN KEHADIRAN & KETERLAMBATAN BULANAN (UPGRADED) -->
                 <div class="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-sm mb-8">
-                    <div class="flex justify-between items-center mb-6 pb-4 border-b border-slate-100">
+                    <!-- HEADER GRAFIK DENGAN KONTROL LENGKAP -->
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5 pb-4 border-b border-slate-100">
                         <div>
                             <h3 class="font-bold text-slate-800 text-sm uppercase tracking-wider flex items-center">
-                                <i class="fas fa-chart-line mr-2 text-indigo-500"></i>Tren Kehadiran & Keterlambatan Bulanan
+                                <i class="fas fa-chart-line mr-2 text-indigo-600"></i>Tren Kehadiran & Keterlambatan Bulanan
                             </h3>
-                            <p class="text-xs text-slate-500 mt-0.5">Perbandingan interaktif total kehadiran dan keterlambatan setiap bulannya.</p>
+                            <p class="text-xs text-slate-500 mt-0.5">Analisis komparatif kehadiran tepat waktu vs keterlambatan karyawan per bulan.</p>
+                        </div>
+
+                        <div class="flex flex-wrap items-center gap-2">
+                            <!-- FILTER TAHUN -->
+                            <div class="flex items-center space-x-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-xl text-xs shadow-2xs">
+                                <i class="fas fa-calendar-alt text-slate-400 text-[11px]"></i>
+                                <span class="text-slate-500 font-medium">Tahun:</span>
+                                <select id="dashboardChartYearSelect" onchange="window.setDashboardChartYear(this.value)" class="bg-transparent font-bold text-slate-800 focus:outline-none cursor-pointer">
+                                    ${listTahunChart.map(y => `<option value="${y}" ${y === activeChartYear ? 'selected' : ''}>${y}</option>`).join('')}
+                                </select>
+                            </div>
+
+                            <!-- TOGGLE TIPE GRAFIK -->
+                            <div class="flex items-center p-1 bg-slate-100 rounded-xl space-x-1 border border-slate-200">
+                                <button type="button" onclick="window.setDashboardChartType('bar')" id="btnChartType_bar" title="Grafik Batang Bertumpuk" class="text-xs font-bold px-2.5 py-1 rounded-lg ${activeChartType === 'bar' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'} transition flex items-center gap-1">
+                                    <i class="fas fa-chart-column"></i> <span class="hidden sm:inline">Batang</span>
+                                </button>
+                                <button type="button" onclick="window.setDashboardChartType('line')" id="btnChartType_line" title="Grafik Tren Garis" class="text-xs font-bold px-2.5 py-1 rounded-lg ${activeChartType === 'line' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'} transition flex items-center gap-1">
+                                    <i class="fas fa-chart-line"></i> <span class="hidden sm:inline">Garis</span>
+                                </button>
+                                <button type="button" onclick="window.setDashboardChartType('table')" id="btnChartType_table" title="Tabel Rekapitulasi" class="text-xs font-bold px-2.5 py-1 rounded-lg ${activeChartType === 'table' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'} transition flex items-center gap-1">
+                                    <i class="fas fa-table-list"></i> <span class="hidden sm:inline">Tabel</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
-                    <div id="monthlyChartContainer" class="w-full h-[300px] flex items-center justify-center text-slate-400">
-                        <i class="fas fa-spinner fa-spin mr-2"></i> Memuat Grafik...
+
+                    <!-- KPI MINI STATS TAHUNAN -->
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+                        <div class="bg-slate-50 border border-slate-200/80 rounded-xl p-3">
+                            <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">Total Presensi (${activeChartYear})</span>
+                            <div class="flex items-baseline gap-2 mt-1">
+                                <span id="chartKpiTotal" class="text-lg font-black text-slate-900">-</span>
+                                <span class="text-[11px] text-slate-400 font-medium">record</span>
+                            </div>
+                        </div>
+                        <div class="bg-emerald-50/60 border border-emerald-200/80 rounded-xl p-3">
+                            <span class="text-[11px] font-semibold text-emerald-800 uppercase tracking-wider block">Tepat Waktu</span>
+                            <div class="flex items-baseline gap-2 mt-1">
+                                <span id="chartKpiTepat" class="text-lg font-black text-emerald-600">-</span>
+                            </div>
+                        </div>
+                        <div class="bg-amber-50/60 border border-amber-200/80 rounded-xl p-3">
+                            <span class="text-[11px] font-semibold text-amber-800 uppercase tracking-wider block">Terlambat</span>
+                            <div class="flex items-baseline gap-2 mt-1">
+                                <span id="chartKpiTelat" class="text-lg font-black text-amber-600">-</span>
+                            </div>
+                        </div>
+                        <div class="bg-indigo-50/60 border border-indigo-200/80 rounded-xl p-3">
+                            <span class="text-[11px] font-semibold text-indigo-800 uppercase tracking-wider block">Bulan Puncak</span>
+                            <div class="flex items-baseline gap-2 mt-1">
+                                <span id="chartKpiPeak" class="text-xs sm:text-sm font-black text-indigo-700 truncate">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- KONTEN GRAFIK / TABEL -->
+                    <div id="monthlyChartContainer" class="w-full min-h-[300px] flex items-center justify-center text-slate-400">
+                        <i class="fas fa-spinner fa-spin mr-2"></i> Menyiapkan Visualisasi...
                     </div>
                 </div>
             `;
