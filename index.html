@@ -856,7 +856,7 @@
         let clockInterval = null;
         let deleteTarget = null;
         let isInitialLoad = true;
-        let kioskModeType = 'absen';
+        let kioskModeType = 'auto';
         let activeHapusMode = 'absensi';
         let isScannerStarting = false;
         let barcodeBuffer = '';
@@ -1815,37 +1815,31 @@
                     return;
                 }
 
-                // C. KASUS 3: MODE OTOMATIS (kioskModeType === 'auto' || 'absen')
+                // C. KASUS 3: MODE OTOMATIS (kioskModeType === 'auto' || kioskModeType === 'absen')
                 if (recordAktifUntukPulang) {
-                    // PENCEGAHAN DOUBLE SCAN TIDAK SENGAJA:
-                    // Jika baru saja absen masuk (< 15 menit), jangan langsung tutup sebagai absen Pulang!
-                    const waktuMasukDate = new Date(`${recordAktifUntukPulang.tanggal}T${recordAktifUntukPulang.jamMasuk}:00`);
-                    const selisihMenitDariMasuk = Math.floor((now.getTime() - waktuMasukDate.getTime()) / 60000);
-                    
-                    if (selisihMenitDariMasuk < 15) {
-                        window.playSound('masuk');
-                        showToast('Presensi Masuk Aman', `Halo ${karyawan.nama}, Anda sudah tercatat MASUK pukul ${recordAktifUntukPulang.jamMasuk} [${shiftKaryawan.nama}]. Presensi Anda aman.`, 'info');
-                        if (typeof window.tampilkanOverlayScanBerhasil === 'function') {
-                            window.tampilkanOverlayScanBerhasil(karyawan, 'SUDAH MASUK', recordAktifUntukPulang.jamMasuk, `${recordAktifUntukPulang.statusMasuk || 'Tepat Waktu'} (${shiftKaryawan.nama})`, metode);
-                        }
-                        return;
-                    }
-
-                    // TERCATAT SEBAGAI JAM PULANG SHIFT RESMI
+                    // Karyawan sudah memiliki presensi Masuk hari ini -> Otomatis tercatat sebagai Absen PULANG
                     prosesPulangKaryawan(recordAktifUntukPulang);
                 } else { 
-                    // JIKA TIDAK ADA RECORD UNTUK PULANG:
-                    // Cek apakah hari ini sudah merampungkan presensi (sudah Masuk & Pulang)
+                    // JIKA TIDAK ADA RECORD AKTIF UNTUK PULANG:
+                    // 1. Cek apakah karyawan hari ini sudah lengkap (sudah Masuk dan sudah Pulang)
                     if (absenHariIni && absenHariIni.jamMasuk && absenHariIni.jamPulang) {
-                        window.playSound('error'); 
-                        showToast('Presensi Lengkap', `${karyawan.nama} sudah merampungkan presensi hari ini (Masuk: ${absenHariIni.jamMasuk} | Pulang: ${absenHariIni.jamPulang}).`, 'info'); 
+                        const nowMins = timeToMinutes(timeString);
+                        const pulangMins = timeToMinutes(absenHariIni.jamPulang);
+                        // Jika scan lagi setelah jam pulang sebelumnya (misal lembur atau update waktu pulang terbaru):
+                        if (nowMins > pulangMins + 5) {
+                            prosesPulangKaryawan(absenHariIni);
+                            return;
+                        }
+
+                        window.playSound('masuk'); 
+                        showToast('Presensi Hari Ini Lengkap', `${karyawan.nama} sudah merampungkan presensi hari ini (Masuk: ${absenHariIni.jamMasuk} | Pulang: ${absenHariIni.jamPulang}).`, 'info'); 
                         if (typeof window.tampilkanOverlayScanBerhasil === 'function') {
                             window.tampilkanOverlayScanBerhasil(karyawan, 'SUDAH LENGKAP', `${absenHariIni.jamMasuk} - ${absenHariIni.jamPulang}`, `Shift: ${shiftKaryawan.nama}`, metode);
                         }
                         return;
                     }
 
-                    // CATAT PRESENSI MASUK BARU SESUAI SHIFT KERJA
+                    // 2. Jika belum memiliki presensi Masuk -> Otomatis tercatat sebagai Absen MASUK sesuai shift kerja
                     prosesMasukKaryawan();
                 }
             }
@@ -2294,8 +2288,22 @@
                     titleEl.innerText = isGpsView ? "Presensi GPS: Absen Pulang" : "Terminal Scan: Absen Pulang";
                     subtitleEl.innerText = isGpsView ? "Kunci Lokasi GPS untuk Absen Selesai Shift Kerja" : "Scan Kartu / NIK untuk Pulang Shift";
                 } else {
-                    titleEl.innerText = isGpsView ? "Absen Personal GPS (Otomatis)" : "Terminal Mesin QR & Barcode";
-                    subtitleEl.innerText = isGpsView ? "Scan ID Card atau Pilih Nama untuk Kunci Titik Lokasi" : "Arahkan Barcode ID Card atau QR Code ke Kamera";
+                    titleEl.innerText = isGpsView ? "Absen Personal GPS (Otomatis)" : "Terminal Kiosk: Mode Otomatis";
+                    subtitleEl.innerText = isGpsView ? "Scan ID Card atau Pilih Nama untuk Kunci Titik Lokasi" : "Sistem Otomatis Mendeteksi Absen Masuk atau Pulang Sesuai Shift Kerja";
+                }
+            }
+
+            // Update Manual Submit Button in Kiosk
+            const btnSubmitManual = document.getElementById('btnSubmitManualKiosk');
+            if (btnSubmitManual) {
+                if (mode === 'imk') {
+                    btnSubmitManual.innerHTML = '<i class="fas fa-person-walking mr-1.5 text-amber-400"></i> Catat IMK';
+                } else if (mode === 'masuk') {
+                    btnSubmitManual.innerHTML = '<i class="fas fa-sign-in-alt mr-1.5 text-blue-400"></i> Absen Masuk';
+                } else if (mode === 'pulang') {
+                    btnSubmitManual.innerHTML = '<i class="fas fa-sign-out-alt mr-1.5 text-rose-400"></i> Absen Pulang';
+                } else {
+                    btnSubmitManual.innerHTML = '<i class="fas fa-magic mr-1.5 text-emerald-400"></i> Absen Otomatis';
                 }
             }
 
@@ -2311,9 +2319,20 @@
                     btnSubmitGPS.innerHTML = '<i class="fas fa-sign-out-alt mr-1.5 text-rose-200"></i> KLIK ABSEN PULANG (GPS)';
                     btnSubmitGPS.className = "bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm transition text-xs flex items-center justify-center shrink-0";
                 } else {
-                    btnSubmitGPS.innerHTML = '<i class="fas fa-location-crosshairs mr-1.5 text-blue-200"></i> KLIK ABSEN SEKARANG (GPS)';
-                    btnSubmitGPS.className = "bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm transition text-xs flex items-center justify-center shrink-0";
+                    btnSubmitGPS.innerHTML = '<i class="fas fa-magic mr-1.5 text-emerald-200"></i> KLIK ABSEN OTOMATIS (GPS)';
+                    btnSubmitGPS.className = "bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm transition text-xs flex items-center justify-center shrink-0";
                 }
+            }
+
+            // Feedback Toast saat pergantian mode
+            if (mode === 'auto' || mode === 'absen') {
+                showToast('Mode Otomatis Aktif', 'Terminal Kiosk siap: Otomatis mendeteksi Masuk atau Pulang sesuai riwayat shift hari ini.', 'info');
+            } else if (mode === 'masuk') {
+                showToast('Mode Masuk Aktif', 'Terminal Kiosk disetel khusus untuk Absen Masuk.', 'info');
+            } else if (mode === 'pulang') {
+                showToast('Mode Pulang Aktif', 'Terminal Kiosk disetel khusus untuk Absen Pulang.', 'info');
+            } else if (mode === 'imk') {
+                showToast('Mode IMK Aktif', 'Terminal Kiosk disetel untuk Izin Keluar Masuk (IMK).', 'warning');
             }
 
             if (typeof window.renderRecentKioskScans === 'function') {
@@ -3438,8 +3457,8 @@
                                         <i class="fas ${isKiosk ? 'fa-qrcode' : 'fa-map-marker-alt'}"></i>
                                     </div>
                                     <div>
-                                        <h1 class="text-lg sm:text-xl font-bold text-white leading-tight" id="kioskTitle">${isKiosk ? 'Terminal Mesin QR & Barcode' : 'Absen Personal GPS'}</h1>
-                                        <p class="text-xs text-emerald-400 font-medium" id="kioskSubtitle">${isKiosk ? 'Dekatkan Barcode ID Card atau QR Code ke Kamera' : 'Scan ID Card atau Pilih Nama untuk Kunci Titik Lokasi'}</p>
+                                        <h1 class="text-lg sm:text-xl font-bold text-white leading-tight" id="kioskTitle">${isKiosk ? (kioskModeType === 'auto' || kioskModeType === 'absen' ? 'Terminal Kiosk: Mode Otomatis' : (kioskModeType === 'masuk' ? 'Terminal Scan: Absen Masuk' : (kioskModeType === 'pulang' ? 'Terminal Scan: Absen Pulang' : 'Terminal IMK (Keluar/Masuk)'))) : 'Absen Personal GPS'}</h1>
+                                        <p class="text-xs text-emerald-400 font-medium" id="kioskSubtitle">${isKiosk ? (kioskModeType === 'auto' || kioskModeType === 'absen' ? 'Sistem Otomatis Mendeteksi Absen Masuk atau Pulang Sesuai Shift Kerja' : (kioskModeType === 'masuk' ? 'Scan Kartu / NIK untuk Masuk Shift' : (kioskModeType === 'pulang' ? 'Scan Kartu / NIK untuk Pulang Shift' : 'Scan 1x = Izin Keluar Kantor | Scan ke-2 = Kembali'))) : 'Scan ID Card atau Pilih Nama untuk Kunci Titik Lokasi'}</p>
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-2">
@@ -3605,8 +3624,14 @@
                                         </span>
                                         <input type="text" id="inputManualNIK" placeholder="Scan Barcode Gun atau Ketik NIK..." autocomplete="off" class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none transition">
                                     </div>
-                                    <button type="submit" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2.5 rounded-xl font-bold text-xs shadow transition whitespace-nowrap flex items-center">
-                                        <i class="fas fa-check mr-1.5 text-emerald-400"></i> Absen
+                                    <button type="submit" id="btnSubmitManualKiosk" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2.5 rounded-xl font-bold text-xs shadow transition whitespace-nowrap flex items-center">
+                                        ${kioskModeType === 'imk' 
+                                            ? '<i class="fas fa-person-walking mr-1.5 text-amber-400"></i> Catat IMK' 
+                                            : (kioskModeType === 'masuk' 
+                                                ? '<i class="fas fa-sign-in-alt mr-1.5 text-blue-400"></i> Absen Masuk' 
+                                                : (kioskModeType === 'pulang' 
+                                                    ? '<i class="fas fa-sign-out-alt mr-1.5 text-rose-400"></i> Absen Pulang' 
+                                                    : '<i class="fas fa-magic mr-1.5 text-emerald-400"></i> Absen Otomatis'))}
                                     </button>
                                 </form>
                                 <p class="text-[11px] text-slate-400 mt-2 text-center"><i class="fas fa-info-circle mr-1 text-slate-400"></i> Mendukung Barcode Scanner Gun USB/Bluetooth, Webcam & Kamera HP</p>
