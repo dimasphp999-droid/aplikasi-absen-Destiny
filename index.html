@@ -1421,12 +1421,133 @@
             isProcessingQueue = false;
         }
 
+        // ==========================================
+        // HELPER LOGIKA SHIFT & EVALUASI WAKTU PRESENSI
+        // ==========================================
+        function timeToMinutes(tStr) {
+            if (!tStr) return 0;
+            const parts = tStr.split(':').map(Number);
+            return (parts[0] || 0) * 60 + (parts[1] || 0);
+        }
+
+        // Kalkulasi jarak Haversine dalam meter antara dua titik koordinat GPS
+        function hitungJarakGPS(lat1, lon1, lat2, lon2) {
+            if (lat1 === null || lon1 === null || lat2 === null || lon2 === null || 
+                lat1 === undefined || lon1 === undefined || lat2 === undefined || lon2 === undefined ||
+                isNaN(lat1) || isNaN(lon1) || isNaN(lat2) || isNaN(lon2)) {
+                return null;
+            }
+            const R = 6371000; // Radius Bumi dalam meter
+            const rad = Math.PI / 180;
+            const dLat = (lat2 - lat1) * rad;
+            const dLon = (lon2 - lon1) * rad;
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                      Math.cos(lat1 * rad) * Math.cos(lat2 * rad) *
+                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return Math.round(R * c);
+        }
+
+        function getKaryawanShift(karyawan) {
+            const shifts = state.pengaturan?.shifts || [];
+            if (!karyawan) {
+                return shifts[0] || { id: 'default', nama: 'Shift Reguler', jamMasuk: state.pengaturan?.jamMasuk || '07:35', jamPulang: '15:30' };
+            }
+            let found = null;
+            if (karyawan.shiftId) {
+                const targetId = String(karyawan.shiftId).trim();
+                found = shifts.find(s => s && (
+                    String(s.id).trim() === targetId ||
+                    String(s.nama || '').trim().toLowerCase() === targetId.toLowerCase() ||
+                    targetId.toLowerCase().includes(String(s.id).trim().toLowerCase())
+                ));
+            }
+            if (!found) {
+                found = shifts[0] || { id: 'default', nama: 'Shift Reguler', jamMasuk: state.pengaturan?.jamMasuk || '07:35', jamPulang: '15:30' };
+            }
+            return found;
+        }
+
+        function evaluasiStatusPresensi(shift, timeStr, dateStr, isLibur) {
+            if (isLibur) return { status: 'Hadir (Libur)', menitTelat: 0 };
+            
+            const jamMasukShift = shift?.jamMasuk || state.pengaturan?.jamMasuk || '07:35';
+            const jamPulangShift = shift?.jamPulang || '15:30';
+            const toleransi = parseInt(state.pengaturan?.toleransiTelat || shift?.toleransi || 0, 10) || 0;
+
+            const nowMins = timeToMinutes(timeStr);
+            const masukMins = timeToMinutes(jamMasukShift);
+            const pulangMins = timeToMinutes(jamPulangShift);
+            const isNightShift = pulangMins < masukMins; // Misal 22:00 - 05:00
+
+            if (isNightShift) {
+                // Shift malam (contoh: Masuk 22:00, Pulang 05:00)
+                // Datang antara 18:00 - (masukMins + toleransi) -> Tepat Waktu
+                if (nowMins >= Math.max(0, masukMins - 240) && nowMins <= masukMins + toleransi) {
+                    return { status: 'Tepat Waktu', menitTelat: 0 };
+                } else if (nowMins > masukMins + toleransi) {
+                    const diff = nowMins - masukMins;
+                    return { status: 'Terlambat', menitTelat: diff };
+                } else if (nowMins < pulangMins + 120) { // Setelah lewat tengah malam (00:00 - 07:00)
+                    const diff = (nowMins + 24 * 60) - masukMins;
+                    return { status: 'Terlambat', menitTelat: diff };
+                } else {
+                    return { status: 'Tepat Waktu', menitTelat: 0 };
+                }
+            } else {
+                // Shift normal (contoh: 07:35 - 15:30)
+                const batasToleransi = masukMins + toleransi;
+                if (nowMins > batasToleransi) {
+                    const selisih = nowMins - masukMins;
+                    return { status: 'Terlambat', menitTelat: selisih };
+                } else {
+                    return { status: 'Tepat Waktu', menitTelat: 0 };
+                }
+            }
+        }
+
+        function evaluasiStatusPulang(shift, timeStr) {
+            const jamPulangShift = shift?.jamPulang || '15:30';
+            const jamMasukShift = shift?.jamMasuk || state.pengaturan?.jamMasuk || '07:35';
+            const nowMins = timeToMinutes(timeStr);
+            const pulangMins = timeToMinutes(jamPulangShift);
+            const masukMins = timeToMinutes(jamMasukShift);
+            const isNightShift = pulangMins < masukMins;
+
+            if (isNightShift) {
+                // Shift malam (contoh: Masuk 22:00, Pulang 05:00)
+                if (nowMins < pulangMins - 15) {
+                    const selisih = pulangMins - nowMins;
+                    return { status: 'Pulang Awal', menit: selisih };
+                } else if (nowMins >= pulangMins + 60) {
+                    const selisih = nowMins - pulangMins;
+                    return { status: 'Lembur', menit: selisih };
+                } else {
+                    return { status: 'Tepat Waktu', menit: 0 };
+                }
+            } else {
+                // Shift normal (contoh: 07:35 - 15:30)
+                if (nowMins < pulangMins - 15) {
+                    const selisih = pulangMins - nowMins;
+                    return { status: 'Pulang Awal', menit: selisih };
+                } else if (nowMins >= pulangMins + 60) {
+                    const selisih = nowMins - pulangMins;
+                    return { status: 'Lembur', menit: selisih };
+                } else {
+                    return { status: 'Tepat Waktu', menit: 0 };
+                }
+            }
+        }
+
         async function executeKehadiran(code, cleanCode, metode = 'QR', lat = null, lng = null) {
             const karyawan = (state.karyawan || []).find(k => 
                 (k.nik && k.nik.trim().toLowerCase() === cleanCode) ||
                 (k.nip && k.nip.trim().toLowerCase() === cleanCode) ||
+                (k.noKtp && k.noKtp.trim().toLowerCase() === cleanCode) ||
                 (k.nikKtp && k.nikKtp.trim().toLowerCase() === cleanCode) ||
-                String(k.id) === code
+                String(k.id) === code ||
+                String(k.id) === cleanCode ||
+                k.id == code
             );
 
             // Efek visual flash saat barcode/QR terdeteksi
@@ -1445,20 +1566,74 @@
             const now = new Date(); 
             const timeString = now.toTimeString().substring(0, 5); 
             const dateString = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            const shiftKaryawan = getKaryawanShift(karyawan);
+            const isLibur = state.pengaturan?.liburNasional?.find(l => l.tanggal === dateString);
 
-            if (kioskModeType === 'imk' && (state.currentView === 'scanWajah' || state.currentView === 'absenGPS')) {
-                // LOGIKA IZIN KELUAR MASUK (IMK) - SUPPORT SHIFT MALAM LINTAS TANGGAL
+            // Periksa jarak GPS jika koordinat kantor disetel
+            let jarakDariKantor = null;
+            let dalamRadiusKantor = true;
+            if (lat !== null && lng !== null && state.pengaturan?.kantorLat && state.pengaturan?.kantorLng) {
+                jarakDariKantor = hitungJarakGPS(lat, lng, state.pengaturan.kantorLat, state.pengaturan.kantorLng);
+                const radiusMaks = parseInt(state.pengaturan.radiusMeter, 10) || 150;
+                if (jarakDariKantor !== null && jarakDariKantor > radiusMaks) {
+                    dalamRadiusKantor = false;
+                }
+            }
+
+            // Validasi Kunci Radius GPS: jika diaktifkan admin, tolak presensi bila berada di luar jangkauan kantor
+            if (!dalamRadiusKantor && state.pengaturan?.kunciRadiusGPS && lat !== null && lng !== null) {
+                window.playSound('error');
+                const radiusMaks = parseInt(state.pengaturan.radiusMeter, 10) || 150;
+                showToast('Di Luar Radius Kantor', `Akses ditolak: Anda berada ${jarakDariKantor}m dari kantor (Batas maksimal: ${radiusMaks}m). Presensi hanya dapat dilakukan di lingkungan kantor.`, 'error');
+                return;
+            }
+
+            // ==========================================
+            // CABANG 1: MODE IZIN KELUAR MASUK (IMK)
+            // ==========================================
+            if (kioskModeType === 'imk') {
                 if(!state.imk) state.imk = [];
-                let imkTerakhir = [...state.imk].reverse().find(i => i.karyawanId === karyawan.id);
-                let isMasihDiLuar = imkTerakhir && !imkTerakhir.jamKembali;
                 
-                // Validasi: Abaikan jika "gantung" tidak ditutup lebih dari 1.5 hari (36 jam)
+                const yesterday = new Date(now);
+                yesterday.setDate(yesterday.getDate() - 1);
+                const yDateStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+                
+                const masukMins = timeToMinutes(shiftKaryawan.jamMasuk);
+                const pulangMins = timeToMinutes(shiftKaryawan.jamPulang);
+                const isNightShift = pulangMins < masukMins;
+
+                // Validasi: Karyawan harus memiliki presensi masuk hari ini (atau kemarin malam jika shift malam)
+                const absenAktifHariIni = (state.absensi || []).find(a => 
+                    (a.karyawanId == karyawan.id || String(a.karyawanId) === String(karyawan.id)) && 
+                    (a.tanggal === dateString || (isNightShift && a.tanggal === yDateStr && !a.jamPulang))
+                );
+
+                if (!absenAktifHariIni) {
+                    window.playSound('error');
+                    showToast('Akses IMK Ditolak', `${karyawan.nama} belum melakukan presensi Masuk hari ini. Harap absen masuk terlebih dahulu.`, 'warning');
+                    return;
+                }
+
+                if (absenAktifHariIni.jamPulang) {
+                    window.playSound('error');
+                    showToast('Akses IMK Ditolak', `${karyawan.nama} sudah menyelesaikan jam kerja / absen pulang hari ini.`, 'warning');
+                    return;
+                }
+
+                // Cek apakah karyawan sedang di luar kantor
+                let imkTerakhir = [...state.imk].reverse().find(i => 
+                    (i.karyawanId == karyawan.id || String(i.karyawanId) === String(karyawan.id))
+                );
+                let isMasihDiLuar = imkTerakhir && !imkTerakhir.jamKembali;
+
+                // Abaikan jika gantung lebih dari 24 jam
                 if (isMasihDiLuar) {
-                    const diffTime = now.getTime() - new Date(imkTerakhir.tanggal).getTime();
-                    if (diffTime / (1000 * 3600 * 24) > 1.5) isMasihDiLuar = false; 
+                    const diffHours = (now.getTime() - new Date(`${imkTerakhir.tanggal}T${imkTerakhir.jamKeluar}:00`).getTime()) / 3600000;
+                    if (diffHours > 24) isMasihDiLuar = false;
                 }
 
                 if (!isMasihDiLuar) {
+                    // CATAT IZIN KELUAR KANTOR
                     const uniqueId = Date.now() * 1000 + Math.floor(Math.random() * 1000);
                     const newImk = {
                         id: uniqueId, 
@@ -1468,91 +1643,210 @@
                         tanggal: dateString, 
                         jamKeluar: timeString, 
                         jamKembali: null, 
-                        durasi: '-' 
+                        durasi: '-',
+                        metode: metode,
+                        lat: lat,
+                        lng: lng,
+                        jarakKeluar: jarakDariKantor,
+                        dalamRadiusKeluar: dalamRadiusKantor
                     };
                     state.imk.push(newImk);
                     syncImkAtomic(newImk, false);
                     saveData(); 
                     window.playSound('imk_keluar'); 
-                    showToast('IMK: Izin Keluar', `${karyawan.nama} tercatat KELUAR kantor pukul ${timeString}`);
+                    const infoJarak = jarakDariKantor !== null ? ` (Jarak ${jarakDariKantor}m)` : '';
+                    showToast('IMK: Izin Keluar', `${karyawan.nama} tercatat KELUAR kantor pukul ${timeString}${infoJarak}`);
                     if (typeof window.tampilkanOverlayScanBerhasil === 'function') {
-                        window.tampilkanOverlayScanBerhasil(karyawan, 'IMK: KELUAR', timeString, 'Izin Keluar', metode);
+                        window.tampilkanOverlayScanBerhasil(karyawan, 'IMK: KELUAR', timeString, 'Izin Keluar Kantor', metode);
                     }
                 } else {
-                    imkTerakhir.jamKembali = timeString;
-                    
-                    let tglKeluar = new Date(`${imkTerakhir.tanggal}T${imkTerakhir.jamKeluar}:00`);
-                    let tglKembali = new Date(`${dateString}T${timeString}:00`);
-                    if (tglKembali < tglKeluar) tglKembali.setDate(tglKembali.getDate() + 1); 
-                    
-                    let diffMins = Math.floor((tglKembali - tglKeluar) / 60000); 
+                    // CATAT KEMBALI KE KANTOR
+                    const tglKeluar = new Date(`${imkTerakhir.tanggal}T${imkTerakhir.jamKeluar}:00`);
+                    const tglKembali = new Date(`${dateString}T${timeString}:00`);
+                    let diffMins = Math.floor((tglKembali - tglKeluar) / 60000);
+                    if (diffMins < 1) {
+                        window.playSound('error');
+                        showToast('Peringatan IMK', `${karyawan.nama} baru saja mencatat Izin Keluar pukul ${imkTerakhir.jamKeluar}. Harap tunggu sebentar.`, 'warning');
+                        return;
+                    }
                     if(diffMins < 0) diffMins = 0;
-                    imkTerakhir.durasi = `${Math.floor(diffMins / 60) > 0 ? Math.floor(diffMins / 60) + ' jam ' : ''}${diffMins % 60} menit`;
                     
+                    imkTerakhir.jamKembali = timeString;
+                    imkTerakhir.durasi = `${Math.floor(diffMins / 60) > 0 ? Math.floor(diffMins / 60) + ' jam ' : ''}${diffMins % 60} menit`;
+                    if (lat && lng) {
+                        imkTerakhir.latKembali = lat;
+                        imkTerakhir.lngKembali = lng;
+                        imkTerakhir.jarakKembali = jarakDariKantor;
+                        imkTerakhir.dalamRadiusKembali = dalamRadiusKantor;
+                    }
+
                     syncImkAtomic(imkTerakhir, true, imkTerakhir.id);
                     saveData(); 
                     window.playSound('imk_kembali'); 
                     showToast('IMK: Kembali', `${karyawan.nama} KEMBALI ke kantor. Durasi: ${imkTerakhir.durasi}`);
                     if (typeof window.tampilkanOverlayScanBerhasil === 'function') {
-                        window.tampilkanOverlayScanBerhasil(karyawan, 'IMK: KEMBALI', timeString, imkTerakhir.durasi, metode);
+                        window.tampilkanOverlayScanBerhasil(karyawan, 'IMK: KEMBALI', timeString, `Durasi: ${imkTerakhir.durasi}`, metode);
                     }
                 }
             } else {
-                // LOGIKA ABSENSI NORMAL - SUPPORT SHIFT MALAM LINTAS TANGGAL
-                const isLibur = state.pengaturan.liburNasional?.find(l => l.tanggal === dateString);
-                const shiftKaryawan = state.pengaturan.shifts?.find(s => s.id === karyawan.shiftId) || state.pengaturan.shifts[0];
+                // ==========================================
+                // CABANG 2: LOGIKA ABSENSI SHIFT (AUTO / MASUK / PULANG)
+                // ==========================================
+                const allAbsen = state.absensi || [];
+                let absenHariIni = allAbsen.find(a => 
+                    (a.karyawanId == karyawan.id || String(a.karyawanId) === String(karyawan.id)) && 
+                    a.tanggal === dateString
+                );
 
-                let absenTerakhir = [...state.absensi].reverse().find(a => a.karyawanId === karyawan.id);
-                let isShiftBelumSelesai = absenTerakhir && !absenTerakhir.jamPulang;
+                const masukMins = timeToMinutes(shiftKaryawan.jamMasuk);
+                const pulangMins = timeToMinutes(shiftKaryawan.jamPulang);
+                const isNightShift = pulangMins < masukMins; // Misal 22:00 - 05:00
 
-                if (isShiftBelumSelesai) {
-                    const diffTime = now.getTime() - new Date(absenTerakhir.tanggal).getTime();
-                    if (diffTime / (1000 * 3600 * 24) > 1.5) isShiftBelumSelesai = false; // Terlalu lama
+                // Cek apakah ada sesi shift malam kemarin yang belum checkout
+                let absenKemarinMalam = null;
+                if (isNightShift) {
+                    const yesterday = new Date(now);
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    const yDateStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+                    absenKemarinMalam = allAbsen.find(a => 
+                        (a.karyawanId == karyawan.id || String(a.karyawanId) === String(karyawan.id)) && 
+                        a.tanggal === yDateStr && 
+                        !a.jamPulang
+                    );
                 }
 
-                if (isShiftBelumSelesai) {
-                    // TERCATAT SEBAGAI JAM PULANG SHIFT
-                    absenTerakhir.jamPulang = timeString; 
-                    absenTerakhir.metodePulang = metode;
-                    absenTerakhir.karyawanNama = karyawan.nama;
-                    absenTerakhir.karyawanNik = karyawan.nik || '';
-                    syncAbsensiAtomic(absenTerakhir, true, absenTerakhir.id);
+                // Tentukan apakah ini Checkout (Pulang) atau Checkin (Masuk):
+                let recordAktifUntukPulang = null;
+                if (absenHariIni && !absenHariIni.jamPulang) {
+                    recordAktifUntukPulang = absenHariIni;
+                } else if (isNightShift && absenKemarinMalam && timeToMinutes(timeString) <= 12 * 60) {
+                    // Shift malam selesai di pagi hari berikutnya
+                    recordAktifUntukPulang = absenKemarinMalam;
+                }
+
+                // Helper Internal Absen Pulang
+                const prosesPulangKaryawan = (rec) => {
+                    const evaluasiPulang = evaluasiStatusPulang(shiftKaryawan, timeString);
+                    rec.jamPulang = timeString; 
+                    rec.statusPulang = evaluasiPulang.status;
+                    rec.metodePulang = metode;
+                    rec.karyawanNama = karyawan.nama;
+                    rec.karyawanNik = karyawan.nik || '';
+                    if (lat && lng) {
+                        rec.latPulang = lat;
+                        rec.lngPulang = lng;
+                        rec.jarakPulang = jarakDariKantor;
+                        rec.dalamRadiusPulang = dalamRadiusKantor;
+                    }
+
+                    syncAbsensiAtomic(rec, true, rec.id);
                     saveData(); 
                     window.playSound('pulang'); 
-                    showToast('Pulang Berhasil', `Hati-hati di jalan, ${karyawan.nama}! (${metode})`);
+                    const infoJarak = jarakDariKantor !== null ? ` [${jarakDariKantor}m]` : '';
+                    showToast('Pulang Berhasil', `Hati-hati di jalan, ${karyawan.nama}! [${shiftKaryawan.nama}] (${evaluasiPulang.status})${infoJarak}`);
                     if (typeof window.tampilkanOverlayScanBerhasil === 'function') {
-                        window.tampilkanOverlayScanBerhasil(karyawan, 'PULANG', timeString, 'Selesai Bekerja', metode);
+                        window.tampilkanOverlayScanBerhasil(karyawan, 'PULANG', timeString, `Shift: ${shiftKaryawan.nama} (${evaluasiPulang.status})`, metode);
                     }
-                } else { 
-                    let absenHariIni = state.absensi.find(a => a.karyawanId === karyawan.id && a.tanggal === dateString);
-                    if (!absenHariIni) {
-                        let status = isLibur ? 'Hadir (Libur)' : (timeString > (shiftKaryawan?.jamMasuk || '08:00') ? 'Terlambat' : 'Tepat Waktu');
-                        const uniqueId = Date.now() * 1000 + Math.floor(Math.random() * 1000);
-                        const recordBaru = { 
-                            id: uniqueId, 
-                            karyawanId: karyawan.id, 
-                            karyawanNama: karyawan.nama,
-                            karyawanNik: karyawan.nik || '',
-                            tanggal: dateString, 
-                            jamMasuk: timeString, 
-                            jamPulang: null, 
-                            statusMasuk: status, 
-                            metode: metode, 
-                            lat: lat, 
-                            lng: lng 
-                        };
-                        state.absensi.push(recordBaru);
-                        syncAbsensiAtomic(recordBaru, false);
-                        saveData(); 
-                        window.playSound('masuk'); 
-                        showToast('Masuk Berhasil', `Selamat bekerja, ${karyawan.nama}! (${status})`);
+                };
+
+                // Helper Internal Absen Masuk Baru
+                const prosesMasukKaryawan = () => {
+                    const evaluasi = evaluasiStatusPresensi(shiftKaryawan, timeString, dateString, isLibur);
+                    const status = evaluasi.status;
+                    const uniqueId = Date.now() * 1000 + Math.floor(Math.random() * 1000);
+                    
+                    const recordBaru = { 
+                        id: uniqueId, 
+                        karyawanId: karyawan.id, 
+                        karyawanNama: karyawan.nama,
+                        karyawanNik: karyawan.nik || '',
+                        tanggal: dateString, 
+                        jamMasuk: timeString, 
+                        jamPulang: null, 
+                        statusMasuk: status, 
+                        statusPulang: null,
+                        shiftNama: shiftKaryawan.nama,
+                        shiftId: shiftKaryawan.id,
+                        metode: metode, 
+                        lat: lat, 
+                        lng: lng,
+                        jarak: jarakDariKantor,
+                        dalamRadius: dalamRadiusKantor
+                    };
+
+                    state.absensi.push(recordBaru);
+                    syncAbsensiAtomic(recordBaru, false);
+                    saveData(); 
+                    window.playSound('masuk'); 
+                    const infoJarak = jarakDariKantor !== null ? ` [${jarakDariKantor}m]` : '';
+                    showToast('Masuk Berhasil', `Selamat bekerja, ${karyawan.nama}! [${shiftKaryawan.nama}: ${shiftKaryawan.jamMasuk}] (${status})${infoJarak}`);
+                    if (typeof window.tampilkanOverlayScanBerhasil === 'function') {
+                        window.tampilkanOverlayScanBerhasil(karyawan, 'MASUK', timeString, `${status} (${shiftKaryawan.nama})`, metode);
+                    }
+                };
+
+                // A. KASUS 1: MODE EKSPLISIT MASUK (kioskModeType === 'masuk')
+                if (kioskModeType === 'masuk') {
+                    if (absenHariIni && absenHariIni.jamMasuk) {
+                        window.playSound('masuk');
+                        showToast('Sudah Absen Masuk', `${karyawan.nama} sudah tercatat MASUK pukul ${absenHariIni.jamMasuk} [${shiftKaryawan.nama}]. Presensi aman.`, 'info');
                         if (typeof window.tampilkanOverlayScanBerhasil === 'function') {
-                            window.tampilkanOverlayScanBerhasil(karyawan, 'MASUK', timeString, status, metode);
+                            window.tampilkanOverlayScanBerhasil(karyawan, 'SUDAH MASUK', absenHariIni.jamMasuk, `${absenHariIni.statusMasuk || 'Tepat Waktu'} (${shiftKaryawan.nama})`, metode);
                         }
-                    } else {
-                        window.playSound('error'); 
-                        showToast('Informasi', `${karyawan.nama} sudah merampungkan absen hari ini.`, 'warning'); 
+                        return;
                     }
+                    prosesMasukKaryawan();
+                    return;
+                }
+
+                // B. KASUS 2: MODE EKSPLISIT PULANG (kioskModeType === 'pulang')
+                if (kioskModeType === 'pulang') {
+                    if (!recordAktifUntukPulang) {
+                        if (absenHariIni && absenHariIni.jamMasuk && absenHariIni.jamPulang) {
+                            window.playSound('error');
+                            showToast('Sudah Pulang', `${karyawan.nama} sudah menyelesaikan presensi pulang pukul ${absenHariIni.jamPulang}.`, 'info');
+                            return;
+                        }
+                        window.playSound('error');
+                        showToast('Akses Ditolak', `${karyawan.nama} belum melakukan presensi Masuk hari ini. Harap absen masuk terlebih dahulu.`, 'warning');
+                        return;
+                    }
+                    prosesPulangKaryawan(recordAktifUntukPulang);
+                    return;
+                }
+
+                // C. KASUS 3: MODE OTOMATIS (kioskModeType === 'auto' || 'absen')
+                if (recordAktifUntukPulang) {
+                    // PENCEGAHAN DOUBLE SCAN TIDAK SENGAJA:
+                    // Jika baru saja absen masuk (< 15 menit), jangan langsung tutup sebagai absen Pulang!
+                    const waktuMasukDate = new Date(`${recordAktifUntukPulang.tanggal}T${recordAktifUntukPulang.jamMasuk}:00`);
+                    const selisihMenitDariMasuk = Math.floor((now.getTime() - waktuMasukDate.getTime()) / 60000);
+                    
+                    if (selisihMenitDariMasuk < 15) {
+                        window.playSound('masuk');
+                        showToast('Presensi Masuk Aman', `Halo ${karyawan.nama}, Anda sudah tercatat MASUK pukul ${recordAktifUntukPulang.jamMasuk} [${shiftKaryawan.nama}]. Presensi Anda aman.`, 'info');
+                        if (typeof window.tampilkanOverlayScanBerhasil === 'function') {
+                            window.tampilkanOverlayScanBerhasil(karyawan, 'SUDAH MASUK', recordAktifUntukPulang.jamMasuk, `${recordAktifUntukPulang.statusMasuk || 'Tepat Waktu'} (${shiftKaryawan.nama})`, metode);
+                        }
+                        return;
+                    }
+
+                    // TERCATAT SEBAGAI JAM PULANG SHIFT RESMI
+                    prosesPulangKaryawan(recordAktifUntukPulang);
+                } else { 
+                    // JIKA TIDAK ADA RECORD UNTUK PULANG:
+                    // Cek apakah hari ini sudah merampungkan presensi (sudah Masuk & Pulang)
+                    if (absenHariIni && absenHariIni.jamMasuk && absenHariIni.jamPulang) {
+                        window.playSound('error'); 
+                        showToast('Presensi Lengkap', `${karyawan.nama} sudah merampungkan presensi hari ini (Masuk: ${absenHariIni.jamMasuk} | Pulang: ${absenHariIni.jamPulang}).`, 'info'); 
+                        if (typeof window.tampilkanOverlayScanBerhasil === 'function') {
+                            window.tampilkanOverlayScanBerhasil(karyawan, 'SUDAH LENGKAP', `${absenHariIni.jamMasuk} - ${absenHariIni.jamPulang}`, `Shift: ${shiftKaryawan.nama}`, metode);
+                        }
+                        return;
+                    }
+
+                    // CATAT PRESENSI MASUK BARU SESUAI SHIFT KERJA
+                    prosesMasukKaryawan();
                 }
             }
 
@@ -1856,7 +2150,7 @@
                 };
 
                 const onScanSuccess = (decodedText) => {
-                    if (state.currentView === 'absenGPS') {
+                    if (state.currentView === 'absenGPS' || state.currentUserRole === 'gps') {
                         window.prosesGPSLaluAbsen(decodedText);
                     } else {
                         window.prosesKehadiran(decodedText, 'QR/Barcode'); 
@@ -1943,23 +2237,87 @@
 
         window.toggleKioskMode = function(mode) {
             kioskModeType = mode;
-            const btnAbsen = document.getElementById('btnModeAbsen'); 
-            const btnImk = document.getElementById('btnModeImk');
+            const isGpsView = state.currentUserRole === 'gps' || state.currentView === 'absenGPS';
             const titleEl = document.getElementById('kioskTitle'); 
             const subtitleEl = document.getElementById('kioskSubtitle');
-            
-            if(!btnAbsen || !btnImk) return;
-            
-            if (mode === 'imk') {
-                btnImk.className = "flex-1 bg-amber-500 text-white font-bold py-2.5 rounded-xl shadow transition text-xs border border-amber-600"; 
-                btnAbsen.className = "flex-1 text-slate-500 bg-slate-100 hover:bg-slate-200 font-semibold py-2.5 rounded-xl transition text-xs border border-slate-200";
-                if (titleEl) titleEl.innerText = "Terminal IMK (Keluar/Masuk)"; 
-                if (subtitleEl) subtitleEl.innerText = "Scan 1x = Keluar Kantor | Scan ke-2 = Kembali";
-            } else {
-                btnAbsen.className = "flex-1 bg-emerald-600 text-white font-bold py-2.5 rounded-xl shadow transition text-xs border border-emerald-700"; 
-                btnImk.className = "flex-1 text-slate-500 bg-slate-100 hover:bg-slate-200 font-semibold py-2.5 rounded-xl transition text-xs border border-slate-200";
-                if (titleEl) titleEl.innerText = "Terminal Mesin QR & Barcode"; 
-                if (subtitleEl) subtitleEl.innerText = "Arahkan Barcode ID Card atau QR Code ke Kamera";
+            const btnSubmitGPS = document.getElementById('btnSubmitGPS');
+
+            // 1. Kiosk mode styling
+            const btnAuto = document.getElementById('btnModeAuto');
+            const btnMasuk = document.getElementById('btnModeMasuk');
+            const btnPulang = document.getElementById('btnModePulang');
+            const btnImk = document.getElementById('btnModeImk');
+
+            if (btnAuto && btnMasuk && btnPulang) {
+                btnAuto.className = (mode === 'auto' || mode === 'absen')
+                    ? "flex-1 bg-emerald-600 text-white font-bold py-2 rounded-xl shadow transition text-xs border border-emerald-700"
+                    : "flex-1 text-slate-600 bg-white hover:bg-slate-50 font-semibold py-2 rounded-xl transition text-xs border border-slate-200";
+                btnMasuk.className = (mode === 'masuk')
+                    ? "flex-1 bg-blue-600 text-white font-bold py-2 rounded-xl shadow transition text-xs border border-blue-700"
+                    : "flex-1 text-slate-600 bg-white hover:bg-slate-50 font-semibold py-2 rounded-xl transition text-xs border border-slate-200";
+                btnPulang.className = (mode === 'pulang')
+                    ? "flex-1 bg-rose-600 text-white font-bold py-2 rounded-xl shadow transition text-xs border border-rose-700"
+                    : "flex-1 text-slate-600 bg-white hover:bg-slate-50 font-semibold py-2 rounded-xl transition text-xs border border-slate-200";
+            }
+            if (btnImk) {
+                btnImk.className = (mode === 'imk')
+                    ? "w-full bg-amber-500 text-white font-bold py-2 rounded-xl shadow transition text-xs border border-amber-600"
+                    : "w-full text-amber-800 bg-amber-50 hover:bg-amber-100 font-semibold py-2 rounded-xl transition text-xs border border-amber-200";
+            }
+
+            // 2. GPS HP mode styling
+            const btnGpsMasuk = document.getElementById('btnModeGpsMasuk');
+            const btnGpsPulang = document.getElementById('btnModeGpsPulang');
+            const btnGpsImk = document.getElementById('btnModeGpsImk');
+
+            if (btnGpsMasuk && btnGpsPulang && btnGpsImk) {
+                btnGpsMasuk.className = (mode === 'masuk' || mode === 'auto' || mode === 'absen')
+                    ? "flex-1 bg-emerald-600 text-white font-bold py-2.5 rounded-xl shadow transition text-xs border border-emerald-700"
+                    : "flex-1 text-slate-600 bg-white hover:bg-slate-50 font-semibold py-2.5 rounded-xl transition text-xs border border-slate-200";
+                btnGpsPulang.className = (mode === 'pulang')
+                    ? "flex-1 bg-rose-600 text-white font-bold py-2.5 rounded-xl shadow transition text-xs border border-rose-700"
+                    : "flex-1 text-slate-600 bg-white hover:bg-slate-50 font-semibold py-2.5 rounded-xl transition text-xs border border-slate-200";
+                btnGpsImk.className = (mode === 'imk')
+                    ? "flex-1 bg-amber-500 text-white font-bold py-2.5 rounded-xl shadow transition text-xs border border-amber-600"
+                    : "flex-1 text-slate-600 bg-white hover:bg-slate-50 font-semibold py-2.5 rounded-xl transition text-xs border border-slate-200";
+            }
+
+            // Update Titles & Subtitles
+            if (titleEl && subtitleEl) {
+                if (mode === 'imk') {
+                    titleEl.innerText = isGpsView ? "Izin Keluar Masuk (IMK Personal HP)" : "Terminal IMK (Keluar/Masuk)";
+                    subtitleEl.innerText = isGpsView ? "Kunci Lokasi GPS & Catat Izin Keluar atau Kembali" : "Scan 1x = Izin Keluar Kantor | Scan ke-2 = Kembali";
+                } else if (mode === 'masuk') {
+                    titleEl.innerText = isGpsView ? "Presensi GPS: Absen Masuk" : "Terminal Scan: Absen Masuk";
+                    subtitleEl.innerText = isGpsView ? "Kunci Lokasi GPS untuk Absen Masuk Shift Kerja" : "Scan Kartu / NIK untuk Masuk Shift";
+                } else if (mode === 'pulang') {
+                    titleEl.innerText = isGpsView ? "Presensi GPS: Absen Pulang" : "Terminal Scan: Absen Pulang";
+                    subtitleEl.innerText = isGpsView ? "Kunci Lokasi GPS untuk Absen Selesai Shift Kerja" : "Scan Kartu / NIK untuk Pulang Shift";
+                } else {
+                    titleEl.innerText = isGpsView ? "Absen Personal GPS (Otomatis)" : "Terminal Mesin QR & Barcode";
+                    subtitleEl.innerText = isGpsView ? "Scan ID Card atau Pilih Nama untuk Kunci Titik Lokasi" : "Arahkan Barcode ID Card atau QR Code ke Kamera";
+                }
+            }
+
+            // Update GPS Submit Button
+            if (btnSubmitGPS) {
+                if (mode === 'imk') {
+                    btnSubmitGPS.innerHTML = '<i class="fas fa-person-walking-arrow-right mr-1.5 text-amber-200"></i> KLIK IZIN KELUAR/MASUK (GPS)';
+                    btnSubmitGPS.className = "bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm transition text-xs flex items-center justify-center shrink-0";
+                } else if (mode === 'masuk') {
+                    btnSubmitGPS.innerHTML = '<i class="fas fa-sign-in-alt mr-1.5 text-emerald-200"></i> KLIK ABSEN MASUK (GPS)';
+                    btnSubmitGPS.className = "bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm transition text-xs flex items-center justify-center shrink-0";
+                } else if (mode === 'pulang') {
+                    btnSubmitGPS.innerHTML = '<i class="fas fa-sign-out-alt mr-1.5 text-rose-200"></i> KLIK ABSEN PULANG (GPS)';
+                    btnSubmitGPS.className = "bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm transition text-xs flex items-center justify-center shrink-0";
+                } else {
+                    btnSubmitGPS.innerHTML = '<i class="fas fa-location-crosshairs mr-1.5 text-blue-200"></i> KLIK ABSEN SEKARANG (GPS)';
+                    btnSubmitGPS.className = "bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm transition text-xs flex items-center justify-center shrink-0";
+                }
+            }
+
+            if (typeof window.renderRecentKioskScans === 'function') {
+                window.renderRecentKioskScans();
             }
         };
 
@@ -2044,7 +2402,7 @@
                 // Set true to show the image locally inside the library's temporary canvas (improves stability)
                 const decodedResult = await fileScanner.scanFile(file, true);
                 if (decodedResult) {
-                    if (state.currentView === 'absenGPS') {
+                    if (state.currentView === 'absenGPS' || state.currentUserRole === 'gps') {
                         window.prosesGPSLaluAbsen(decodedResult);
                     } else {
                         window.prosesKehadiran(decodedResult, 'File Gambar');
@@ -2070,7 +2428,7 @@
             const val = input.value.trim();
             if (!val) return showToast('Peringatan', 'Ketik NIK atau scan barcode terlebih dahulu.', 'warning');
             input.value = '';
-            if (state.currentView === 'absenGPS') {
+            if (state.currentView === 'absenGPS' || state.currentUserRole === 'gps') {
                 window.prosesGPSLaluAbsen(val);
             } else {
                 window.prosesKehadiran(val, 'Barcode Gun/Manual');
@@ -2079,7 +2437,7 @@
 
         // LISTENER KEYBOARD GLOBAL UNTUK SCANNER GUN USB / BLUETOOTH
         window.addEventListener('keydown', function(e) {
-            if (state.currentView !== 'scanWajah' && state.currentView !== 'absenGPS') return;
+            if (state.currentView !== 'scanWajah' && state.currentView !== 'absenGPS' && state.currentUserRole !== 'kiosk' && state.currentUserRole !== 'gps') return;
             
             // Jangan ganggu bila user sedang mengetik di input form/modal selain input manual kiosk
             const activeEl = document.activeElement;
@@ -2097,7 +2455,7 @@
                 if (barcodeBuffer.trim().length >= 2) {
                     const scanned = barcodeBuffer.trim();
                     barcodeBuffer = '';
-                    if (state.currentView === 'absenGPS') {
+                    if (state.currentView === 'absenGPS' || state.currentUserRole === 'gps') {
                         window.prosesGPSLaluAbsen(scanned);
                     } else {
                         window.prosesKehadiran(scanned, 'Barcode Scanner');
@@ -2122,8 +2480,11 @@
             const karyawan = (state.karyawan || []).find(k => 
                 (k.nik && k.nik.trim().toLowerCase() === cleanCode) ||
                 (k.nip && k.nip.trim().toLowerCase() === cleanCode) ||
+                (k.noKtp && k.noKtp.trim().toLowerCase() === cleanCode) ||
                 (k.nikKtp && k.nikKtp.trim().toLowerCase() === cleanCode) ||
-                String(k.id) === code
+                String(k.id) === code ||
+                String(k.id) === cleanCode ||
+                k.id == code
             );
 
             if(!karyawan) { 
@@ -2134,13 +2495,13 @@
 
             const gpsStatusEl = document.getElementById('gpsLockStatus');
             if (gpsStatusEl) {
-                gpsStatusEl.innerHTML = '<span class="text-amber-500 font-bold"><i class="fas fa-spinner fa-spin mr-1"></i> Mengunci koordinat GPS...</span>';
+                gpsStatusEl.innerHTML = '<span class="text-amber-500 font-bold"><i class="fas fa-spinner fa-spin mr-1"></i> Mengunci koordinat GPS HP...</span>';
             }
 
             showToast('Memindai GPS...', `Mengunci titik koordinat untuk ${karyawan.nama}...`, 'warning');
 
             if (!navigator.geolocation) { 
-                if (gpsStatusEl) gpsStatusEl.innerHTML = '<span class="text-rose-500 font-bold"><i class="fas fa-exclamation-triangle mr-1"></i> GPS tidak didukung</span>';
+                if (gpsStatusEl) gpsStatusEl.innerHTML = '<span class="text-rose-500 font-bold"><i class="fas fa-exclamation-triangle mr-1"></i> GPS tidak didukung di perangkat ini</span>';
                 window.prosesKehadiran(code, 'GPS-Manual');
                 return; 
             }
@@ -2148,20 +2509,44 @@
             // Upaya 1: Akurasi Tinggi (High Accuracy)
             navigator.geolocation.getCurrentPosition(
                 (pos) => { 
-                    if (gpsStatusEl) gpsStatusEl.innerHTML = `<span class="text-emerald-500 font-bold"><i class="fas fa-check-circle mr-1"></i> GPS Terkunci: ${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}</span>`;
-                    window.prosesKehadiran(code, 'GPS', pos.coords.latitude, pos.coords.longitude); 
+                    const lat = pos.coords.latitude;
+                    const lng = pos.coords.longitude;
+                    let infoJarak = '';
+                    if (state.pengaturan?.kantorLat && state.pengaturan?.kantorLng) {
+                        const j = hitungJarakGPS(lat, lng, state.pengaturan.kantorLat, state.pengaturan.kantorLng);
+                        const r = parseInt(state.pengaturan.radiusMeter, 10) || 150;
+                        if (j !== null) {
+                            infoJarak = ` | Jarak: ${j}m (${j <= r ? 'Dalam Radius' : 'Di Luar Radius'})`;
+                        }
+                    }
+                    if (gpsStatusEl) {
+                        gpsStatusEl.innerHTML = `<span class="text-emerald-500 font-bold"><i class="fas fa-check-circle mr-1"></i> GPS Terkunci: ${lat.toFixed(4)}, ${lng.toFixed(4)}${infoJarak}</span>`;
+                    }
+                    window.prosesKehadiran(code, 'GPS', lat, lng); 
                 },
                 (firstErr) => { 
                     console.warn("GPS Akurasi tinggi timeout/gagal, beralih ke toleransi indoor...", firstErr);
                     // Upaya 2: Fallback Akurasi Standar (Sangat penting saat karyawan berada di dalam gedung/ruangan kantor)
                     navigator.geolocation.getCurrentPosition(
                         (fallbackPos) => {
-                            if (gpsStatusEl) gpsStatusEl.innerHTML = `<span class="text-emerald-500 font-bold"><i class="fas fa-check-circle mr-1"></i> GPS Terkunci (Indoor): ${fallbackPos.coords.latitude.toFixed(4)}, ${fallbackPos.coords.longitude.toFixed(4)}</span>`;
-                            window.prosesKehadiran(code, 'GPS', fallbackPos.coords.latitude, fallbackPos.coords.longitude);
+                            const lat = fallbackPos.coords.latitude;
+                            const lng = fallbackPos.coords.longitude;
+                            let infoJarak = '';
+                            if (state.pengaturan?.kantorLat && state.pengaturan?.kantorLng) {
+                                const j = hitungJarakGPS(lat, lng, state.pengaturan.kantorLat, state.pengaturan.kantorLng);
+                                const r = parseInt(state.pengaturan.radiusMeter, 10) || 150;
+                                if (j !== null) {
+                                    infoJarak = ` | Jarak: ${j}m (${j <= r ? 'Dalam Radius' : 'Di Luar Radius'})`;
+                                }
+                            }
+                            if (gpsStatusEl) {
+                                gpsStatusEl.innerHTML = `<span class="text-emerald-500 font-bold"><i class="fas fa-check-circle mr-1"></i> GPS Terkunci (Indoor): ${lat.toFixed(4)}, ${lng.toFixed(4)}${infoJarak}</span>`;
+                            }
+                            window.prosesKehadiran(code, 'GPS', lat, lng);
                         },
                         (secondErr) => {
                             console.error("Gagal mendapatkan koordinat GPS:", secondErr);
-                            if (gpsStatusEl) gpsStatusEl.innerHTML = '<span class="text-rose-500 font-bold"><i class="fas fa-times-circle mr-1"></i> Sinyal GPS lemah / Izin ditolak</span>';
+                            if (gpsStatusEl) gpsStatusEl.innerHTML = '<span class="text-rose-500 font-bold"><i class="fas fa-times-circle mr-1"></i> Sinyal GPS lemah / Izin lokasi ditolak</span>';
                             window.playSound('error'); 
                             showToast('Gagal GPS', 'Izin lokasi (GPS) ditolak atau sinyal lemah di perangkat Anda. Harap aktifkan Lokasi.', 'error'); 
                         },
@@ -2900,47 +3285,90 @@
             const today = new Date();
             const dateString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
             
-            const recent = (state.absensi || [])
-                .filter(a => a && a.tanggal === dateString)
-                .slice(-5)
-                .reverse();
+            if (kioskModeType === 'imk') {
+                const recentImk = (state.imk || [])
+                    .filter(i => i && i.tanggal === dateString)
+                    .slice(-5)
+                    .reverse();
 
-            if (recent.length === 0) {
-                container.innerHTML = `
-                    <div class="text-center py-3 text-xs text-slate-400 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
-                        <i class="fas fa-fingerprint mr-1.5 text-slate-300"></i> Belum ada presensi tercatat hari ini.
-                    </div>
-                `;
-                return;
-            }
+                if (recentImk.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center py-3 text-xs text-slate-400 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+                            <i class="fas fa-person-walking mr-1.5 text-amber-500"></i> Belum ada izin keluar kantor (IMK) tercatat hari ini.
+                        </div>
+                    `;
+                    return;
+                }
 
-            container.innerHTML = recent.map(r => {
-                const isLate = r.statusMasuk === 'Terlambat';
-                const badgeColor = isLate ? 'bg-amber-100 text-amber-800 border-amber-200' : 'bg-emerald-100 text-emerald-800 border-emerald-200';
-                const kFound = state.karyawan?.find(k => k.id == r.karyawanId || String(k.id) === String(r.karyawanId));
-                const nama = r.karyawanNama || (kFound ? kFound.nama : 'Karyawan');
-                const pulangInfo = r.jamPulang ? `<span class="text-slate-500 font-mono ml-2">Pulang: <b class="text-slate-700">${r.jamPulang}</b></span>` : '';
-                return `
-                    <div class="flex items-center justify-between p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/90 rounded-xl transition text-xs shadow-2xs">
-                        <div class="flex items-center gap-2.5 min-w-0">
-                            <div class="w-7 h-7 rounded-lg bg-emerald-600 text-white font-bold flex items-center justify-center text-[10px] shrink-0 shadow-xs">
-                                ${nama.charAt(0).toUpperCase()}
-                            </div>
-                            <div class="min-w-0 truncate">
-                                <div class="font-bold text-slate-800 truncate">${nama}</div>
-                                <div class="text-[11px] text-slate-500 flex items-center gap-1.5 flex-wrap">
-                                    <span>Masuk: <b class="font-mono text-slate-700">${r.jamMasuk}</b></span>
-                                    ${pulangInfo}
-                                    <span class="text-[10px] text-slate-400">(${r.metode || 'QR'})</span>
+                container.innerHTML = recentImk.map(r => {
+                    const isKembali = !!r.jamKembali;
+                    const badgeColor = isKembali ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-amber-100 text-amber-800 border-amber-200 animate-pulse';
+                    const kFound = state.karyawan?.find(k => k.id == r.karyawanId || String(k.id) === String(r.karyawanId));
+                    const nama = r.karyawanNama || (kFound ? kFound.nama : 'Karyawan');
+                    const kembaliInfo = r.jamKembali ? `<span class="text-slate-500 font-mono ml-2">Kembali: <b class="text-slate-700">${r.jamKembali}</b> (${r.durasi})</span>` : '';
+                    return `
+                        <div class="flex items-center justify-between p-2.5 bg-amber-50/30 hover:bg-amber-50/60 border border-amber-200/70 rounded-xl transition text-xs shadow-2xs">
+                            <div class="flex items-center gap-2.5 min-w-0">
+                                <div class="w-7 h-7 rounded-lg bg-amber-500 text-white font-bold flex items-center justify-center text-[10px] shrink-0 shadow-xs">
+                                    ${nama.charAt(0).toUpperCase()}
+                                </div>
+                                <div class="min-w-0 truncate">
+                                    <div class="font-bold text-slate-800 truncate">${nama}</div>
+                                    <div class="text-[11px] text-slate-500 flex items-center gap-1.5 flex-wrap">
+                                        <span>Keluar: <b class="font-mono text-amber-700">${r.jamKeluar}</b></span>
+                                        ${kembaliInfo}
+                                    </div>
                                 </div>
                             </div>
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-md border ${badgeColor} shrink-0">
+                                ${isKembali ? 'Kembali' : 'Di Luar'}
+                            </span>
                         </div>
-                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-md border ${badgeColor} shrink-0">
-                            ${r.statusMasuk || 'Hadir'}
-                        </span>
-                    </div>
-                `;
-            }).join('');
+                    `;
+                }).join('');
+            } else {
+                const recent = (state.absensi || [])
+                    .filter(a => a && a.tanggal === dateString)
+                    .slice(-5)
+                    .reverse();
+
+                if (recent.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center py-3 text-xs text-slate-400 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+                            <i class="fas fa-fingerprint mr-1.5 text-slate-300"></i> Belum ada presensi tercatat hari ini.
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = recent.map(r => {
+                    const isLate = r.statusMasuk === 'Terlambat';
+                    const badgeColor = isLate ? 'bg-amber-100 text-amber-800 border-amber-200' : 'bg-emerald-100 text-emerald-800 border-emerald-200';
+                    const kFound = state.karyawan?.find(k => k.id == r.karyawanId || String(k.id) === String(r.karyawanId));
+                    const nama = r.karyawanNama || (kFound ? kFound.nama : 'Karyawan');
+                    const pulangInfo = r.jamPulang ? `<span class="text-slate-500 font-mono ml-2">Pulang: <b class="text-slate-700">${r.jamPulang}</b></span>` : '';
+                    return `
+                        <div class="flex items-center justify-between p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/90 rounded-xl transition text-xs shadow-2xs">
+                            <div class="flex items-center gap-2.5 min-w-0">
+                                <div class="w-7 h-7 rounded-lg bg-emerald-600 text-white font-bold flex items-center justify-center text-[10px] shrink-0 shadow-xs">
+                                    ${nama.charAt(0).toUpperCase()}
+                                </div>
+                                <div class="min-w-0 truncate">
+                                    <div class="font-bold text-slate-800 truncate">${nama}</div>
+                                    <div class="text-[11px] text-slate-500 flex items-center gap-1.5 flex-wrap">
+                                        <span>Masuk: <b class="font-mono text-slate-700">${r.jamMasuk}</b></span>
+                                        ${pulangInfo}
+                                        <span class="text-[10px] text-slate-400">(${r.metode || 'QR'})</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-md border ${badgeColor} shrink-0">
+                                ${r.statusMasuk || 'Hadir'}
+                            </span>
+                        </div>
+                    `;
+                }).join('');
+            }
         };
 
         window.tampilkanOverlayScanBerhasil = function(karyawan, tipe, jam, status, metode) {
@@ -3028,18 +3456,41 @@
                                 </div>
 
                                 ${isKiosk ? `
-                                <div class="flex bg-slate-100 p-1 rounded-2xl mb-4 border border-slate-200">
-                                    <button id="btnModeAbsen" onclick="window.toggleKioskMode('absen')" class="flex-1 bg-emerald-600 text-white font-bold py-2.5 rounded-xl shadow transition text-xs border border-emerald-700">Absen Masuk/Pulang</button>
-                                    <button id="btnModeImk" onclick="window.toggleKioskMode('imk')" class="flex-1 text-slate-500 bg-slate-100 hover:bg-slate-200 font-semibold py-2.5 rounded-xl transition text-xs border border-slate-200">Izin Keluar Masuk (IMK)</button>
+                                <div class="grid grid-cols-3 gap-1.5 bg-slate-100 p-1.5 rounded-2xl mb-2 border border-slate-200">
+                                    <button id="btnModeAuto" onclick="window.toggleKioskMode('auto')" class="flex-1 ${(kioskModeType === 'auto' || kioskModeType === 'absen') ? 'bg-emerald-600 text-white shadow border border-emerald-700' : 'text-slate-600 bg-white hover:bg-slate-50'} font-bold py-2 rounded-xl transition text-xs flex items-center justify-center">
+                                        <i class="fas fa-magic mr-1.5"></i> Otomatis
+                                    </button>
+                                    <button id="btnModeMasuk" onclick="window.toggleKioskMode('masuk')" class="flex-1 ${kioskModeType === 'masuk' ? 'bg-blue-600 text-white shadow border border-blue-700' : 'text-slate-600 bg-white hover:bg-slate-50'} font-bold py-2 rounded-xl transition text-xs flex items-center justify-center">
+                                        <i class="fas fa-sign-in-alt mr-1.5"></i> Masuk
+                                    </button>
+                                    <button id="btnModePulang" onclick="window.toggleKioskMode('pulang')" class="flex-1 ${kioskModeType === 'pulang' ? 'bg-rose-600 text-white shadow border border-rose-700' : 'text-slate-600 bg-white hover:bg-slate-50'} font-bold py-2 rounded-xl transition text-xs flex items-center justify-center">
+                                        <i class="fas fa-sign-out-alt mr-1.5"></i> Pulang
+                                    </button>
+                                </div>
+                                <div class="mb-4">
+                                    <button id="btnModeImk" onclick="window.toggleKioskMode('imk')" class="w-full ${kioskModeType === 'imk' ? 'bg-amber-500 text-white shadow border border-amber-600' : 'text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200'} font-bold py-2 rounded-xl transition text-xs flex items-center justify-center">
+                                        <i class="fas fa-person-walking-arrow-right mr-1.5"></i> Mode Izin Keluar Masuk (IMK)
+                                    </button>
                                 </div>
                                 ` : `
+                                <div class="grid grid-cols-3 gap-1.5 bg-slate-100 p-1.5 rounded-2xl mb-3 border border-slate-200 shadow-2xs">
+                                    <button id="btnModeGpsMasuk" onclick="window.toggleKioskMode('masuk')" class="flex-1 ${(kioskModeType === 'masuk' || kioskModeType === 'auto' || kioskModeType === 'absen') ? 'bg-emerald-600 text-white shadow border border-emerald-700' : 'text-slate-600 bg-white hover:bg-slate-50'} font-bold py-2.5 rounded-xl transition text-xs flex items-center justify-center">
+                                        <i class="fas fa-right-to-bracket mr-1.5"></i> Masuk (GPS)
+                                    </button>
+                                    <button id="btnModeGpsPulang" onclick="window.toggleKioskMode('pulang')" class="flex-1 ${kioskModeType === 'pulang' ? 'bg-rose-600 text-white shadow border border-rose-700' : 'text-slate-600 bg-white hover:bg-slate-50'} font-bold py-2.5 rounded-xl transition text-xs flex items-center justify-center">
+                                        <i class="fas fa-right-from-bracket mr-1.5"></i> Pulang (GPS)
+                                    </button>
+                                    <button id="btnModeGpsImk" onclick="window.toggleKioskMode('imk')" class="flex-1 ${kioskModeType === 'imk' ? 'bg-amber-500 text-white shadow border border-amber-600' : 'text-slate-600 bg-white hover:bg-slate-50'} font-bold py-2.5 rounded-xl transition text-xs flex items-center justify-center">
+                                        <i class="fas fa-person-walking mr-1.5"></i> IMK (GPS)
+                                    </button>
+                                </div>
                                 <div class="bg-blue-50 border border-blue-200 p-3 rounded-2xl mb-4 text-blue-700 text-xs font-bold">
                                     <div class="flex items-center justify-center gap-2 mb-1">
                                         <i class="fas fa-satellite-dish mr-1 animate-pulse text-base"></i> 
                                         <span>Mode Presensi GPS Personal (HP)</span>
                                     </div>
                                     <div id="gpsLockStatus" class="text-[11px] text-slate-600 font-normal">
-                                        <span class="inline-flex items-center text-emerald-600 font-semibold"><i class="fas fa-circle-check mr-1"></i> GPS Otomatis Aktif saat Scan / Klik Absen</span>
+                                        <span class="inline-flex items-center text-emerald-600 font-semibold"><i class="fas fa-circle-check mr-1"></i> GPS Otomatis Mengunci Titik Lokasi saat Scan / Klik</span>
                                     </div>
                                 </div>
 
@@ -3051,10 +3502,17 @@
                                     <div class="flex flex-col sm:flex-row gap-2">
                                         <select id="selectKaryawanGPS" class="flex-1 bg-white border border-blue-200 rounded-xl px-3 py-2 text-xs text-slate-800 font-semibold outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs">
                                             <option value="">-- Pilih Nama Anda --</option>
-                                            ${(state.karyawan || []).map(k => `<option value="${k.nik || k.id}">${k.nama} (${k.nik || '-'})</option>`).join('')}
+                                            ${(state.karyawan || []).map(k => {
+                                                const s = getKaryawanShift(k);
+                                                return `<option value="${k.nik || k.id}">${k.nama} [Shift: ${s.nama} (${s.jamMasuk}-${s.jamPulang})] [${k.nik || '-'}]</option>`;
+                                            }).join('')}
                                         </select>
-                                        <button type="button" onclick="window.absenGPSKaryawanTerpilih()" class="bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm transition text-xs flex items-center justify-center shrink-0">
-                                            <i class="fas fa-location-crosshairs mr-1.5 text-amber-300"></i> KLIK ABSEN SEKARANG
+                                        <button type="button" id="btnSubmitGPS" onclick="window.absenGPSKaryawanTerpilih()" class="${kioskModeType === 'imk' ? 'bg-amber-600 hover:bg-amber-700' : (kioskModeType === 'pulang' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-600 hover:bg-emerald-700')} active:scale-95 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm transition text-xs flex items-center justify-center shrink-0">
+                                            ${kioskModeType === 'imk' 
+                                                ? '<i class="fas fa-person-walking-arrow-right mr-1.5 text-amber-200"></i> KLIK IZIN KELUAR/MASUK (GPS)' 
+                                                : (kioskModeType === 'pulang' 
+                                                    ? '<i class="fas fa-sign-out-alt mr-1.5 text-rose-200"></i> KLIK ABSEN PULANG (GPS)' 
+                                                    : '<i class="fas fa-sign-in-alt mr-1.5 text-emerald-200"></i> KLIK ABSEN MASUK (GPS)')}
                                         </button>
                                     </div>
                                 </div>
@@ -5367,17 +5825,29 @@
                 const badge = (a.statusMasuk === 'Tepat Waktu' || a.statusMasuk?.includes('Libur')) 
                     ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
                     : 'bg-rose-50 text-rose-700 border border-rose-200';
-                
-                let met = a.metode === 'GPS' 
-                    ? `<a href="https://maps.google.com/?q=${a.lat},${a.lng}" target="_blank" class="text-blue-600 bg-blue-50 border border-blue-200 px-2 py-1 rounded-md text-xs font-bold whitespace-nowrap hover:bg-blue-600 hover:text-white transition inline-flex items-center"><i class="fas fa-map-marker-alt mr-1"></i>Buka Peta</a>` 
-                    : (a.metode === 'Manual' 
-                        ? `<span class="text-indigo-600 bg-indigo-50 border border-indigo-200 px-2 py-1 rounded-md text-xs font-bold inline-flex items-center"><i class="fas fa-keyboard mr-1"></i>Manual</span>` 
-                        : `<span class="text-slate-600 bg-slate-100 border border-slate-200 px-2 py-1 rounded-md text-xs font-bold inline-flex items-center"><i class="fas fa-qrcode mr-1"></i>Kiosk QR</span>`);
 
                 const namaTampil = k ? k.nama : (a.karyawanNama || 'Karyawan Non-Aktif');
                 const nikTampil = k ? (k.nik || '-') : (a.karyawanNik || '-');
                 const initial = (namaTampil.charAt(0) || 'P').toUpperCase();
                 const isOrphan = !k;
+                const shiftNama = a.shiftNama || (k ? getKaryawanShift(k).nama : 'Shift Reguler');
+
+                let met = '';
+                if (a.metode === 'GPS' || a.lat || a.lng) {
+                    const latNum = a.lat !== null && a.lat !== undefined ? Number(a.lat).toFixed(4) : '-';
+                    const lngNum = a.lng !== null && a.lng !== undefined ? Number(a.lng).toFixed(4) : '-';
+                    let radBadge = '';
+                    if (a.jarak !== null && a.jarak !== undefined) {
+                        radBadge = a.dalamRadius 
+                            ? `<span class="text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded ml-1" title="Dalam Radius Kantor (${a.jarak}m)"><i class="fas fa-check mr-0.5"></i>${a.jarak}m</span>`
+                            : `<span class="text-[9px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded ml-1" title="Di Luar Radius Kantor (${a.jarak}m)"><i class="fas fa-exclamation mr-0.5"></i>${a.jarak}m</span>`;
+                    }
+                    met = `<div class="flex items-center gap-1 flex-wrap"><a href="https://maps.google.com/?q=${a.lat},${a.lng}" target="_blank" class="text-blue-600 bg-blue-50 border border-blue-200 px-2 py-1 rounded-md text-xs font-bold whitespace-nowrap hover:bg-blue-600 hover:text-white transition inline-flex items-center" title="Buka Titik Lokasi GPS di Google Maps"><i class="fas fa-map-marker-alt mr-1 text-blue-500"></i>GPS (${latNum}, ${lngNum})</a>${radBadge}</div>`;
+                } else if (a.metode === 'Manual' || a.metode === 'Barcode Gun/Manual') {
+                    met = `<span class="text-indigo-600 bg-indigo-50 border border-indigo-200 px-2 py-1 rounded-md text-xs font-bold inline-flex items-center"><i class="fas fa-keyboard mr-1"></i>Manual/Gun</span>`;
+                } else {
+                    met = `<span class="text-slate-600 bg-slate-100 border border-slate-200 px-2 py-1 rounded-md text-xs font-bold inline-flex items-center"><i class="fas fa-qrcode mr-1"></i>${a.metode || 'Kiosk QR'}</span>`;
+                }
 
                 return `
                     <tr class="hover:bg-slate-50/80 transition">
@@ -5391,7 +5861,10 @@
                                 </div>
                                 <div>
                                     <span class="font-bold ${isOrphan ? 'text-slate-600' : 'text-slate-800'} block text-sm leading-tight">${namaTampil}</span>
-                                    <span class="text-[11px] text-slate-400 font-mono">${nikTampil} ${isOrphan ? '<span class="text-[9px] text-amber-700 bg-amber-50 border border-amber-200 px-1 py-0.5 rounded font-sans ml-1 font-semibold">Non-Aktif</span>' : ''}</span>
+                                    <div class="flex items-center gap-1.5 flex-wrap mt-0.5">
+                                        <span class="text-[11px] text-slate-400 font-mono">${nikTampil} ${isOrphan ? '<span class="text-[9px] text-amber-700 bg-amber-50 border border-amber-200 px-1 py-0.5 rounded font-sans ml-1 font-semibold">Non-Aktif</span>' : ''}</span>
+                                        <span class="text-[10px] text-indigo-600 bg-indigo-50 border border-indigo-100 px-1.5 py-0.2 rounded font-medium"><i class="fas fa-clock text-[9px] mr-1"></i>${shiftNama}</span>
+                                    </div>
                                 </div>
                             </div>
                         </td>
@@ -5400,6 +5873,7 @@
                         </td>
                         <td class="py-3.5 px-6 font-mono font-semibold ${a.jamPulang ? 'text-slate-700' : 'text-slate-400'}">
                             ${a.jamPulang || '-'}
+                            ${a.statusPulang ? `<span class="text-[10px] block font-sans font-medium ${a.statusPulang === 'Pulang Awal' ? 'text-amber-600' : (a.statusPulang === 'Lembur' ? 'text-indigo-600' : 'text-slate-400')}">(${a.statusPulang})</span>` : ''}
                         </td>
                         <td class="py-3.5 px-6 whitespace-nowrap">
                             ${met}
@@ -7449,6 +7923,49 @@
                     <div class="bg-white rounded-2xl border p-8"><div class="flex justify-between items-center mb-6"><h2 class="font-bold flex items-center"><i class="fas fa-calendar-day text-rose-500 mr-2"></i>Libur Nasional</h2><button onclick="window.bukaModalLibur()" class="bg-rose-50 hover:bg-rose-600 hover:text-white text-rose-600 px-3 py-1.5 rounded text-sm font-bold transition">Tambah</button></div><table class="w-full text-sm"><tbody id="tb_libur" class="divide-y"></tbody></table></div>
                 </div>
                 <div class="bg-white rounded-2xl border p-8 mb-8">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                        <h2 class="font-bold text-slate-800 flex items-center text-base">
+                            <i class="fas fa-map-marked-alt text-emerald-600 mr-2"></i>Pengaturan Presensi, Lokasi Kantor (GPS) & Shift
+                        </h2>
+                        <button type="button" onclick="window.ambilLokasiKantorSekarang()" class="bg-blue-50 hover:bg-blue-100 text-blue-700 px-3.5 py-2 rounded-xl text-xs font-bold border border-blue-200 transition flex items-center shadow-2xs self-start sm:self-auto">
+                            <i class="fas fa-crosshairs mr-1.5 text-blue-600"></i> Ambil Koordinat Saya Saat Ini (GPS)
+                        </button>
+                    </div>
+                    <p class="text-xs text-slate-500 mb-6">Atur koordinat kantor untuk memvalidasi presensi personal HP karyawan dan toleransi keterlambatan shift.</p>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <div>
+                            <label class="block text-xs font-bold mb-2 text-slate-600">Toleransi Telat (Menit)</label>
+                            <input type="number" id="s_toleransi" value="${p.toleransiTelat !== undefined && p.toleransiTelat !== null ? p.toleransiTelat : 10}" placeholder="Contoh: 10" class="w-full border p-3 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-sm font-semibold">
+                            <span class="text-[10px] text-slate-400 mt-1 block">Toleransi setelah jam masuk shift</span>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold mb-2 text-slate-600">Latitude Kantor</label>
+                            <input type="text" id="s_lat" value="${p.kantorLat !== null && p.kantorLat !== undefined ? p.kantorLat : ''}" placeholder="-6.2088..." class="w-full border p-3 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-sm font-semibold">
+                            <span class="text-[10px] text-slate-400 mt-1 block">Garis lintang lokasi kantor</span>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold mb-2 text-slate-600">Longitude Kantor</label>
+                            <input type="text" id="s_lng" value="${p.kantorLng !== null && p.kantorLng !== undefined ? p.kantorLng : ''}" placeholder="106.8456..." class="w-full border p-3 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-sm font-semibold">
+                            <span class="text-[10px] text-slate-400 mt-1 block">Garis bujur lokasi kantor</span>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold mb-2 text-slate-600">Radius Kantor (Meter)</label>
+                            <input type="number" id="s_radius" value="${p.radiusMeter || 150}" placeholder="150" class="w-full border p-3 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-sm font-semibold">
+                            <span class="text-[10px] text-slate-400 mt-1 block">Jarak maksimal presensi (Meter)</span>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between flex-wrap gap-4">
+                        <label class="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700">
+                            <input type="checkbox" id="s_kunci_radius" ${p.kunciRadiusGPS ? 'checked' : ''} class="w-4 h-4 text-emerald-600 rounded">
+                            <span>Wajib Dalam Radius (Tolak presensi HP jika karyawan berada di luar radius kantor)</span>
+                        </label>
+                        <button onclick="window.simpanPengaturanUmum()" class="bg-emerald-600 text-white font-bold py-2.5 px-6 rounded-xl shadow hover:bg-emerald-700 transition text-xs flex items-center">
+                            <i class="fas fa-save mr-1.5"></i> Simpan Pengaturan Presensi
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl border p-8 mb-8">
                     <h2 class="font-bold mb-4">Gaji, Denda, & Kontak</h2>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div><label class="block text-xs font-bold mb-2">Tunjangan Hadir / Hari (Rp)</label><input type="number" id="s_th" value="${p.tunjanganHadir||0}" class="w-full border p-3 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500"></div>
@@ -7513,9 +8030,52 @@
             state.pengaturan.liburNasional.push({ id: Date.now(), tanggal: t, keterangan: k });
             saveData(); document.getElementById('m_libur').classList.add('hidden'); renderLiburTable(); showToast('Tersimpan', 'Libur berhasil ditambah');
         };
+        window.ambilLokasiKantorSekarang = function() {
+            if (!navigator.geolocation) {
+                return showToast('Error', 'Browser tidak mendukung GPS Geolocation.', 'error');
+            }
+            showToast('Mencari GPS', 'Sedang membaca titik koordinat lokasi kantor saat ini...', 'warning');
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    const lat = pos.coords.latitude;
+                    const lng = pos.coords.longitude;
+                    const elLat = document.getElementById('s_lat');
+                    const elLng = document.getElementById('s_lng');
+                    if (elLat) elLat.value = lat.toFixed(6);
+                    if (elLng) elLng.value = lng.toFixed(6);
+                    showToast('Lokasi Terkunci', `Koordinat berhasil diambil: ${lat.toFixed(6)}, ${lng.toFixed(6)}`, 'success');
+                },
+                (err) => {
+                    showToast('Gagal GPS', 'Gagal membaca GPS kantor. Pastikan izin lokasi (GPS) diaktifkan di browser.', 'error');
+                },
+                { enableHighAccuracy: true, timeout: 10000 }
+            );
+        };
+
         window.simpanPengaturanUmum = function() {
-            state.pengaturan.tunjanganHadir = parseFloat(document.getElementById('s_th').value)||0; state.pengaturan.dendaTelat = parseFloat(document.getElementById('s_dt').value)||0; state.pengaturan.waKepalaSekolah = document.getElementById('s_wa').value;
-            saveData(); showToast('Tersimpan', 'Aturan Kehadiran diperbarui.');
+            const th = document.getElementById('s_th');
+            const dt = document.getElementById('s_dt');
+            const wa = document.getElementById('s_wa');
+            if (th) state.pengaturan.tunjanganHadir = parseFloat(th.value) || 0;
+            if (dt) state.pengaturan.dendaTelat = parseFloat(dt.value) || 0;
+            if (wa) state.pengaturan.waKepalaSekolah = wa.value;
+
+            const tol = document.getElementById('s_toleransi');
+            if (tol) state.pengaturan.toleransiTelat = parseInt(tol.value, 10) || 0;
+
+            const latVal = document.getElementById('s_lat')?.value?.trim();
+            const lngVal = document.getElementById('s_lng')?.value?.trim();
+            state.pengaturan.kantorLat = (latVal && !isNaN(parseFloat(latVal))) ? parseFloat(latVal) : null;
+            state.pengaturan.kantorLng = (lngVal && !isNaN(parseFloat(lngVal))) ? parseFloat(lngVal) : null;
+
+            const rad = document.getElementById('s_radius');
+            if (rad) state.pengaturan.radiusMeter = parseInt(rad.value, 10) || 150;
+
+            const kunciRad = document.getElementById('s_kunci_radius');
+            state.pengaturan.kunciRadiusGPS = kunciRad ? kunciRad.checked : false;
+
+            saveData(); 
+            showToast('Tersimpan', 'Aturan Kehadiran & Pengaturan GPS diperbarui.');
         };
         window.simpanKredensial = function() {
             const user = document.getElementById('set_user').value; const pass = document.getElementById('set_pass').value;
