@@ -740,7 +740,7 @@
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-500 mb-2">Status Kehadiran</label>
-                    <select id="fa_status" required class="w-full border rounded-xl p-3 outline-none">
+                    <select id="fa_status" onchange="window.handleStatusAbsensiChange(this.value)" required class="w-full border rounded-xl p-3 outline-none">
                         <option value="Tepat Waktu">Tepat Waktu</option>
                         <option value="Terlambat">Terlambat</option>
                         <option value="Alpha">Alpha (Mangkir)</option>
@@ -751,6 +751,47 @@
             <div class="px-6 py-5 border-t flex justify-end gap-3">
                 <button onclick="window.tutupModalAbsensi()" class="bg-slate-100 text-slate-700 px-6 py-2.5 rounded-xl font-bold">Batal</button>
                 <button onclick="window.simpanAbsensi()" class="bg-indigo-600 hover:bg-indigo-700 transition text-white px-6 py-2.5 rounded-xl font-bold shadow">Simpan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PROSES ALPHA MANUAL BERDASARKAN JADWAL SHIFT (GLOBAL) -->
+    <div id="modalAlphaManual" class="fixed inset-0 bg-slate-900 bg-opacity-70 hidden z-[200] flex justify-center items-center p-4 backdrop-blur-sm transition-opacity duration-300 opacity-0">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden transform scale-95 transition-all duration-300 flex flex-col max-h-[90vh]" id="modalAlphaManualContent">
+            <div class="px-6 py-5 border-b bg-slate-50 flex justify-between items-center">
+                <div class="flex items-center space-x-3">
+                    <span class="w-10 h-10 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center font-bold text-lg border border-rose-200"><i class="fas fa-user-xmark"></i></span>
+                    <div>
+                        <h3 class="font-bold text-lg text-slate-800">Proses Alpha Manual (Shift Kerja)</h3>
+                        <p class="text-xs text-slate-500">Pilih secara manual karyawan yang tidak hadir untuk ditandai Alpha sesuai jadwal shift</p>
+                    </div>
+                </div>
+                <button type="button" onclick="window.tutupModalAlphaManual()" class="text-slate-400 hover:text-rose-600 transition"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            
+            <div class="px-6 py-4 bg-slate-50 border-b flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                <div class="flex items-center space-x-2">
+                    <label class="text-xs font-bold uppercase text-slate-600 whitespace-nowrap"><i class="fas fa-calendar-alt text-rose-500 mr-1.5"></i>Pilih Tanggal:</label>
+                    <input type="date" id="mam_tanggal" onchange="window.muatDaftarAlphaManual()" class="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-rose-500 shadow-2xs">
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button type="button" onclick="window.pilihSemuaAlphaManual(true)" class="text-xs bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-semibold px-3 py-2 rounded-xl transition shadow-2xs">Pilih Semua</button>
+                    <button type="button" onclick="window.pilihSemuaAlphaManual(false)" class="text-xs bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 font-semibold px-3 py-2 rounded-xl transition shadow-2xs">Batal Pilih</button>
+                </div>
+            </div>
+
+            <div class="p-6 overflow-y-auto flex-1 space-y-2.5" id="mam_container_list">
+                <!-- Daftar kandidat karyawan alpha akan dimuat secara dinamis -->
+            </div>
+
+            <div class="px-6 py-4 border-t bg-slate-50 flex justify-between items-center">
+                <span id="mam_selected_count" class="text-xs font-bold text-slate-600">0 Karyawan dipilih</span>
+                <div class="flex gap-2">
+                    <button type="button" onclick="window.tutupModalAlphaManual()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-5 py-2.5 rounded-xl font-bold text-xs transition">Batal</button>
+                    <button type="button" onclick="window.simpanAlphaManual()" class="bg-rose-600 hover:bg-rose-700 text-white px-6 py-2.5 rounded-xl font-bold text-xs shadow-md shadow-rose-600/30 transition flex items-center">
+                        <i class="fas fa-check mr-1.5"></i> Simpan Alpha Terpilih
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -1864,95 +1905,356 @@
         }
 
         // ==========================================
-        // FITUR OTOMATISASI ALPHA / MANGKIR (AKHIR HARI & DASHBOARD ADMIN)
+        // FITUR PROSES ALPHA MANUAL (SESUAI JADWAL SHIFT & KONFIRMASI ADMIN)
         // ==========================================
-        window.autoProsesAlpha = function(targetTanggal = null, notifyIfZero = false) {
+        window.bukaModalAlphaManual = function(targetTanggal = null) {
+            const modal = document.getElementById('modalAlphaManual');
+            const content = document.getElementById('modalAlphaManualContent');
+            const tglInput = document.getElementById('mam_tanggal');
+            if (!modal) return;
+            
             const today = new Date();
             const dateString = targetTanggal || `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-            
-            if (!state.karyawan || state.karyawan.length === 0) return 0;
-            if (!state.absensi) state.absensi = [];
-            if (!state.cuti) state.cuti = [];
+            if (tglInput) tglInput.value = dateString;
 
-            // 1. Ambil daftar semua karyawan aktif (bukan yang telah dihapus atau telah keluar)
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                if (content) content.classList.remove('scale-95');
+            }, 10);
+
+            window.muatDaftarAlphaManual();
+        };
+
+        window.tutupModalAlphaManual = function() {
+            const modal = document.getElementById('modalAlphaManual');
+            const content = document.getElementById('modalAlphaManualContent');
+            if (!modal) return;
+            modal.classList.add('opacity-0');
+            if (content) content.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 200);
+        };
+
+        window.pilihSemuaAlphaManual = function(pilih) {
+            const cbs = document.querySelectorAll('.mam-checkbox');
+            cbs.forEach(cb => { cb.checked = pilih; });
+            window.updateHitunganAlphaManual();
+        };
+
+        window.updateHitunganAlphaManual = function() {
+            const cbs = document.querySelectorAll('.mam-checkbox:checked');
+            const lbl = document.getElementById('mam_selected_count');
+            if (lbl) {
+                lbl.innerText = `${cbs.length} Karyawan dipilih`;
+            }
+        };
+
+        window.muatDaftarAlphaManual = function() {
+            const container = document.getElementById('mam_container_list');
+            const tglInput = document.getElementById('mam_tanggal');
+            if (!container) return;
+
+            const today = new Date();
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            const dateString = (tglInput && tglInput.value) ? tglInput.value : todayStr;
+
             const semuaKaryawan = state.karyawan || [];
             const karyawanAktif = semuaKaryawan.filter(k => !k.isDeleted && (!k.tanggalKeluar || k.tanggalKeluar > dateString));
 
-            // 2. Karyawan yang sudah memiliki catatan kehadiran pada tanggal tersebut
-            const idAbsenSet = new Set();
-            state.absensi.forEach(a => {
-                if (a && a.tanggal === dateString) {
-                    if (a.karyawanId) idAbsenSet.add(String(a.karyawanId));
-                    if (a.karyawanNik) idAbsenSet.add(String(a.karyawanNik).trim().toLowerCase());
+            // Cek apakah tanggal adalah Libur Nasional
+            const isLibur = state.pengaturan?.liburNasional?.find(l => l.tanggal === dateString);
+
+            // Cek Hari (Weekend/Weekday)
+            const dObj = new Date(dateString + 'T00:00:00');
+            const namaHari = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'][dObj.getDay()];
+            const isWeekend = (dObj.getDay() === 0 || dObj.getDay() === 6);
+
+            // Cek absensi yang sudah ada
+            const absenSudahAda = (state.absensi || []).filter(a => a && a.tanggal === dateString);
+            const idHadirMap = new Map();
+            const idAlphaMap = new Map();
+
+            absenSudahAda.forEach(a => {
+                const isAlpha = (a.statusMasuk === 'Alpha' || a.status === 'Alpha' || a.statusMasuk === 'Mangkir');
+                const kIdKey = String(a.karyawanId || '');
+                const kNikKey = String(a.karyawanNik || '').trim().toLowerCase();
+
+                if (isAlpha) {
+                    if (kIdKey) idAlphaMap.set(kIdKey, a);
+                    if (kNikKey) idAlphaMap.set(kNikKey, a);
+                } else {
+                    if (kIdKey) idHadirMap.set(kIdKey, a);
+                    if (kNikKey) idHadirMap.set(kNikKey, a);
                 }
             });
 
-            // 3. Karyawan yang memiliki catatan izin / cuti / sakit aktif pada tanggal tersebut
-            const idCutiSet = new Set();
-            state.cuti.forEach(c => {
+            // Cek cuti / izin resmi
+            const idCutiMap = new Map();
+            (state.cuti || []).forEach(c => {
                 if (c && c.status !== 'Ditolak') {
                     const mulai = c.mulai || c.tanggalMulai;
                     const selesai = c.selesai || c.tanggalSelesai || mulai;
                     if (mulai && selesai && dateString >= mulai && dateString <= selesai) {
-                        if (c.karyawanId) idCutiSet.add(String(c.karyawanId));
-                        if (c.karyawanNik) idCutiSet.add(String(c.karyawanNik).trim().toLowerCase());
+                        if (c.karyawanId) idCutiMap.set(String(c.karyawanId), c);
+                        if (c.karyawanNik) idCutiMap.set(String(c.karyawanNik).trim().toLowerCase(), c);
                     }
                 }
             });
 
-            // 4. Identifikasi karyawan yang tidak ditemukan dalam catatan kehadiran atau daftar cuti/izin
-            let addedCount = 0;
+            // Filter kandidat: karyawan aktif yang belum ada presensi masuk & belum ada cuti
+            const kandidat = [];
+            const sudahAlpha = [];
+            let countHadir = 0;
+            let countCuti = 0;
+
+            const nowTime = today.toTimeString().substring(0, 5);
+            const isTargetHariIni = (dateString === todayStr);
 
             karyawanAktif.forEach(k => {
                 const kIdStr = String(k.id);
                 const kNikStr = (k.nik || '').trim().toLowerCase();
 
-                const sudahAdaAbsen = idAbsenSet.has(kIdStr) || (kNikStr && idAbsenSet.has(kNikStr));
-                const sedangCuti = idCutiSet.has(kIdStr) || (kNikStr && idCutiSet.has(kNikStr));
-
-                if (!sudahAdaAbsen && !sedangCuti) {
-                    const shiftK = getKaryawanShift(k);
-                    const uniqueId = Date.now() * 1000 + Math.floor(Math.random() * 1000) + addedCount;
-                    const recordAlpha = {
-                        id: uniqueId,
-                        karyawanId: k.id,
-                        karyawanNama: k.nama,
-                        karyawanNik: k.nik || '',
-                        tanggal: dateString,
-                        jamMasuk: '-',
-                        jamPulang: '-',
-                        statusMasuk: 'Alpha',
-                        statusPulang: null,
-                        status: 'Alpha',
-                        shiftNama: shiftK?.nama || 'Shift Reguler',
-                        shiftId: shiftK?.id || 'default',
-                        metode: 'Sistem (Auto Alpha)',
-                        keterangan: 'Tidak hadir tanpa keterangan (Mangkir)'
-                    };
-
-                    state.absensi.push(recordAlpha);
-                    syncAbsensiAtomic(recordAlpha, false);
-                    idAbsenSet.add(kIdStr);
-                    if (kNikStr) idAbsenSet.add(kNikStr);
-                    addedCount++;
+                const cuti = idCutiMap.get(kIdStr) || (kNikStr && idCutiMap.get(kNikStr));
+                if (cuti) {
+                    countCuti++;
+                    return;
                 }
+
+                const hadir = idHadirMap.get(kIdStr) || (kNikStr && idHadirMap.get(kNikStr));
+                if (hadir) {
+                    countHadir++;
+                    return;
+                }
+
+                const alphaRecord = idAlphaMap.get(kIdStr) || (kNikStr && idAlphaMap.get(kNikStr));
+                if (alphaRecord) {
+                    sudahAlpha.push({ karyawan: k, record: alphaRecord });
+                    return;
+                }
+
+                // Belum ada kehadiran & belum ada cuti -> Kandidat untuk ditandai Alpha secara manual
+                kandidat.push(k);
             });
 
-            // Simpan data ke Firebase dan localStorage jika ada karyawan alpha baru
+            // Render Header Banner Info
+            let bannerHTML = '';
+            if (isLibur) {
+                bannerHTML += `
+                    <div class="bg-rose-50 border border-rose-200 p-3.5 rounded-2xl flex items-start gap-3 text-xs text-rose-800 mb-3 shadow-2xs">
+                        <i class="fas fa-exclamation-triangle text-rose-600 text-lg shrink-0 mt-0.5"></i>
+                        <div>
+                            <span class="font-bold block">Peringatan: Libur Nasional</span>
+                            Tanggal <b>${formatDateID(dateString)}</b> tercatat sebagai <b>${isLibur.keterangan}</b>. Karyawan yang tidak memiliki jadwal piket khusus sebaiknya tidak ditandai Alpha.
+                        </div>
+                    </div>
+                `;
+            } else if (isWeekend) {
+                bannerHTML += `
+                    <div class="bg-amber-50 border border-amber-200 p-3.5 rounded-2xl flex items-start gap-3 text-xs text-amber-800 mb-3 shadow-2xs">
+                        <i class="fas fa-calendar-day text-amber-600 text-base shrink-0 mt-0.5"></i>
+                        <div>
+                            <span class="font-bold block">Peringatan: Hari ${namaHari} (Akhir Pekan)</span>
+                            Pastikan karyawan yang dipilih memang memiliki jadwal dinas aktif / shift kerja pada hari ini.
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Status bar ringkasan
+            const summaryHTML = `
+                <div class="grid grid-cols-3 gap-2 p-3 bg-slate-100 rounded-xl mb-4 text-center text-xs">
+                    <div><span class="text-slate-500 block text-[10px] uppercase font-bold">Hadir Resmi</span><b class="text-emerald-700 text-sm">${countHadir}</b></div>
+                    <div><span class="text-slate-500 block text-[10px] uppercase font-bold">Izin / Cuti</span><b class="text-blue-700 text-sm">${countCuti}</b></div>
+                    <div><span class="text-slate-500 block text-[10px] uppercase font-bold">Belum Ada Presensi</span><b class="text-rose-700 text-sm">${kandidat.length}</b></div>
+                </div>
+            `;
+
+            let listHTML = '';
+
+            // Section 1: Kandidat yang belum absen
+            if (kandidat.length === 0) {
+                listHTML += `
+                    <div class="p-8 text-center bg-white rounded-2xl border border-slate-200 shadow-2xs">
+                        <div class="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-xl mx-auto mb-3">
+                            <i class="fas fa-clipboard-check"></i>
+                        </div>
+                        <h4 class="font-bold text-slate-800 text-sm">Tidak Ada Karyawan Tanpa Keterangan</h4>
+                        <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">Semua karyawan aktif telah tercatat presensi, cuti resmi, atau sudah diproses untuk tanggal ${formatDateID(dateString)}.</p>
+                    </div>
+                `;
+            } else {
+                listHTML += `
+                    <div class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2 flex items-center justify-between">
+                        <span>Pilih Karyawan yang Mangkir / Alpha (${kandidat.length}):</span>
+                        <span class="text-[11px] font-normal text-slate-400">Centang manual karyawan yang akan ditandai</span>
+                    </div>
+                    <div class="space-y-2">
+                `;
+
+                kandidat.forEach(k => {
+                    const shift = getKaryawanShift(k);
+                    const jObj = (state.jabatan || []).find(j => j.id == k.jabatanId);
+                    const jabNama = jObj ? jObj.nama : (k.jabatanNama || '-');
+
+                    // Shift timing analysis
+                    let shiftStatusBadge = '';
+                    if (isTargetHariIni) {
+                        if (nowTime < shift.jamMasuk) {
+                            shiftStatusBadge = `<span class="text-[10px] bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-md font-semibold"><i class="fas fa-hourglass-start mr-1"></i>Shift Belum Mulai (${shift.jamMasuk})</span>`;
+                        } else if (nowTime >= shift.jamMasuk && nowTime < shift.jamPulang) {
+                            shiftStatusBadge = `<span class="text-[10px] bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-md font-semibold"><i class="fas fa-business-time mr-1"></i>Jam Kerja Berjalan (${shift.jamMasuk} - ${shift.jamPulang})</span>`;
+                        } else {
+                            shiftStatusBadge = `<span class="text-[10px] bg-rose-50 text-rose-700 border border-rose-200 px-2 py-0.5 rounded-md font-semibold"><i class="fas fa-clock mr-1"></i>Shift Selesai (${shift.jamPulang})</span>`;
+                        }
+                    } else {
+                        shiftStatusBadge = `<span class="text-[10px] bg-slate-100 text-slate-700 border border-slate-200 px-2 py-0.5 rounded-md font-semibold"><i class="fas fa-calendar-check mr-1"></i>${shift.jamMasuk} - ${shift.jamPulang}</span>`;
+                    }
+
+                    listHTML += `
+                        <label class="flex items-center justify-between p-3.5 bg-white hover:bg-rose-50/40 border border-slate-200 hover:border-rose-300 rounded-2xl transition cursor-pointer shadow-2xs group">
+                            <div class="flex items-center space-x-3 min-w-0">
+                                <input type="checkbox" class="mam-checkbox h-4 w-4 text-rose-600 rounded border-slate-300 focus:ring-rose-500 cursor-pointer" value="${k.id}" onchange="window.updateHitunganAlphaManual()">
+                                <div class="min-w-0">
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-bold text-slate-800 text-sm truncate group-hover:text-rose-700 transition">${k.nama}</span>
+                                        <span class="text-[11px] font-mono text-slate-400 bg-slate-100 px-1.5 py-0.2 rounded border">${k.nik}</span>
+                                    </div>
+                                    <div class="flex items-center gap-1.5 flex-wrap mt-1">
+                                        <span class="text-[11px] text-slate-500"><i class="fas fa-briefcase text-slate-400 mr-1 text-[10px]"></i>${jabNama}</span>
+                                        <span class="text-slate-300">&bull;</span>
+                                        <span class="text-[11px] font-medium text-indigo-600"><i class="fas fa-clock text-indigo-400 mr-1 text-[10px]"></i>${shift.nama}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="shrink-0 text-right ml-2">
+                                ${shiftStatusBadge}
+                            </div>
+                        </label>
+                    `;
+                });
+
+                listHTML += `</div>`;
+            }
+
+            // Section 2: Karyawan yang sudah ditandai Alpha pada tanggal ini
+            if (sudahAlpha.length > 0) {
+                listHTML += `
+                    <div class="mt-6 pt-4 border-t border-slate-200">
+                        <div class="text-xs font-bold uppercase tracking-wider text-rose-600 mb-2 flex items-center justify-between">
+                            <span>Sudah Tercatat Alpha Pada Tanggal Ini (${sudahAlpha.length}):</span>
+                            <span class="text-[11px] font-normal text-slate-400">Klik batal jika ingin menghapus Alpha</span>
+                        </div>
+                        <div class="space-y-1.5">
+                `;
+
+                sudahAlpha.forEach(sa => {
+                    const k = sa.karyawan;
+                    const rec = sa.record;
+                    listHTML += `
+                        <div class="flex items-center justify-between p-3 bg-rose-50/60 border border-rose-200 rounded-xl text-xs">
+                            <div class="flex items-center space-x-2.5">
+                                <span class="w-6 h-6 rounded-lg bg-rose-200 text-rose-800 flex items-center justify-center font-bold text-[10px]"><i class="fas fa-user-xmark"></i></span>
+                                <div>
+                                    <b class="text-slate-800 text-xs">${k.nama}</b>
+                                    <span class="text-slate-400 font-mono text-[10px] ml-1">(${k.nik})</span>
+                                    <span class="text-rose-600 block text-[10px] font-semibold mt-0.5">${rec.keterangan || 'Alpha (Mangkir)'}</span>
+                                </div>
+                            </div>
+                            <button type="button" onclick="window.hapusAlphaRecordManual(${rec.id})" class="text-rose-700 bg-rose-100 hover:bg-rose-600 hover:text-white px-2.5 py-1 rounded-lg font-bold text-[11px] transition shadow-2xs">
+                                <i class="fas fa-undo mr-1"></i>Batalkan Alpha
+                            </button>
+                        </div>
+                    `;
+                });
+
+                listHTML += `</div></div>`;
+            }
+
+            container.innerHTML = bannerHTML + summaryHTML + listHTML;
+            window.updateHitunganAlphaManual();
+        };
+
+        window.simpanAlphaManual = function() {
+            const tglInput = document.getElementById('mam_tanggal');
+            const today = new Date();
+            const dateString = (tglInput && tglInput.value) ? tglInput.value : `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+            const cbs = document.querySelectorAll('.mam-checkbox:checked');
+            if (cbs.length === 0) {
+                showToast('Peringatan', 'Silakan centang minimal satu karyawan yang akan ditandai Alpha.', 'warning');
+                return;
+            }
+
+            let addedCount = 0;
+            cbs.forEach(cb => {
+                const kId = cb.value;
+                const k = (state.karyawan || []).find(x => String(x.id) === String(kId));
+                if (!k) return;
+
+                // Hindari duplicate pada tanggal yang sama
+                const alreadyAlpha = (state.absensi || []).find(a => (String(a.karyawanId) === String(k.id) || (k.nik && a.karyawanNik === k.nik)) && a.tanggal === dateString && (a.statusMasuk === 'Alpha' || a.status === 'Alpha'));
+                if (alreadyAlpha) return;
+
+                const shift = getKaryawanShift(k);
+                const uniqueId = Date.now() * 1000 + Math.floor(Math.random() * 1000) + addedCount;
+                const recordAlpha = {
+                    id: uniqueId,
+                    karyawanId: k.id,
+                    karyawanNama: k.nama,
+                    karyawanNik: k.nik || '',
+                    tanggal: dateString,
+                    jamMasuk: '-',
+                    jamPulang: '-',
+                    statusMasuk: 'Alpha',
+                    statusPulang: null,
+                    status: 'Alpha',
+                    shiftNama: shift?.nama || 'Shift Reguler',
+                    shiftId: shift?.id || 'default',
+                    metode: 'Manual (Admin)',
+                    keterangan: 'Alpha (Ditetapkan Manual oleh Admin)'
+                };
+
+                if (!state.absensi) state.absensi = [];
+                state.absensi.push(recordAlpha);
+                if (typeof syncAbsensiAtomic === 'function') syncAbsensiAtomic(recordAlpha, false);
+                addedCount++;
+            });
+
             if (addedCount > 0) {
                 saveData();
-                showToast('Auto Proses Alpha', `${addedCount} karyawan tercatat 'Alpha' (tidak hadir tanpa keterangan) pada tanggal ${dateString}.`, 'warning');
+                showToast('Sukses', `${addedCount} karyawan berhasil ditandai 'Alpha' pada tanggal ${formatDateID(dateString)}.`, 'success');
                 if (typeof window.playSound === 'function') window.playSound('notif_admin');
+                window.tutupModalAlphaManual();
                 if (state.currentView === 'absensi' && typeof renderAbsensiTable === 'function') {
                     renderAbsensiTable();
                 } else if (state.currentView === 'dashboard' && typeof window.renderMainContent === 'function') {
                     window.renderMainContent();
                 }
-            } else if (notifyIfZero) {
-                showToast('Presensi Tertib', `Seluruh karyawan aktif telah memiliki catatan presensi atau izin resmi untuk tanggal ${dateString}.`, 'info');
+            } else {
+                showToast('Info', 'Tidak ada data baru yang disimpan.', 'info');
+                window.tutupModalAlphaManual();
             }
+        };
 
-            return addedCount;
+        window.hapusAlphaRecordManual = function(recId) {
+            if (!confirm('Apakah Anda yakin ingin membatalkan/menghapus status Alpha untuk karyawan ini?')) return;
+            const idx = (state.absensi || []).findIndex(a => a.id === recId || String(a.id) === String(recId));
+            if (idx !== -1) {
+                state.absensi.splice(idx, 1);
+                saveData();
+                showToast('Sukses', 'Status Alpha berhasil dibatalkan.', 'info');
+                window.muatDaftarAlphaManual();
+                if (state.currentView === 'absensi' && typeof renderAbsensiTable === 'function') {
+                    renderAbsensiTable();
+                }
+            }
+        };
+
+        // Kompatibilitas jika dipanggil dari tempat lain: langsung buka modal manual
+        window.autoProsesAlpha = function(targetTanggal = null) {
+            window.bukaModalAlphaManual(targetTanggal);
         };
 
         // PENGELOLAAN INSTANCE SCANNER YANG BERSIH & ROBUST
@@ -3253,9 +3555,6 @@
             }
             state.currentView = view; 
             saveSession();
-            if (view === 'dashboard' && state.currentUserRole === 'admin' && typeof window.autoProsesAlpha === 'function') {
-                window.autoProsesAlpha();
-            }
             window.render(); 
         };
         
@@ -4197,9 +4496,6 @@
             const area = document.getElementById('mainContentArea');
             if (!area) return;
             if(state.currentView === 'dashboard') {
-                if (state.currentUserRole === 'admin' && typeof window.autoProsesAlpha === 'function') {
-                    window.autoProsesAlpha();
-                }
                 area.innerHTML = getDashboardHTML();
                 if(window.renderRechartsMonthly) setTimeout(window.renderRechartsMonthly, 50);
             }
@@ -4838,9 +5134,9 @@
                             <i class="fas fa-clipboard-check text-slate-600 text-base"></i>
                             <span>+ Presensi</span>
                         </button>
-                        <button id="quickActionAutoAlpha" onclick="window.autoProsesAlpha(null, true)" class="flex items-center space-x-2.5 p-3 rounded-xl border border-rose-200 hover:bg-rose-50 hover:border-rose-300 text-rose-700 transition text-xs font-semibold shadow-2xs" title="Proses otomatis karyawan tanpa kehadiran & tanpa izin menjadi Alpha">
+                        <button id="quickActionAlphaManual" onclick="window.bukaModalAlphaManual()" class="flex items-center space-x-2.5 p-3 rounded-xl border border-rose-200 hover:bg-rose-50 hover:border-rose-300 text-rose-700 transition text-xs font-semibold shadow-2xs" title="Proses dan pilih secara manual karyawan yang Alpha / Mangkir berdasarkan jadwal shift">
                             <i class="fas fa-user-xmark text-rose-600 text-base"></i>
-                            <span>Auto Alpha</span>
+                            <span>Alpha Manual</span>
                         </button>
                         <button id="quickActionCuti" onclick="window.setView('cuti')" class="flex items-center space-x-2.5 p-3 rounded-xl border border-slate-200 hover:bg-amber-50 hover:border-amber-300 text-slate-700 hover:text-amber-700 transition text-xs font-semibold shadow-2xs">
                             <i class="fas fa-envelope-open-text text-amber-600 text-base"></i>
@@ -5791,8 +6087,8 @@
                             <button onclick="window.bukaModalAbsensi()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2.5 rounded-xl shadow-sm text-xs sm:text-sm transition flex items-center">
                                 <i class="fas fa-plus mr-2"></i>Tambah Manual
                             </button>
-                            <button onclick="window.autoProsesAlpha(null, true)" class="bg-rose-600 hover:bg-rose-700 text-white font-semibold px-4 py-2.5 rounded-xl shadow-sm text-xs sm:text-sm transition flex items-center" title="Proses otomatis karyawan aktif yang belum hadir & tanpa izin menjadi Alpha">
-                                <i class="fas fa-user-xmark mr-2"></i>Auto Alpha
+                            <button onclick="window.bukaModalAlphaManual()" class="bg-rose-600 hover:bg-rose-700 text-white font-semibold px-4 py-2.5 rounded-xl shadow-sm text-xs sm:text-sm transition flex items-center" title="Proses manual karyawan Alpha sesuai jadwal shift & filter tanggal">
+                                <i class="fas fa-user-xmark mr-2"></i>Proses Alpha Manual
                             </button>
                             <button onclick="window.bukaModalHapusTanggal('absensi')" class="bg-amber-500 hover:bg-amber-600 text-white font-semibold px-4 py-2.5 rounded-xl shadow-sm text-xs sm:text-sm transition flex items-center">
                                 <i class="fas fa-calendar-times mr-2"></i>Hapus per Tanggal
@@ -6103,6 +6399,25 @@
             }
         }
         
+        window.handleStatusAbsensiChange = function(val) {
+            const masukInput = document.getElementById('fa_masuk');
+            const pulangInput = document.getElementById('fa_pulang');
+            if (!masukInput || !pulangInput) return;
+            if (val === 'Alpha') {
+                masukInput.value = '';
+                masukInput.disabled = true;
+                masukInput.required = false;
+                masukInput.placeholder = '-';
+                pulangInput.value = '';
+                pulangInput.disabled = true;
+            } else {
+                masukInput.disabled = false;
+                masukInput.required = true;
+                if (!masukInput.value) masukInput.value = '08:00';
+                pulangInput.disabled = false;
+            }
+        };
+
         window.bukaModalAbsensi = function(id = null) {
             const faKaryawan = document.getElementById('fa_karyawan');
             if (faKaryawan) {
@@ -6116,9 +6431,10 @@
                 document.getElementById('fa_id').value = a.id;
                 document.getElementById('fa_karyawan').value = a.karyawanId;
                 document.getElementById('fa_tanggal').value = a.tanggal;
-                document.getElementById('fa_masuk').value = a.jamMasuk;
-                document.getElementById('fa_pulang').value = a.jamPulang || '';
+                document.getElementById('fa_masuk').value = (a.jamMasuk && a.jamMasuk !== '-') ? a.jamMasuk : '';
+                document.getElementById('fa_pulang').value = (a.jamPulang && a.jamPulang !== '-') ? a.jamPulang : '';
                 document.getElementById('fa_status').value = a.statusMasuk || 'Tepat Waktu';
+                window.handleStatusAbsensiChange(a.statusMasuk || 'Tepat Waktu');
             } else {
                 document.getElementById('fa_id').value = '';
                 document.getElementById('fa_karyawan').value = '';
@@ -6127,6 +6443,7 @@
                 document.getElementById('fa_masuk').value = '08:00';
                 document.getElementById('fa_pulang').value = '';
                 document.getElementById('fa_status').value = 'Tepat Waktu';
+                window.handleStatusAbsensiChange('Tepat Waktu');
             }
             modal.classList.remove('hidden');
         };
@@ -6143,29 +6460,61 @@
             const pulang = document.getElementById('fa_pulang').value;
             const status = document.getElementById('fa_status').value;
             
-            if(!kId || !tgl || !masuk) return showToast('Error', 'Data Karyawan, Tanggal, dan Jam Masuk wajib diisi!', 'error');
-            
-            if (id) {
-                const idx = state.absensi.findIndex(a => a.id == parseInt(id, 10));
-                state.absensi[idx].karyawanId = parseInt(kId, 10);
-                state.absensi[idx].tanggal = tgl;
-                state.absensi[idx].jamMasuk = masuk;
-                state.absensi[idx].jamPulang = pulang || null;
-                state.absensi[idx].statusMasuk = status;
-                if(state.absensi[idx].metode !== 'GPS') state.absensi[idx].metode = 'Manual';
-            } else {
-                state.absensi.push({
-                    id: Date.now(),
-                    karyawanId: parseInt(kId, 10),
-                    tanggal: tgl,
-                    jamMasuk: masuk,
-                    jamPulang: pulang || null,
-                    statusMasuk: status,
-                    metode: 'Manual'
-                });
+            if(!kId || !tgl || (status !== 'Alpha' && !masuk)) {
+                return showToast('Error', 'Data Karyawan, Tanggal, dan Jam Masuk wajib diisi!', 'error');
             }
             
-            saveData(); window.tutupModalAbsensi(); window.renderMainContent(); showToast('Sukses', 'Riwayat Absensi berhasil disimpan');
+            const kObj = (state.karyawan || []).find(k => String(k.id) === String(kId));
+            const shiftK = kObj ? getKaryawanShift(kObj) : null;
+            const jamMasukVal = status === 'Alpha' ? '-' : (masuk || '-');
+            const jamPulangVal = status === 'Alpha' ? '-' : (pulang || null);
+
+            if (id) {
+                const idx = state.absensi.findIndex(a => a.id == parseInt(id, 10));
+                if (idx !== -1) {
+                    state.absensi[idx].karyawanId = parseInt(kId, 10);
+                    if (kObj) {
+                        state.absensi[idx].karyawanNama = kObj.nama;
+                        state.absensi[idx].karyawanNik = kObj.nik || '';
+                    }
+                    state.absensi[idx].tanggal = tgl;
+                    state.absensi[idx].jamMasuk = jamMasukVal;
+                    state.absensi[idx].jamPulang = jamPulangVal;
+                    state.absensi[idx].statusMasuk = status;
+                    state.absensi[idx].status = status;
+                    if (shiftK) {
+                        state.absensi[idx].shiftNama = shiftK.nama;
+                        state.absensi[idx].shiftId = shiftK.id;
+                    }
+                    if(state.absensi[idx].metode !== 'GPS') state.absensi[idx].metode = 'Manual';
+                    if (status === 'Alpha') {
+                        state.absensi[idx].keterangan = 'Alpha (Input Manual Admin)';
+                    }
+                }
+            } else {
+                const newRec = {
+                    id: Date.now(),
+                    karyawanId: parseInt(kId, 10),
+                    karyawanNama: kObj ? kObj.nama : '',
+                    karyawanNik: kObj ? (kObj.nik || '') : '',
+                    tanggal: tgl,
+                    jamMasuk: jamMasukVal,
+                    jamPulang: jamPulangVal,
+                    statusMasuk: status,
+                    status: status,
+                    shiftNama: shiftK?.nama || 'Shift Reguler',
+                    shiftId: shiftK?.id || 'default',
+                    metode: 'Manual',
+                    keterangan: status === 'Alpha' ? 'Alpha (Input Manual Admin)' : 'Presensi Input Manual'
+                };
+                state.absensi.push(newRec);
+                if (typeof syncAbsensiAtomic === 'function') syncAbsensiAtomic(newRec, false);
+            }
+            
+            saveData(); 
+            window.tutupModalAbsensi(); 
+            window.renderMainContent(); 
+            showToast('Sukses', 'Riwayat Absensi berhasil disimpan');
         };
 
         function getImkHTML() { return `<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4"><div><h1 class="text-3xl font-bold text-slate-800">Riwayat IMK</h1><p class="text-slate-500 text-sm mt-1">Izin Keluar Sementara</p></div><div class="flex gap-2"><button onclick="window.bukaModalHapusTanggal('imk')" class="bg-amber-500 hover:bg-amber-600 text-white font-semibold px-4 py-3 rounded-xl shadow text-sm transition"><i class="fas fa-calendar-times mr-2"></i>Hapus via Tanggal</button><button onclick="window.confirmDelete('semua_imk', 'all')" class="bg-red-500 hover:bg-red-600 text-white font-semibold px-4 py-3 rounded-xl shadow text-sm transition"><i class="fas fa-trash-alt mr-2"></i>Kosongkan</button></div></div><div class="bg-white rounded-2xl border overflow-x-auto shadow-sm"><table class="min-w-full text-sm text-left"><thead class="bg-slate-50 border-b text-xs text-slate-500 uppercase"><tr><th class="py-4 px-6">Tanggal</th><th class="py-4 px-6">Nama Karyawan</th><th class="py-4 px-6">Jam Keluar</th><th class="py-4 px-6">Jam Kembali</th><th class="py-4 px-6">Durasi di Luar</th><th class="py-4 px-6 text-center">Aksi</th></tr></thead><tbody id="tabelImkBody" class="divide-y"></tbody></table></div>`; }
