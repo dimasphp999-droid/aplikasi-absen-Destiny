@@ -326,23 +326,13 @@
                         <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Pilih Nama Anda</label>
                         <select id="pc_karyawan" required class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-amber-500 outline-none transition"></select>
                     </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Jenis Pengajuan</label>
-                            <select id="pc_jenis" onchange="window.handleJenisCutiChange(this.value)" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-amber-500 outline-none transition">
-                                <option value="Izin">Izin (Pribadi)</option>
-                                <option value="Sakit">Sakit</option>
-                                <option value="Cuti">Cuti Tahunan</option>
-                                <option value="Tidak Hadir">Tidak Hadir (Alpa / Mangkir)</option>
-                            </select>
-                        </div>
-                        <div id="pc_status_box">
-                            <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Status Pengajuan</label>
-                            <select id="pc_status" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-amber-500 outline-none transition">
-                                <option value="Disetujui" selected>Langsung Disetujui (ACC)</option>
-                                <option value="Menunggu">Menunggu Persetujuan</option>
-                            </select>
-                        </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Jenis Pengajuan</label>
+                        <select id="pc_jenis" onchange="window.handleJenisCutiChange(this.value)" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-amber-500 outline-none transition">
+                            <option value="Izin">Izin (Pribadi)</option>
+                            <option value="Sakit">Sakit</option>
+                            <option value="Cuti">Cuti Tahunan</option>
+                        </select>
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
@@ -357,7 +347,6 @@
                     <div>
                         <div class="flex justify-between items-center mb-1.5">
                             <label id="pc_label_alasan" class="block text-xs font-bold uppercase text-slate-500">Alasan / Keterangan</label>
-                            <span id="pc_hint_tidak_hadir" class="text-[11px] text-rose-500 font-semibold hidden"><i class="fas fa-info-circle mr-1"></i>Keterangan tidak hadir berkorelasi ke slip & kalkulasi penggajian</span>
                         </div>
                         <textarea id="pc_alasan" required rows="3" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-amber-500 outline-none transition" placeholder="Tuliskan keterangan pengajuan..."></textarea>
                     </div>
@@ -754,6 +743,7 @@
                     <select id="fa_status" required class="w-full border rounded-xl p-3 outline-none">
                         <option value="Tepat Waktu">Tepat Waktu</option>
                         <option value="Terlambat">Terlambat</option>
+                        <option value="Alpha">Alpha (Mangkir)</option>
                         <option value="Hadir (Libur)">Hadir (Libur)</option>
                     </select>
                 </div>
@@ -1816,31 +1806,52 @@
                 }
 
                 // C. KASUS 3: MODE OTOMATIS (kioskModeType === 'auto' || kioskModeType === 'absen')
-                if (recordAktifUntukPulang) {
-                    // Karyawan sudah memiliki presensi Masuk hari ini -> Otomatis tercatat sebagai Absen PULANG
-                    prosesPulangKaryawan(recordAktifUntukPulang);
-                } else { 
-                    // JIKA TIDAK ADA RECORD AKTIF UNTUK PULANG:
-                    // 1. Cek apakah karyawan hari ini sudah lengkap (sudah Masuk dan sudah Pulang)
-                    if (absenHariIni && absenHariIni.jamMasuk && absenHariIni.jamPulang) {
-                        const nowMins = timeToMinutes(timeString);
-                        const pulangMins = timeToMinutes(absenHariIni.jamPulang);
-                        // Jika scan lagi setelah jam pulang sebelumnya (misal lembur atau update waktu pulang terbaru):
-                        if (nowMins > pulangMins + 5) {
-                            prosesPulangKaryawan(absenHariIni);
-                            return;
-                        }
+                // 1. Jika belum pernah absen Masuk hari ini:
+                if (!absenHariIni && !recordAktifUntukPulang) {
+                    prosesMasukKaryawan();
+                    return;
+                }
 
-                        window.playSound('masuk'); 
-                        showToast('Presensi Hari Ini Lengkap', `${karyawan.nama} sudah merampungkan presensi hari ini (Masuk: ${absenHariIni.jamMasuk} | Pulang: ${absenHariIni.jamPulang}).`, 'info'); 
+                // 2. Jika sudah ada record aktif untuk pulang (sudah Masuk, belum Pulang):
+                if (recordAktifUntukPulang) {
+                    const nowMins = timeToMinutes(timeString);
+                    const jamMasukMins = timeToMinutes(recordAktifUntukPulang.jamMasuk);
+                    const selisihMasukMenit = nowMins - jamMasukMins;
+
+                    // Jika scan lagi dalam rentang waktu < 10 menit setelah absen masuk pada hari yang sama,
+                    // jangan pulangkan! Ini adalah pengecekan ulang/kartu ter-scan kembali.
+                    if (recordAktifUntukPulang.tanggal === dateString && selisihMasukMenit >= 0 && selisihMasukMenit < 10) {
+                        window.playSound('masuk');
+                        showToast('Sudah Absen Masuk', `${karyawan.nama} sudah tercatat MASUK pukul ${recordAktifUntukPulang.jamMasuk} [${shiftKaryawan.nama}: ${recordAktifUntukPulang.statusMasuk || 'Tepat Waktu'}]. Presensi Anda telah tersimpan aman.`, 'info');
                         if (typeof window.tampilkanOverlayScanBerhasil === 'function') {
-                            window.tampilkanOverlayScanBerhasil(karyawan, 'SUDAH LENGKAP', `${absenHariIni.jamMasuk} - ${absenHariIni.jamPulang}`, `Shift: ${shiftKaryawan.nama}`, metode);
+                            window.tampilkanOverlayScanBerhasil(karyawan, 'SUDAH MASUK', recordAktifUntukPulang.jamMasuk, `${recordAktifUntukPulang.statusMasuk || 'Tepat Waktu'} (${shiftKaryawan.nama})`, metode);
                         }
                         return;
                     }
 
-                    // 2. Jika belum memiliki presensi Masuk -> Otomatis tercatat sebagai Absen MASUK sesuai shift kerja
-                    prosesMasukKaryawan();
+                    // Jika sudah lewat 10 menit dari waktu masuk, atau shift kemarin malam, otomatis proses PULANG
+                    prosesPulangKaryawan(recordAktifUntukPulang);
+                    return;
+                }
+
+                // 3. Jika hari ini sudah lengkap (sudah Masuk dan sudah Pulang):
+                if (absenHariIni && absenHariIni.jamMasuk && absenHariIni.jamPulang) {
+                    const nowMins = timeToMinutes(timeString);
+                    const pulangMins = timeToMinutes(absenHariIni.jamPulang);
+                    const selisihPulangMenit = nowMins - pulangMins;
+
+                    // Jika scan lagi setelah lebih dari 15 menit sejak jam pulang sebelumnya (misal lembur atau pembaruan kepulangan):
+                    if (selisihPulangMenit > 15) {
+                        prosesPulangKaryawan(absenHariIni);
+                        return;
+                    }
+
+                    window.playSound('masuk'); 
+                    showToast('Presensi Hari Ini Lengkap', `${karyawan.nama} sudah merampungkan presensi hari ini (Masuk: ${absenHariIni.jamMasuk} | Pulang: ${absenHariIni.jamPulang}).`, 'info'); 
+                    if (typeof window.tampilkanOverlayScanBerhasil === 'function') {
+                        window.tampilkanOverlayScanBerhasil(karyawan, 'SUDAH LENGKAP', `${absenHariIni.jamMasuk} - ${absenHariIni.jamPulang}`, `Shift: ${shiftKaryawan.nama}`, metode);
+                    }
+                    return;
                 }
             }
 
@@ -1851,6 +1862,98 @@
                 renderAbsensiTable();
             }
         }
+
+        // ==========================================
+        // FITUR OTOMATISASI ALPHA / MANGKIR (AKHIR HARI & DASHBOARD ADMIN)
+        // ==========================================
+        window.autoProsesAlpha = function(targetTanggal = null, notifyIfZero = false) {
+            const today = new Date();
+            const dateString = targetTanggal || `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            
+            if (!state.karyawan || state.karyawan.length === 0) return 0;
+            if (!state.absensi) state.absensi = [];
+            if (!state.cuti) state.cuti = [];
+
+            // 1. Ambil daftar semua karyawan aktif (bukan yang telah dihapus atau telah keluar)
+            const semuaKaryawan = state.karyawan || [];
+            const karyawanAktif = semuaKaryawan.filter(k => !k.isDeleted && (!k.tanggalKeluar || k.tanggalKeluar > dateString));
+
+            // 2. Karyawan yang sudah memiliki catatan kehadiran pada tanggal tersebut
+            const idAbsenSet = new Set();
+            state.absensi.forEach(a => {
+                if (a && a.tanggal === dateString) {
+                    if (a.karyawanId) idAbsenSet.add(String(a.karyawanId));
+                    if (a.karyawanNik) idAbsenSet.add(String(a.karyawanNik).trim().toLowerCase());
+                }
+            });
+
+            // 3. Karyawan yang memiliki catatan izin / cuti / sakit aktif pada tanggal tersebut
+            const idCutiSet = new Set();
+            state.cuti.forEach(c => {
+                if (c && c.status !== 'Ditolak') {
+                    const mulai = c.mulai || c.tanggalMulai;
+                    const selesai = c.selesai || c.tanggalSelesai || mulai;
+                    if (mulai && selesai && dateString >= mulai && dateString <= selesai) {
+                        if (c.karyawanId) idCutiSet.add(String(c.karyawanId));
+                        if (c.karyawanNik) idCutiSet.add(String(c.karyawanNik).trim().toLowerCase());
+                    }
+                }
+            });
+
+            // 4. Identifikasi karyawan yang tidak ditemukan dalam catatan kehadiran atau daftar cuti/izin
+            let addedCount = 0;
+
+            karyawanAktif.forEach(k => {
+                const kIdStr = String(k.id);
+                const kNikStr = (k.nik || '').trim().toLowerCase();
+
+                const sudahAdaAbsen = idAbsenSet.has(kIdStr) || (kNikStr && idAbsenSet.has(kNikStr));
+                const sedangCuti = idCutiSet.has(kIdStr) || (kNikStr && idCutiSet.has(kNikStr));
+
+                if (!sudahAdaAbsen && !sedangCuti) {
+                    const shiftK = getKaryawanShift(k);
+                    const uniqueId = Date.now() * 1000 + Math.floor(Math.random() * 1000) + addedCount;
+                    const recordAlpha = {
+                        id: uniqueId,
+                        karyawanId: k.id,
+                        karyawanNama: k.nama,
+                        karyawanNik: k.nik || '',
+                        tanggal: dateString,
+                        jamMasuk: '-',
+                        jamPulang: '-',
+                        statusMasuk: 'Alpha',
+                        statusPulang: null,
+                        status: 'Alpha',
+                        shiftNama: shiftK?.nama || 'Shift Reguler',
+                        shiftId: shiftK?.id || 'default',
+                        metode: 'Sistem (Auto Alpha)',
+                        keterangan: 'Tidak hadir tanpa keterangan (Mangkir)'
+                    };
+
+                    state.absensi.push(recordAlpha);
+                    syncAbsensiAtomic(recordAlpha, false);
+                    idAbsenSet.add(kIdStr);
+                    if (kNikStr) idAbsenSet.add(kNikStr);
+                    addedCount++;
+                }
+            });
+
+            // Simpan data ke Firebase dan localStorage jika ada karyawan alpha baru
+            if (addedCount > 0) {
+                saveData();
+                showToast('Auto Proses Alpha', `${addedCount} karyawan tercatat 'Alpha' (tidak hadir tanpa keterangan) pada tanggal ${dateString}.`, 'warning');
+                if (typeof window.playSound === 'function') window.playSound('notif_admin');
+                if (state.currentView === 'absensi' && typeof renderAbsensiTable === 'function') {
+                    renderAbsensiTable();
+                } else if (state.currentView === 'dashboard' && typeof window.renderMainContent === 'function') {
+                    window.renderMainContent();
+                }
+            } else if (notifyIfZero) {
+                showToast('Presensi Tertib', `Seluruh karyawan aktif telah memiliki catatan presensi atau izin resmi untuk tanggal ${dateString}.`, 'info');
+            }
+
+            return addedCount;
+        };
 
         // PENGELOLAAN INSTANCE SCANNER YANG BERSIH & ROBUST
         async function stopScannerInternal() { 
@@ -3150,6 +3253,9 @@
             }
             state.currentView = view; 
             saveSession();
+            if (view === 'dashboard' && state.currentUserRole === 'admin' && typeof window.autoProsesAlpha === 'function') {
+                window.autoProsesAlpha();
+            }
             window.render(); 
         };
         
@@ -4091,6 +4197,9 @@
             const area = document.getElementById('mainContentArea');
             if (!area) return;
             if(state.currentView === 'dashboard') {
+                if (state.currentUserRole === 'admin' && typeof window.autoProsesAlpha === 'function') {
+                    window.autoProsesAlpha();
+                }
                 area.innerHTML = getDashboardHTML();
                 if(window.renderRechartsMonthly) setTimeout(window.renderRechartsMonthly, 50);
             }
@@ -4135,10 +4244,11 @@
             const activeChartType = window.dashboardChartState?.type || 'bar';
 
             const absenHariIni = (state.absensi || []).filter(a => a.tanggal === dateToday);
-            const hadir = absenHariIni.length;
+            const alphaHariIni = absenHariIni.filter(a => a.statusMasuk === 'Alpha' || a.status === 'Alpha' || a.statusMasuk === 'Mangkir').length;
+            const hadir = absenHariIni.filter(a => a.statusMasuk !== 'Alpha' && a.status !== 'Alpha' && a.statusMasuk !== 'Mangkir').length;
             const telat = absenHariIni.filter(a => a.statusMasuk === 'Terlambat').length;
-            const tepatWaktu = absenHariIni.filter(a => a.statusMasuk === 'Tepat Waktu').length;
-            const belumHadir = Math.max(0, totalAktif - hadir);
+            const tepatWaktu = absenHariIni.filter(a => a.statusMasuk === 'Tepat Waktu' || a.statusMasuk?.includes('Libur')).length;
+            const belumHadir = Math.max(0, totalAktif - hadir - alphaHariIni);
             const persenHadir = totalAktif > 0 ? Math.min(100, Math.round((hadir / totalAktif) * 100)) : 0;
             const dendaHariIni = telat * (state.pengaturan?.dendaTelat || 0);
             const persenDisiplin = hadir > 0 ? Math.round((tepatWaktu / hadir) * 100) : 100;
@@ -4719,7 +4829,7 @@
                         </div>
                         <span class="text-[11px] text-slate-400">Pintas navigasi ke modul utama sistem</span>
                     </div>
-                    <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                         <button id="quickActionKaryawan" onclick="window.bukaModalKaryawan()" class="flex items-center space-x-2.5 p-3 rounded-xl border border-slate-200 hover:bg-indigo-50 hover:border-indigo-300 text-slate-700 hover:text-indigo-700 transition text-xs font-semibold shadow-2xs">
                             <i class="fas fa-user-plus text-indigo-600 text-base"></i>
                             <span>+ Karyawan</span>
@@ -4727,6 +4837,10 @@
                         <button id="quickActionAbsensi" onclick="window.bukaModalAbsensi()" class="flex items-center space-x-2.5 p-3 rounded-xl border border-slate-200 hover:bg-slate-100 hover:border-slate-300 text-slate-700 transition text-xs font-semibold shadow-2xs">
                             <i class="fas fa-clipboard-check text-slate-600 text-base"></i>
                             <span>+ Presensi</span>
+                        </button>
+                        <button id="quickActionAutoAlpha" onclick="window.autoProsesAlpha(null, true)" class="flex items-center space-x-2.5 p-3 rounded-xl border border-rose-200 hover:bg-rose-50 hover:border-rose-300 text-rose-700 transition text-xs font-semibold shadow-2xs" title="Proses otomatis karyawan tanpa kehadiran & tanpa izin menjadi Alpha">
+                            <i class="fas fa-user-xmark text-rose-600 text-base"></i>
+                            <span>Auto Alpha</span>
                         </button>
                         <button id="quickActionCuti" onclick="window.setView('cuti')" class="flex items-center space-x-2.5 p-3 rounded-xl border border-slate-200 hover:bg-amber-50 hover:border-amber-300 text-slate-700 hover:text-amber-700 transition text-xs font-semibold shadow-2xs">
                             <i class="fas fa-envelope-open-text text-amber-600 text-base"></i>
@@ -5677,6 +5791,9 @@
                             <button onclick="window.bukaModalAbsensi()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2.5 rounded-xl shadow-sm text-xs sm:text-sm transition flex items-center">
                                 <i class="fas fa-plus mr-2"></i>Tambah Manual
                             </button>
+                            <button onclick="window.autoProsesAlpha(null, true)" class="bg-rose-600 hover:bg-rose-700 text-white font-semibold px-4 py-2.5 rounded-xl shadow-sm text-xs sm:text-sm transition flex items-center" title="Proses otomatis karyawan aktif yang belum hadir & tanpa izin menjadi Alpha">
+                                <i class="fas fa-user-xmark mr-2"></i>Auto Alpha
+                            </button>
                             <button onclick="window.bukaModalHapusTanggal('absensi')" class="bg-amber-500 hover:bg-amber-600 text-white font-semibold px-4 py-2.5 rounded-xl shadow-sm text-xs sm:text-sm transition flex items-center">
                                 <i class="fas fa-calendar-times mr-2"></i>Hapus per Tanggal
                             </button>
@@ -5847,9 +5964,12 @@
             // 4. RENDER ROWS (Satu kali assignment innerHTML)
             const rowsHTML = pageItems.map(a => {
                 const k = getKaryawanAbsen(a);
-                const badge = (a.statusMasuk === 'Tepat Waktu' || a.statusMasuk?.includes('Libur')) 
-                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
-                    : 'bg-rose-50 text-rose-700 border border-rose-200';
+                const isAlpha = (a.statusMasuk === 'Alpha' || a.status === 'Alpha' || a.statusMasuk === 'Mangkir');
+                const badge = isAlpha
+                    ? 'bg-rose-100 text-rose-800 border border-rose-300 font-extrabold'
+                    : ((a.statusMasuk === 'Tepat Waktu' || a.statusMasuk?.includes('Libur')) 
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                        : 'bg-rose-50 text-rose-700 border border-rose-200');
 
                 const namaTampil = k ? k.nama : (a.karyawanNama || 'Karyawan Non-Aktif');
                 const nikTampil = k ? (k.nik || '-') : (a.karyawanNik || '-');
@@ -6598,24 +6718,10 @@
 
         window.handleJenisCutiChange = function(val) {
             const lbl = document.getElementById('pc_label_alasan');
-            const hint = document.getElementById('pc_hint_tidak_hadir');
             const txt = document.getElementById('pc_alasan');
             if (!lbl || !txt) return;
-            if (val === 'Tidak Hadir') {
-                lbl.innerText = 'Keterangan Tidak Hadir';
-                txt.placeholder = 'Tuliskan keterangan tidak hadir (contoh: Tanpa keterangan / Alpa / Urusan mendesak / Sakit tanpa surat)...';
-                if (hint) hint.classList.remove('hidden');
-                if (!txt.value.trim()) {
-                    txt.value = 'Tidak hadir tanpa keterangan';
-                }
-            } else {
-                lbl.innerText = 'Alasan / Keterangan';
-                txt.placeholder = 'Tuliskan keterangan pengajuan...';
-                if (hint) hint.classList.add('hidden');
-                if (txt.value === 'Tidak hadir tanpa keterangan') {
-                    txt.value = '';
-                }
-            }
+            lbl.innerText = 'Alasan / Keterangan';
+            txt.placeholder = 'Tuliskan keterangan pengajuan...';
         };
 
         window.tutupModalPengajuanCuti = function() { 
@@ -6643,9 +6749,6 @@
 
             const rawKaryawanId = pcK.value;
             let alasanVal = pcA.value.trim();
-            if (pcJ.value === 'Tidak Hadir' && !alasanVal) {
-                alasanVal = 'Tidak hadir tanpa keterangan';
-            }
 
             if(!rawKaryawanId || !pcM.value || !pcS.value || !alasanVal) {
                 return showToast('Error', 'Lengkapi seluruh data formulir!', 'error');
@@ -6667,7 +6770,8 @@
             const targetJabatan = (state.jabatan || []).find(j => j.id == targetKaryawan.jabatanId);
             
             if(!state.cuti) state.cuti = [];
-            const selectedStatus = pcStat ? pcStat.value : 'Disetujui';
+            // Status pengajuan dari kiosk: default 'Menunggu' (persetujuan pimpinan/admin)
+            const selectedStatus = pcStat ? pcStat.value : 'Menunggu';
             const newCuti = { 
                 id: Date.now(), 
                 karyawanId: targetKaryawan.id,
@@ -6685,7 +6789,7 @@
             state.cuti.push(newCuti);
             saveData(); 
             window.tutupModalPengajuanCuti(); 
-            showToast('Sukses', `Data ${newCuti.jenis} atas nama ${targetKaryawan.nama} berhasil disimpan (${selectedStatus})`); 
+            showToast('Sukses', `Data ${newCuti.jenis} atas nama ${targetKaryawan.nama} berhasil diajukan (Status: ${selectedStatus})`); 
             if(typeof window.playSound === 'function') window.playSound('notif_admin');
             if (state.currentView === 'cuti') {
                 renderCutiTable();
@@ -7197,36 +7301,42 @@
                 return (matchId || matchNik) && a.tanggal && a.tanggal.startsWith(bln);
             });
 
-            const h = ab.length;
+            let alphaCount = 0;
+            let hadirSebenarnya = 0;
             let t = 0;
             let hTunjangan = 0;
             let pAwal = 0;
             const isNightShift = shift.jamPulang < shift.jamMasuk;
 
             ab.forEach(a => {
+                const isAlpha = (a.statusMasuk === 'Alpha' || a.status === 'Alpha' || a.statusMasuk === 'Mangkir');
+                if (isAlpha) {
+                    alphaCount++;
+                    return;
+                }
+
+                hadirSebenarnya++;
                 const isTelat = (a.statusMasuk === 'Terlambat');
                 if (isTelat) t++;
 
-                let isPulangAwal = false;
+                let isPulangAwal = (a.statusPulang === 'Pulang Awal');
                 let sudahPulang = false;
 
-                if (!a.jamPulang) {
+                if (!a.jamPulang || a.jamPulang === '-') {
                     let tglMasuk = new Date(`${a.tanggal}T${a.jamMasuk || '08:00'}:00`);
                     let diffHours = (now.getTime() - tglMasuk.getTime()) / (1000 * 3600);
                     if (diffHours >= 24) isPulangAwal = true;
                 } else {
                     sudahPulang = true;
-                    if (isNightShift) {
-                        if (a.jamPulang >= shift.jamPulang && a.jamPulang < shift.jamMasuk) {
-                            // Valid
+                    if (!isPulangAwal) {
+                        if (isNightShift) {
+                            if (!(a.jamPulang >= shift.jamPulang && a.jamPulang < shift.jamMasuk)) {
+                                isPulangAwal = true;
+                            }
                         } else {
-                            isPulangAwal = true;
-                        }
-                    } else {
-                        if (a.jamPulang >= shift.jamPulang || a.jamPulang < shift.jamMasuk) {
-                            // Valid
-                        } else {
-                            isPulangAwal = true;
+                            if (!(a.jamPulang >= shift.jamPulang || a.jamPulang < shift.jamMasuk)) {
+                                isPulangAwal = true;
+                            }
                         }
                     }
                 }
@@ -7239,6 +7349,7 @@
 
             // Rekapitulasi Cuti & Izin Pegawai
             const dataCuti = hitungHariCutiKaryawanBulan(k.id, bln);
+            const totalTidakHadir = (dataCuti.tidakHadir || 0) + alphaCount;
 
             const tarifTunjangan = (state.pengaturan && state.pengaturan.tunjanganHadir) ? Number(state.pengaturan.tunjanganHadir) : 0;
             const tarifDenda = (state.pengaturan && state.pengaturan.dendaTelat) ? Number(state.pengaturan.dendaTelat) : 0;
@@ -7263,7 +7374,7 @@
                 shiftNama: shift.nama || `${shift.jamMasuk} - ${shift.jamPulang}`,
                 bulan: bln,
                 gajiPokok,
-                hadir: h,
+                hadir: hadirSebenarnya,
                 telat: t,
                 pulangAwal: pAwal,
                 hariValid: hTunjangan,
@@ -7278,7 +7389,8 @@
                 cutiHari: dataCuti.cuti,
                 sakitHari: dataCuti.sakit,
                 izinHari: dataCuti.izin,
-                tidakHadirHari: dataCuti.tidakHadir || 0,
+                tidakHadirHari: totalTidakHadir,
+                alphaHari: alphaCount,
                 pendingCutiHari: dataCuti.pendingHari
             };
         }
