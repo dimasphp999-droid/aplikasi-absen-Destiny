@@ -735,17 +735,29 @@
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-500 mb-2">Jam Pulang</label>
-                        <input type="time" id="fa_pulang" class="w-full border rounded-xl p-3 outline-none">
+                        <input type="time" id="fa_pulang" onchange="window.handleJamPulangInputManual(this.value)" class="w-full border rounded-xl p-3 outline-none">
                     </div>
                 </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 mb-2">Status Kehadiran</label>
-                    <select id="fa_status" onchange="window.handleStatusAbsensiChange(this.value)" required class="w-full border rounded-xl p-3 outline-none">
-                        <option value="Tepat Waktu">Tepat Waktu</option>
-                        <option value="Terlambat">Terlambat</option>
-                        <option value="Alpha">Alpha (Mangkir)</option>
-                        <option value="Hadir (Libur)">Hadir (Libur)</option>
-                    </select>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-2">Status Masuk</label>
+                        <select id="fa_status" onchange="window.handleStatusAbsensiChange(this.value)" required class="w-full border rounded-xl p-3 outline-none text-sm">
+                            <option value="Tepat Waktu">Tepat Waktu</option>
+                            <option value="Terlambat">Terlambat</option>
+                            <option value="Alpha">Alpha (Mangkir)</option>
+                            <option value="Hadir (Libur)">Hadir (Libur)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-2">Status Pulang</label>
+                        <select id="fa_status_pulang" class="w-full border rounded-xl p-3 outline-none text-sm">
+                            <option value="Tepat Waktu">Tepat Waktu (Selesai Kerja Normal)</option>
+                            <option value="auto">Otomatis (Evaluasi Shift)</option>
+                            <option value="Pulang Awal">Pulang Awal</option>
+                            <option value="Lembur">Lembur</option>
+                            <option value="">- (Tanpa Label Pulang)</option>
+                        </select>
+                    </div>
                 </div>
             </div>
             <div class="px-6 py-5 border-t flex justify-end gap-3">
@@ -872,7 +884,7 @@
                 audioImkKeluar: null,
                 audioImkKembali: null,
                 shifts: [
-                    { id: 'shift_1', nama: 'Shift Standar (Pagi)', jamMasuk: '08:00', jamPulang: '17:00' }
+                    { id: 'shift_1', nama: 'Shift Standar (Pagi)', jamMasuk: '07:30', jamPulang: '15:30' }
                 ],
                 liburNasional: []
             }
@@ -887,7 +899,10 @@
         let clockInterval = null;
         let deleteTarget = null;
         let isInitialLoad = true;
-        let kioskModeType = 'auto';
+        let kioskCategory = 'absen'; // 'absen' (Mode Absen Kerja) atau 'imk' (Mode Izin Keluar Masuk IMK)
+        let kioskAbsenAction = 'masuk'; // 'masuk' atau 'pulang'
+        let kioskImkAction = 'keluar'; // 'keluar' atau 'kembali'
+        let kioskModeType = 'masuk';
         let activeHapusMode = 'absensi';
         let isScannerStarting = false;
         let barcodeBuffer = '';
@@ -1007,7 +1022,13 @@
 
         function pastikanDataMigrasi() {
             if (!state.pengaturan) state.pengaturan = {};
-            if (!state.pengaturan.shifts || state.pengaturan.shifts.length === 0) state.pengaturan.shifts = [ { id: 'shift_1', nama: 'Shift Standar (Pagi)', jamMasuk: '08:00', jamPulang: '17:00' } ];
+            if (!state.pengaturan.shifts || state.pengaturan.shifts.length === 0) {
+                state.pengaturan.shifts = [ { id: 'shift_1', nama: 'Shift Standar (Pagi)', jamMasuk: '07:30', jamPulang: '15:30' } ];
+            } else if (state.pengaturan.shifts[0] && state.pengaturan.shifts[0].id === 'shift_1' && state.pengaturan.shifts[0].jamPulang === '17:00') {
+                // Perbaiki default shift lama yang 17:00 menjadi 15:30
+                state.pengaturan.shifts[0].jamPulang = '15:30';
+                state.pengaturan.shifts[0].jamMasuk = '07:30';
+            }
             if (!state.pengaturan.liburNasional) state.pengaturan.liburNasional = [];
             if (!state.imk) state.imk = [];
             if (!state.cuti) state.cuti = [];
@@ -1050,7 +1071,8 @@
                 }
             });
 
-            // 2. Normalisasi Riwayat Absensi
+            // 2. Normalisasi Riwayat Absensi & Perbaikan Anomali Pulang Awal
+            let absensiDiperbaiki = false;
             state.absensi.forEach(a => {
                 if (!a) return;
                 const k = cariPegawai(a.karyawanId, a.karyawanNik || a.nik, a.karyawanNama || a.nama);
@@ -1059,7 +1081,65 @@
                     if (!a.karyawanNama || a.karyawanNama === 'Karyawan Dihapus') a.karyawanNama = k.nama;
                     if (!a.karyawanNik) a.karyawanNik = k.nik || '';
                 }
+
+                // Perbaiki data anomali statusPulang 'Pulang Awal' jika jam pulang sudah sesuai, input manual, hari Jumat, atau durasi kerja mencukupi
+                if (a.statusPulang === 'Pulang Awal' && a.jamPulang && a.jamPulang !== '-') {
+                    const sNama = String(a.shiftNama || (k ? k.shiftId : '') || '').toLowerCase();
+                    const actualMins = timeToMinutes(a.jamPulang);
+                    
+                    let isJumat = false;
+                    try {
+                        if (a.tanggal && new Date(a.tanggal + 'T12:00:00').getDay() === 5) isJumat = true;
+                    } catch(e) {}
+
+                    // Target jam pulang: 14:00 di hari Jumat, 15:30 di hari Senin-Kamis
+                    let targetPulangMins = isJumat ? (14 * 60) : (15 * 60 + 30);
+                    if (state.pengaturan && state.pengaturan.shifts) {
+                        const shFound = state.pengaturan.shifts.find(s => s && (
+                            String(s.id) === String(a.shiftId) || 
+                            String(s.nama || '').toLowerCase() === sNama ||
+                            sNama.includes(String(s.nama || '').toLowerCase())
+                        ));
+                        if (shFound && shFound.jamPulang) {
+                            let spMins = timeToMinutes(shFound.jamPulang);
+                            if (isJumat && spMins >= 15 * 60) spMins = 14 * 60;
+                            // Jangan gunakan jam 17:00 jika staf/guru/pagi/standar
+                            if ((spMins === 17 * 60 || spMins === 16 * 60) && (sNama.includes('staff') || sNama.includes('pagi') || sNama.includes('guru') || sNama.includes('standar') || !shFound.id || shFound.id === 'shift_1')) {
+                                spMins = isJumat ? (14 * 60) : (15 * 60 + 30);
+                            }
+                            targetPulangMins = spMins;
+                        }
+                    }
+
+                    let durasiKerjaCukup = false;
+                    if (a.jamMasuk && a.jamMasuk !== '-') {
+                        const jMasukMins = timeToMinutes(a.jamMasuk);
+                        const durasi = actualMins - jMasukMins;
+                        if (durasi >= (isJumat ? 6 * 60 : 7 * 60)) durasiKerjaCukup = true;
+                    }
+
+                    // Koreksi ke Tepat Waktu jika:
+                    // 1. Karyawan pulang >= target - 15 menit
+                    // 2. Atau hari Jumat dan pulang >= 14:00
+                    // 3. Atau hari biasa dan pulang >= 15:15
+                    // 4. Atau durasi kerja sudah cukup (>= 7 jam / 6 jam Jumat)
+                    // 5. Atau metode input manual / barcode gun
+                    if (actualMins >= (targetPulangMins - 15) || 
+                        (isJumat && actualMins >= 14 * 60) || 
+                        (!isJumat && actualMins >= (15 * 60 + 15)) ||
+                        durasiKerjaCukup ||
+                        a.metode === 'Manual' || 
+                        a.metode === 'Barcode Gun/Manual') {
+                        a.statusPulang = 'Tepat Waktu';
+                        absensiDiperbaiki = true;
+                        if (typeof syncAbsensiAtomic === 'function') syncAbsensiAtomic(a, true, a.id);
+                    }
+                }
             });
+
+            if (absensiDiperbaiki && typeof saveData === 'function') {
+                saveData();
+            }
 
             // 3. Normalisasi Riwayat IMK
             state.imk.forEach(i => {
@@ -1479,10 +1559,53 @@
             return Math.round(R * c);
         }
 
+        function getShiftForAbsensi(a, karyawanParam = null) {
+            const shifts = state.pengaturan?.shifts || [];
+            const k = karyawanParam || (a ? getKaryawanAbsen(a) : null);
+
+            // 1. Cek apakah ada a.shiftId
+            if (a && a.shiftId) {
+                const targetId = String(a.shiftId).trim();
+                const found = shifts.find(s => s && (
+                    String(s.id).trim() === targetId ||
+                    String(s.nama || '').trim().toLowerCase() === targetId.toLowerCase()
+                ));
+                if (found) return found;
+            }
+
+            // 2. Cek apakah ada a.shiftNama
+            if (a && a.shiftNama) {
+                const targetNama = String(a.shiftNama).trim().toLowerCase();
+                const found = shifts.find(s => s && (
+                    String(s.nama || '').trim().toLowerCase() === targetNama ||
+                    targetNama.includes(String(s.nama || '').trim().toLowerCase()) ||
+                    String(s.nama || '').trim().toLowerCase().includes(targetNama)
+                ));
+                if (found) return found;
+
+                // Jika nama mengandung kata 'staff' atau 'pagi', jam pulang default adalah 15:30
+                if (targetNama.includes('staff')) {
+                    return { id: 'staff_pagi', nama: a.shiftNama, jamMasuk: '07:30', jamPulang: '15:30' };
+                }
+            }
+
+            // 3. Cek dari profil karyawan
+            if (k) {
+                return getKaryawanShift(k);
+            }
+
+            // 4. Default fallback: jam masuk 07:30, jam pulang 15:30
+            return shifts.find(s => String(s.nama || '').toLowerCase().includes('staff') || String(s.nama || '').toLowerCase().includes('pagi')) ||
+                   shifts[0] || 
+                   { id: 'default', nama: 'Shift Reguler', jamMasuk: state.pengaturan?.jamMasuk || '07:35', jamPulang: '15:30' };
+        }
+
         function getKaryawanShift(karyawan) {
             const shifts = state.pengaturan?.shifts || [];
             if (!karyawan) {
-                return shifts[0] || { id: 'default', nama: 'Shift Reguler', jamMasuk: state.pengaturan?.jamMasuk || '07:35', jamPulang: '15:30' };
+                return shifts.find(s => String(s.nama || '').toLowerCase().includes('staff')) ||
+                       shifts[0] || 
+                       { id: 'default', nama: 'Shift Reguler', jamMasuk: state.pengaturan?.jamMasuk || '07:35', jamPulang: '15:30' };
             }
             let found = null;
             if (karyawan.shiftId) {
@@ -1493,8 +1616,25 @@
                     targetId.toLowerCase().includes(String(s.id).trim().toLowerCase())
                 ));
             }
+            // Jika belum ketemu, coba cari berdasarkan nama shift jika karyawan punya properti shift / shiftNama
+            if (!found && karyawan.shift) {
+                const sName = String(karyawan.shift).trim().toLowerCase();
+                found = shifts.find(s => s && String(s.nama || '').trim().toLowerCase() === sName);
+            }
+            // Jika jabatan atau NIK karyawan adalah Staff / Guru / DIADM / DISPV, gunakan Shift Pagi - STAFF (15:30)
             if (!found) {
-                found = shifts[0] || { id: 'default', nama: 'Shift Reguler', jamMasuk: state.pengaturan?.jamMasuk || '07:35', jamPulang: '15:30' };
+                const nikStr = String(karyawan.nik || '').toUpperCase();
+                const jObj = (state.jabatan || []).find(j => j.id == karyawan.jabatanId);
+                const jNama = (jObj ? jObj.nama : '').toLowerCase();
+                if (nikStr.includes('DIADM') || nikStr.includes('DISPV') || jNama.includes('staff') || jNama.includes('guru') || jNama.includes('admin')) {
+                    found = shifts.find(s => String(s.nama || '').toLowerCase().includes('staff')) ||
+                            { id: 'shift_staff', nama: 'Shift Pagi - STAFF', jamMasuk: '07:30', jamPulang: '15:30' };
+                }
+            }
+            if (!found) {
+                found = shifts.find(s => String(s.nama || '').toLowerCase().includes('staff')) ||
+                        shifts[0] || 
+                        { id: 'default', nama: 'Shift Reguler', jamMasuk: state.pengaturan?.jamMasuk || '07:35', jamPulang: '15:30' };
             }
             return found;
         }
@@ -1537,10 +1677,37 @@
             }
         }
 
-        function evaluasiStatusPulang(shift, timeStr) {
-            const jamPulangShift = shift?.jamPulang || '15:30';
-            const jamMasukShift = shift?.jamMasuk || state.pengaturan?.jamMasuk || '07:35';
+        function evaluasiStatusPulang(shift, timeStr, dateStr = null, jamMasukStr = null) {
+            if (!timeStr || timeStr === '-' || String(timeStr).trim() === '') return { status: null, menit: 0 };
+            
             const nowMins = timeToMinutes(timeStr);
+            let jamPulangShift = shift?.jamPulang || '15:30';
+            const jamMasukShift = shift?.jamMasuk || state.pengaturan?.jamMasuk || '07:35';
+            
+            // Cek apakah tanggal adalah hari Jumat (Day 5)
+            let isJumat = false;
+            if (dateStr) {
+                try {
+                    const d = new Date(dateStr + 'T12:00:00');
+                    if (d.getDay() === 5) isJumat = true;
+                } catch(e) {}
+            }
+
+            // Penyesuaian jam pulang hari Jumat (instansi pulang lebih awal, misal 14:00 / 14:30)
+            if (isJumat) {
+                const shiftPulangMins = timeToMinutes(jamPulangShift);
+                // Jika shift biasa 15:30 / 16:00 / 17:00, di hari Jumat jam pulang disesuaikan ke 14:00
+                if (shiftPulangMins >= 15 * 60) {
+                    jamPulangShift = '14:00';
+                }
+            }
+
+            // Jika jam pulang shift di data lama masih 17:00 / 16:00 tapi nama shift staf/guru/pagi/standar, normalkan ke 15:30 (atau 14:00 di Jumat)
+            const sNama = String(shift?.nama || '').toLowerCase();
+            if ((jamPulangShift === '17:00' || jamPulangShift === '16:00') && (sNama.includes('staff') || sNama.includes('pagi') || sNama.includes('guru') || sNama.includes('standar') || !shift?.id || shift?.id === 'shift_1' || shift?.id === 'default')) {
+                jamPulangShift = isJumat ? '14:00' : '15:30';
+            }
+
             const pulangMins = timeToMinutes(jamPulangShift);
             const masukMins = timeToMinutes(jamMasukShift);
             const isNightShift = pulangMins < masukMins;
@@ -1557,8 +1724,38 @@
                     return { status: 'Tepat Waktu', menit: 0 };
                 }
             } else {
-                // Shift normal (contoh: 07:35 - 15:30)
-                if (nowMins < pulangMins - 15) {
+                // Cek durasi kerja aktual jika ada jamMasuk
+                const jMasuk = jamMasukStr || jamMasukShift;
+                if (jMasuk && jMasuk !== '-') {
+                    const jMasukMins = timeToMinutes(jMasuk);
+                    const durasiMins = nowMins - jMasukMins;
+                    // Jika sudah bekerja >= 7 jam (atau >= 6 jam hari Jumat), dianggap sudah menyelesaikan jam kerja penuh
+                    if (durasiMins >= (isJumat ? 6 * 60 : 7 * 60)) {
+                        if (nowMins >= pulangMins + 60) {
+                            return { status: 'Lembur', menit: nowMins - pulangMins };
+                        }
+                        return { status: 'Tepat Waktu', menit: 0 };
+                    }
+                }
+
+                // Jika di hari Jumat dan pulang pukul 14:00 ke atas -> Tepat Waktu
+                if (isJumat && nowMins >= 14 * 60) {
+                    if (nowMins >= pulangMins + 60) {
+                        return { status: 'Lembur', menit: nowMins - pulangMins };
+                    }
+                    return { status: 'Tepat Waktu', menit: 0 };
+                }
+
+                // Jika di hari biasa dan pulang pukul 15:15 ke atas -> Tepat Waktu
+                if (!isJumat && nowMins >= (15 * 60 + 15)) {
+                    if (nowMins >= pulangMins + 60) {
+                        return { status: 'Lembur', menit: nowMins - pulangMins };
+                    }
+                    return { status: 'Tepat Waktu', menit: 0 };
+                }
+
+                // Shift normal (contoh: 07:35 - 15:30) dengan batas toleransi 15 menit
+                if (nowMins < (pulangMins - 15)) {
                     const selisih = pulangMins - nowMins;
                     return { status: 'Pulang Awal', menit: selisih };
                 } else if (nowMins >= pulangMins + 60) {
@@ -1622,7 +1819,8 @@
             // ==========================================
             // CABANG 1: MODE IZIN KELUAR MASUK (IMK)
             // ==========================================
-            if (kioskModeType === 'imk') {
+            const isImkMode = (kioskCategory === 'imk' || kioskModeType === 'imk' || kioskModeType === 'imk_keluar' || kioskModeType === 'imk_kembali');
+            if (isImkMode) {
                 if(!state.imk) state.imk = [];
                 
                 const yesterday = new Date(now);
@@ -1663,7 +1861,18 @@
                     if (diffHours > 24) isMasihDiLuar = false;
                 }
 
-                if (!isMasihDiLuar) {
+                const targetImkAction = (kioskImkAction === 'kembali' || kioskModeType === 'imk_kembali') ? 'kembali' : 'keluar';
+
+                if (targetImkAction === 'keluar') {
+                    if (isMasihDiLuar) {
+                        window.playSound('error');
+                        showToast('Sudah Tercatat Keluar', `${karyawan.nama} sudah tercatat izin KELUAR pukul ${imkTerakhir.jamKeluar}. Jika sudah balik ke kantor, silakan pilih fungsi 'Kembali'.`, 'warning');
+                        if (typeof window.tampilkanOverlayScanBerhasil === 'function') {
+                            window.tampilkanOverlayScanBerhasil(karyawan, 'SUDAH KELUAR', imkTerakhir.jamKeluar, 'Silakan pilih fungsi Kembali', metode);
+                        }
+                        return;
+                    }
+
                     // CATAT IZIN KELUAR KANTOR
                     const uniqueId = Date.now() * 1000 + Math.floor(Math.random() * 1000);
                     const newImk = {
@@ -1690,7 +1899,18 @@
                     if (typeof window.tampilkanOverlayScanBerhasil === 'function') {
                         window.tampilkanOverlayScanBerhasil(karyawan, 'IMK: KELUAR', timeString, 'Izin Keluar Kantor', metode);
                     }
+                    return;
                 } else {
+                    // targetImkAction === 'kembali'
+                    if (!isMasihDiLuar) {
+                        window.playSound('error');
+                        showToast('Belum Izin Keluar', `${karyawan.nama} belum mencatat izin KELUAR hari ini. Silakan pilih fungsi 'Keluar' terlebih dahulu.`, 'warning');
+                        if (typeof window.tampilkanOverlayScanBerhasil === 'function') {
+                            window.tampilkanOverlayScanBerhasil(karyawan, 'BELUM KELUAR', timeString, 'Silakan pilih fungsi Keluar', metode);
+                        }
+                        return;
+                    }
+
                     // CATAT KEMBALI KE KANTOR
                     const tglKeluar = new Date(`${imkTerakhir.tanggal}T${imkTerakhir.jamKeluar}:00`);
                     const tglKembali = new Date(`${dateString}T${timeString}:00`);
@@ -1718,6 +1938,7 @@
                     if (typeof window.tampilkanOverlayScanBerhasil === 'function') {
                         window.tampilkanOverlayScanBerhasil(karyawan, 'IMK: KEMBALI', timeString, `Durasi: ${imkTerakhir.durasi}`, metode);
                     }
+                    return;
                 }
             } else {
                 // ==========================================
@@ -1757,7 +1978,7 @@
 
                 // Helper Internal Absen Pulang
                 const prosesPulangKaryawan = (rec) => {
-                    const evaluasiPulang = evaluasiStatusPulang(shiftKaryawan, timeString);
+                    const evaluasiPulang = evaluasiStatusPulang(shiftKaryawan, timeString, rec.tanggal || dateString, rec.jamMasuk);
                     rec.jamPulang = timeString; 
                     rec.statusPulang = evaluasiPulang.status;
                     rec.metodePulang = metode;
@@ -1816,8 +2037,11 @@
                     }
                 };
 
-                // A. KASUS 1: MODE EKSPLISIT MASUK (kioskModeType === 'masuk')
-                if (kioskModeType === 'masuk') {
+                // A. KASUS 1: MODE EKSPLISIT MASUK
+                const isAbsenMasuk = (kioskAbsenAction === 'masuk' || kioskModeType === 'masuk');
+                const isAbsenPulang = (kioskAbsenAction === 'pulang' || kioskModeType === 'pulang');
+
+                if (isAbsenMasuk && !isAbsenPulang) {
                     if (absenHariIni && absenHariIni.jamMasuk) {
                         window.playSound('masuk');
                         showToast('Sudah Absen Masuk', `${karyawan.nama} sudah tercatat MASUK pukul ${absenHariIni.jamMasuk} [${shiftKaryawan.nama}]. Presensi aman.`, 'info');
@@ -1830,8 +2054,8 @@
                     return;
                 }
 
-                // B. KASUS 2: MODE EKSPLISIT PULANG (kioskModeType === 'pulang')
-                if (kioskModeType === 'pulang') {
+                // B. KASUS 2: MODE EKSPLISIT PULANG
+                if (isAbsenPulang) {
                     if (!recordAktifUntukPulang) {
                         if (absenHariIni && absenHariIni.jamMasuk && absenHariIni.jamPulang) {
                             window.playSound('error');
@@ -2634,115 +2858,205 @@
             }
         };
 
-        window.toggleKioskMode = function(mode) {
-            kioskModeType = mode;
+        window.setKioskMainMode = function(category) {
+            kioskCategory = category;
+            if (category === 'absen') {
+                kioskModeType = kioskAbsenAction; // 'masuk' atau 'pulang'
+            } else {
+                kioskModeType = (kioskImkAction === 'kembali') ? 'imk_kembali' : 'imk_keluar';
+            }
+            window.updateKioskUIElements();
+            if (category === 'absen') {
+                showToast('Mode Absen Kerja Aktif', `Fungsi aktif: Absen ${kioskAbsenAction === 'pulang' ? 'PULANG' : 'MASUK'}`, 'info');
+            } else {
+                showToast('Mode Izin Keluar Masuk (IMK) Aktif', `Fungsi aktif: Izin ${kioskImkAction === 'kembali' ? 'KEMBALI' : 'KELUAR'}`, 'warning');
+            }
+        };
+
+        window.setKioskSubMode = function(action) {
+            if (kioskCategory === 'absen') {
+                kioskAbsenAction = action; // 'masuk' atau 'pulang'
+                kioskModeType = action;
+                showToast(`Absen Kerja: ${action.toUpperCase()}`, `Terminal siap untuk mencatat presensi ${action.toUpperCase()}.`, 'info');
+            } else {
+                kioskImkAction = action; // 'keluar' atau 'kembali'
+                kioskModeType = action === 'kembali' ? 'imk_kembali' : 'imk_keluar';
+                showToast(`IMK: ${action.toUpperCase()}`, `Terminal siap untuk izin ${action.toUpperCase()} kantor.`, 'warning');
+            }
+            window.updateKioskUIElements();
+        };
+
+        window.updateKioskUIElements = function() {
             const isGpsView = state.currentUserRole === 'gps' || state.currentView === 'absenGPS';
             const titleEl = document.getElementById('kioskTitle'); 
             const subtitleEl = document.getElementById('kioskSubtitle');
             const btnSubmitGPS = document.getElementById('btnSubmitGPS');
-
-            // 1. Kiosk mode styling
-            const btnAuto = document.getElementById('btnModeAuto');
-            const btnMasuk = document.getElementById('btnModeMasuk');
-            const btnPulang = document.getElementById('btnModePulang');
-            const btnImk = document.getElementById('btnModeImk');
-
-            if (btnAuto && btnMasuk && btnPulang) {
-                btnAuto.className = (mode === 'auto' || mode === 'absen')
-                    ? "flex-1 bg-emerald-600 text-white font-bold py-2 rounded-xl shadow transition text-xs border border-emerald-700"
-                    : "flex-1 text-slate-600 bg-white hover:bg-slate-50 font-semibold py-2 rounded-xl transition text-xs border border-slate-200";
-                btnMasuk.className = (mode === 'masuk')
-                    ? "flex-1 bg-blue-600 text-white font-bold py-2 rounded-xl shadow transition text-xs border border-blue-700"
-                    : "flex-1 text-slate-600 bg-white hover:bg-slate-50 font-semibold py-2 rounded-xl transition text-xs border border-slate-200";
-                btnPulang.className = (mode === 'pulang')
-                    ? "flex-1 bg-rose-600 text-white font-bold py-2 rounded-xl shadow transition text-xs border border-rose-700"
-                    : "flex-1 text-slate-600 bg-white hover:bg-slate-50 font-semibold py-2 rounded-xl transition text-xs border border-slate-200";
-            }
-            if (btnImk) {
-                btnImk.className = (mode === 'imk')
-                    ? "w-full bg-amber-500 text-white font-bold py-2 rounded-xl shadow transition text-xs border border-amber-600"
-                    : "w-full text-amber-800 bg-amber-50 hover:bg-amber-100 font-semibold py-2 rounded-xl transition text-xs border border-amber-200";
-            }
-
-            // 2. GPS HP mode styling
-            const btnGpsMasuk = document.getElementById('btnModeGpsMasuk');
-            const btnGpsPulang = document.getElementById('btnModeGpsPulang');
-            const btnGpsImk = document.getElementById('btnModeGpsImk');
-
-            if (btnGpsMasuk && btnGpsPulang && btnGpsImk) {
-                btnGpsMasuk.className = (mode === 'masuk' || mode === 'auto' || mode === 'absen')
-                    ? "flex-1 bg-emerald-600 text-white font-bold py-2.5 rounded-xl shadow transition text-xs border border-emerald-700"
-                    : "flex-1 text-slate-600 bg-white hover:bg-slate-50 font-semibold py-2.5 rounded-xl transition text-xs border border-slate-200";
-                btnGpsPulang.className = (mode === 'pulang')
-                    ? "flex-1 bg-rose-600 text-white font-bold py-2.5 rounded-xl shadow transition text-xs border border-rose-700"
-                    : "flex-1 text-slate-600 bg-white hover:bg-slate-50 font-semibold py-2.5 rounded-xl transition text-xs border border-slate-200";
-                btnGpsImk.className = (mode === 'imk')
-                    ? "flex-1 bg-amber-500 text-white font-bold py-2.5 rounded-xl shadow transition text-xs border border-amber-600"
-                    : "flex-1 text-slate-600 bg-white hover:bg-slate-50 font-semibold py-2.5 rounded-xl transition text-xs border border-slate-200";
-            }
-
-            // Update Titles & Subtitles
-            if (titleEl && subtitleEl) {
-                if (mode === 'imk') {
-                    titleEl.innerText = isGpsView ? "Izin Keluar Masuk (IMK Personal HP)" : "Terminal IMK (Keluar/Masuk)";
-                    subtitleEl.innerText = isGpsView ? "Kunci Lokasi GPS & Catat Izin Keluar atau Kembali" : "Scan 1x = Izin Keluar Kantor | Scan ke-2 = Kembali";
-                } else if (mode === 'masuk') {
-                    titleEl.innerText = isGpsView ? "Presensi GPS: Absen Masuk" : "Terminal Scan: Absen Masuk";
-                    subtitleEl.innerText = isGpsView ? "Kunci Lokasi GPS untuk Absen Masuk Shift Kerja" : "Scan Kartu / NIK untuk Masuk Shift";
-                } else if (mode === 'pulang') {
-                    titleEl.innerText = isGpsView ? "Presensi GPS: Absen Pulang" : "Terminal Scan: Absen Pulang";
-                    subtitleEl.innerText = isGpsView ? "Kunci Lokasi GPS untuk Absen Selesai Shift Kerja" : "Scan Kartu / NIK untuk Pulang Shift";
-                } else {
-                    titleEl.innerText = isGpsView ? "Absen Personal GPS (Otomatis)" : "Terminal Kiosk: Mode Otomatis";
-                    subtitleEl.innerText = isGpsView ? "Scan ID Card atau Pilih Nama untuk Kunci Titik Lokasi" : "Sistem Otomatis Mendeteksi Absen Masuk atau Pulang Sesuai Shift Kerja";
-                }
-            }
-
-            // Update Manual Submit Button in Kiosk
             const btnSubmitManual = document.getElementById('btnSubmitManualKiosk');
+
+            // 1. Tab Mode Utama Kiosk & GPS
+            const btnMainAbsen = document.getElementById('btnMainModeAbsen');
+            const btnMainImk = document.getElementById('btnMainModeImk');
+            const btnGpsMainAbsen = document.getElementById('btnGpsMainModeAbsen');
+            const btnGpsMainImk = document.getElementById('btnGpsMainModeImk');
+            
+            const updateMainModeButtons = (btnAbsen, btnImk) => {
+                if (!btnAbsen || !btnImk) return;
+                if (kioskCategory === 'absen') {
+                    btnAbsen.className = "py-2.5 px-3 rounded-xl font-bold text-xs transition flex items-center justify-center gap-1.5 bg-indigo-600 text-white shadow-sm border border-indigo-700";
+                    btnImk.className = "py-2.5 px-3 rounded-xl font-semibold text-xs transition flex items-center justify-center gap-1.5 text-slate-600 bg-white hover:bg-slate-50 border border-slate-200";
+                } else {
+                    btnAbsen.className = "py-2.5 px-3 rounded-xl font-semibold text-xs transition flex items-center justify-center gap-1.5 text-slate-600 bg-white hover:bg-slate-50 border border-slate-200";
+                    btnImk.className = "py-2.5 px-3 rounded-xl font-bold text-xs transition flex items-center justify-center gap-1.5 bg-amber-500 text-white shadow-sm border border-amber-600";
+                }
+            };
+            updateMainModeButtons(btnMainAbsen, btnMainImk);
+            updateMainModeButtons(btnGpsMainAbsen, btnGpsMainImk);
+
+            // 2. Submode Containers Kiosk & GPS
+            const subAbsenCont = document.getElementById('subModeAbsenContainer');
+            const subImkCont = document.getElementById('subModeImkContainer');
+            const gpsSubAbsenCont = document.getElementById('gpsSubModeAbsenContainer');
+            const gpsSubImkCont = document.getElementById('gpsSubModeImkContainer');
+
+            const updateContainers = (cAbsen, cImk) => {
+                if (!cAbsen || !cImk) return;
+                if (kioskCategory === 'absen') {
+                    cAbsen.classList.remove('hidden');
+                    cAbsen.classList.add('grid');
+                    cImk.classList.add('hidden');
+                    cImk.classList.remove('grid');
+                } else {
+                    cAbsen.classList.add('hidden');
+                    cAbsen.classList.remove('grid');
+                    cImk.classList.remove('hidden');
+                    cImk.classList.add('grid');
+                }
+            };
+            updateContainers(subAbsenCont, subImkCont);
+            updateContainers(gpsSubAbsenCont, gpsSubImkCont);
+
+            // 3. Tombol Submode Absen Kerja (Masuk & Pulang)
+            const btnSubMasuk = document.getElementById('btnSubMasuk');
+            const btnSubPulang = document.getElementById('btnSubPulang');
+            const btnGpsSubMasuk = document.getElementById('btnGpsSubMasuk');
+            const btnGpsSubPulang = document.getElementById('btnGpsSubPulang');
+
+            const updateSubAbsenButtons = (bMasuk, bPulang) => {
+                if (!bMasuk || !bPulang) return;
+                if (kioskAbsenAction === 'masuk') {
+                    bMasuk.className = "py-2.5 px-3 rounded-xl font-bold text-xs transition flex items-center justify-center gap-1.5 bg-emerald-600 text-white shadow border border-emerald-700";
+                    bPulang.className = "py-2.5 px-3 rounded-xl font-semibold text-xs transition flex items-center justify-center gap-1.5 text-slate-700 bg-white hover:bg-slate-100 border border-slate-200";
+                } else {
+                    bMasuk.className = "py-2.5 px-3 rounded-xl font-semibold text-xs transition flex items-center justify-center gap-1.5 text-slate-700 bg-white hover:bg-slate-100 border border-slate-200";
+                    bPulang.className = "py-2.5 px-3 rounded-xl font-bold text-xs transition flex items-center justify-center gap-1.5 bg-rose-600 text-white shadow border border-rose-700";
+                }
+            };
+            updateSubAbsenButtons(btnSubMasuk, btnSubPulang);
+            updateSubAbsenButtons(btnGpsSubMasuk, btnGpsSubPulang);
+
+            // 4. Tombol Submode IMK (Keluar & Kembali)
+            const btnSubKeluar = document.getElementById('btnSubKeluar');
+            const btnSubKembali = document.getElementById('btnSubKembali');
+            const btnGpsSubKeluar = document.getElementById('btnGpsSubKeluar');
+            const btnGpsSubKembali = document.getElementById('btnGpsSubKembali');
+
+            const updateSubImkButtons = (bKeluar, bKembali) => {
+                if (!bKeluar || !bKembali) return;
+                if (kioskImkAction === 'keluar') {
+                    bKeluar.className = "py-2.5 px-3 rounded-xl font-bold text-xs transition flex items-center justify-center gap-1.5 bg-amber-600 text-white shadow border border-amber-700";
+                    bKembali.className = "py-2.5 px-3 rounded-xl font-semibold text-xs transition flex items-center justify-center gap-1.5 text-slate-700 bg-white hover:bg-amber-50 border border-slate-200";
+                } else {
+                    bKeluar.className = "py-2.5 px-3 rounded-xl font-semibold text-xs transition flex items-center justify-center gap-1.5 text-slate-700 bg-white hover:bg-amber-50 border border-slate-200";
+                    bKembali.className = "py-2.5 px-3 rounded-xl font-bold text-xs transition flex items-center justify-center gap-1.5 bg-teal-600 text-white shadow border border-teal-700";
+                }
+            };
+            updateSubImkButtons(btnSubKeluar, btnSubKembali);
+            updateSubImkButtons(btnGpsSubKeluar, btnGpsSubKembali);
+
+            // 5. Update Header Title & Subtitle
+            if (titleEl && subtitleEl) {
+                if (kioskCategory === 'imk') {
+                    if (kioskImkAction === 'kembali') {
+                        titleEl.innerText = isGpsView ? "IMK (GPS): Kembali ke Kantor" : "Terminal IMK: Kembali ke Kantor";
+                        subtitleEl.innerText = isGpsView ? "Kunci Lokasi GPS & Catat Waktu Kembali Bekerja" : "Scan Kartu / NIK untuk Menyelesaikan Izin Keluar Kantor";
+                    } else {
+                        titleEl.innerText = isGpsView ? "IMK (GPS): Izin Keluar Kantor" : "Terminal IMK: Izin Keluar";
+                        subtitleEl.innerText = isGpsView ? "Kunci Lokasi GPS & Catat Izin Keluar Kantor Sementara" : "Scan Kartu / NIK untuk Izin Keluar Kantor Sementara";
+                    }
+                } else {
+                    if (kioskAbsenAction === 'pulang') {
+                        titleEl.innerText = isGpsView ? "Presensi GPS: Absen Pulang" : "Terminal Absen Kerja: Pulang";
+                        subtitleEl.innerText = isGpsView ? "Kunci Lokasi GPS untuk Selesai Shift Kerja" : "Scan Kartu / NIK untuk Pulang Shift Kerja";
+                    } else {
+                        titleEl.innerText = isGpsView ? "Presensi GPS: Absen Masuk" : "Terminal Absen Kerja: Masuk";
+                        subtitleEl.innerText = isGpsView ? "Kunci Lokasi GPS untuk Masuk Shift Kerja" : "Scan Kartu / NIK untuk Masuk Shift Kerja";
+                    }
+                }
+            }
+
+            // 6. Update Tombol Manual Kiosk Form NIK
             if (btnSubmitManual) {
-                if (mode === 'imk') {
-                    btnSubmitManual.innerHTML = '<i class="fas fa-person-walking mr-1.5 text-amber-400"></i> Catat IMK';
-                } else if (mode === 'masuk') {
-                    btnSubmitManual.innerHTML = '<i class="fas fa-sign-in-alt mr-1.5 text-blue-400"></i> Absen Masuk';
-                } else if (mode === 'pulang') {
-                    btnSubmitManual.innerHTML = '<i class="fas fa-sign-out-alt mr-1.5 text-rose-400"></i> Absen Pulang';
+                if (kioskCategory === 'imk') {
+                    if (kioskImkAction === 'kembali') {
+                        btnSubmitManual.innerHTML = '<i class="fas fa-rotate-left mr-1.5 text-teal-400"></i> IMK: Kembali';
+                    } else {
+                        btnSubmitManual.innerHTML = '<i class="fas fa-person-walking-arrow-right mr-1.5 text-amber-400"></i> IMK: Keluar';
+                    }
                 } else {
-                    btnSubmitManual.innerHTML = '<i class="fas fa-magic mr-1.5 text-emerald-400"></i> Absen Otomatis';
+                    if (kioskAbsenAction === 'pulang') {
+                        btnSubmitManual.innerHTML = '<i class="fas fa-sign-out-alt mr-1.5 text-rose-400"></i> Absen Pulang';
+                    } else {
+                        btnSubmitManual.innerHTML = '<i class="fas fa-sign-in-alt mr-1.5 text-emerald-400"></i> Absen Masuk';
+                    }
                 }
             }
 
-            // Update GPS Submit Button
+            // 7. Update Tombol Submit GPS (HP)
             if (btnSubmitGPS) {
-                if (mode === 'imk') {
-                    btnSubmitGPS.innerHTML = '<i class="fas fa-person-walking-arrow-right mr-1.5 text-amber-200"></i> KLIK IZIN KELUAR/MASUK (GPS)';
-                    btnSubmitGPS.className = "bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm transition text-xs flex items-center justify-center shrink-0";
-                } else if (mode === 'masuk') {
-                    btnSubmitGPS.innerHTML = '<i class="fas fa-sign-in-alt mr-1.5 text-emerald-200"></i> KLIK ABSEN MASUK (GPS)';
-                    btnSubmitGPS.className = "bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm transition text-xs flex items-center justify-center shrink-0";
-                } else if (mode === 'pulang') {
-                    btnSubmitGPS.innerHTML = '<i class="fas fa-sign-out-alt mr-1.5 text-rose-200"></i> KLIK ABSEN PULANG (GPS)';
-                    btnSubmitGPS.className = "bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm transition text-xs flex items-center justify-center shrink-0";
+                if (kioskCategory === 'imk') {
+                    if (kioskImkAction === 'kembali') {
+                        btnSubmitGPS.innerHTML = '<i class="fas fa-rotate-left mr-1.5 text-teal-200"></i> KLIK KEMBALI KANTOR (GPS)';
+                        btnSubmitGPS.className = "bg-teal-600 hover:bg-teal-700 active:scale-95 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm transition text-xs flex items-center justify-center shrink-0";
+                    } else {
+                        btnSubmitGPS.innerHTML = '<i class="fas fa-person-walking-arrow-right mr-1.5 text-amber-200"></i> KLIK IZIN KELUAR (GPS)';
+                        btnSubmitGPS.className = "bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm transition text-xs flex items-center justify-center shrink-0";
+                    }
                 } else {
-                    btnSubmitGPS.innerHTML = '<i class="fas fa-magic mr-1.5 text-emerald-200"></i> KLIK ABSEN OTOMATIS (GPS)';
-                    btnSubmitGPS.className = "bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm transition text-xs flex items-center justify-center shrink-0";
+                    if (kioskAbsenAction === 'pulang') {
+                        btnSubmitGPS.innerHTML = '<i class="fas fa-sign-out-alt mr-1.5 text-rose-200"></i> KLIK ABSEN PULANG (GPS)';
+                        btnSubmitGPS.className = "bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm transition text-xs flex items-center justify-center shrink-0";
+                    } else {
+                        btnSubmitGPS.innerHTML = '<i class="fas fa-sign-in-alt mr-1.5 text-emerald-200"></i> KLIK ABSEN MASUK (GPS)';
+                        btnSubmitGPS.className = "bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm transition text-xs flex items-center justify-center shrink-0";
+                    }
                 }
-            }
-
-            // Feedback Toast saat pergantian mode
-            if (mode === 'auto' || mode === 'absen') {
-                showToast('Mode Otomatis Aktif', 'Terminal Kiosk siap: Otomatis mendeteksi Masuk atau Pulang sesuai riwayat shift hari ini.', 'info');
-            } else if (mode === 'masuk') {
-                showToast('Mode Masuk Aktif', 'Terminal Kiosk disetel khusus untuk Absen Masuk.', 'info');
-            } else if (mode === 'pulang') {
-                showToast('Mode Pulang Aktif', 'Terminal Kiosk disetel khusus untuk Absen Pulang.', 'info');
-            } else if (mode === 'imk') {
-                showToast('Mode IMK Aktif', 'Terminal Kiosk disetel untuk Izin Keluar Masuk (IMK).', 'warning');
             }
 
             if (typeof window.renderRecentKioskScans === 'function') {
                 window.renderRecentKioskScans();
             }
+        };
+
+        window.toggleKioskMode = function(mode) {
+            if (mode === 'imk' || mode === 'imk_keluar') {
+                kioskCategory = 'imk';
+                kioskImkAction = 'keluar';
+                kioskModeType = 'imk_keluar';
+            } else if (mode === 'imk_kembali') {
+                kioskCategory = 'imk';
+                kioskImkAction = 'kembali';
+                kioskModeType = 'imk_kembali';
+            } else if (mode === 'pulang') {
+                kioskCategory = 'absen';
+                kioskAbsenAction = 'pulang';
+                kioskModeType = 'pulang';
+            } else {
+                // 'masuk' atau 'auto' atau 'absen'
+                kioskCategory = 'absen';
+                kioskAbsenAction = 'masuk';
+                kioskModeType = 'masuk';
+            }
+            window.updateKioskUIElements();
         };
 
         window.toggleCamera = async function() { 
@@ -3709,7 +4023,7 @@
             const today = new Date();
             const dateString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
             
-            if (kioskModeType === 'imk') {
+            if (kioskCategory === 'imk' || (kioskModeType && kioskModeType.startsWith('imk'))) {
                 const recentImk = (state.imk || [])
                     .filter(i => i && i.tanggal === dateString)
                     .slice(-5)
@@ -3862,8 +4176,8 @@
                                         <i class="fas ${isKiosk ? 'fa-qrcode' : 'fa-map-marker-alt'}"></i>
                                     </div>
                                     <div>
-                                        <h1 class="text-lg sm:text-xl font-bold text-white leading-tight" id="kioskTitle">${isKiosk ? (kioskModeType === 'auto' || kioskModeType === 'absen' ? 'Terminal Kiosk: Mode Otomatis' : (kioskModeType === 'masuk' ? 'Terminal Scan: Absen Masuk' : (kioskModeType === 'pulang' ? 'Terminal Scan: Absen Pulang' : 'Terminal IMK (Keluar/Masuk)'))) : 'Absen Personal GPS'}</h1>
-                                        <p class="text-xs text-emerald-400 font-medium" id="kioskSubtitle">${isKiosk ? (kioskModeType === 'auto' || kioskModeType === 'absen' ? 'Sistem Otomatis Mendeteksi Absen Masuk atau Pulang Sesuai Shift Kerja' : (kioskModeType === 'masuk' ? 'Scan Kartu / NIK untuk Masuk Shift' : (kioskModeType === 'pulang' ? 'Scan Kartu / NIK untuk Pulang Shift' : 'Scan 1x = Izin Keluar Kantor | Scan ke-2 = Kembali'))) : 'Scan ID Card atau Pilih Nama untuk Kunci Titik Lokasi'}</p>
+                                        <h1 class="text-lg sm:text-xl font-bold text-white leading-tight" id="kioskTitle">${isKiosk ? (kioskCategory === 'imk' ? (kioskImkAction === 'kembali' ? 'Terminal IMK: Kembali ke Kantor' : 'Terminal IMK: Izin Keluar') : (kioskAbsenAction === 'pulang' ? 'Terminal Scan: Absen Pulang' : 'Terminal Scan: Absen Masuk')) : (kioskCategory === 'imk' ? (kioskImkAction === 'kembali' ? 'IMK (GPS): Kembali ke Kantor' : 'IMK (GPS): Izin Keluar') : (kioskAbsenAction === 'pulang' ? 'Presensi GPS: Absen Pulang' : 'Presensi GPS: Absen Masuk'))}</h1>
+                                        <p class="text-xs text-emerald-400 font-medium" id="kioskSubtitle">${isKiosk ? (kioskCategory === 'imk' ? (kioskImkAction === 'kembali' ? 'Scan Kartu / NIK untuk Menyelesaikan Izin & Kembali Bekerja' : 'Scan Kartu / NIK untuk Izin Keluar Kantor Sementara') : (kioskAbsenAction === 'pulang' ? 'Scan Kartu / NIK untuk Pulang Shift Kerja' : 'Scan Kartu / NIK untuk Masuk Shift Kerja')) : (kioskCategory === 'imk' ? (kioskImkAction === 'kembali' ? 'Kunci Lokasi GPS & Catat Waktu Kembali Bekerja' : 'Kunci Lokasi GPS & Catat Izin Keluar Kantor Sementara') : (kioskAbsenAction === 'pulang' ? 'Kunci Lokasi GPS untuk Selesai Shift Kerja' : 'Kunci Lokasi GPS untuk Masuk Shift Kerja'))}</p>
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-2">
@@ -3880,33 +4194,78 @@
                                 </div>
 
                                 ${isKiosk ? `
-                                <div class="grid grid-cols-3 gap-1.5 bg-slate-100 p-1.5 rounded-2xl mb-2 border border-slate-200">
-                                    <button id="btnModeAuto" onclick="window.toggleKioskMode('auto')" class="flex-1 ${(kioskModeType === 'auto' || kioskModeType === 'absen') ? 'bg-emerald-600 text-white shadow border border-emerald-700' : 'text-slate-600 bg-white hover:bg-slate-50'} font-bold py-2 rounded-xl transition text-xs flex items-center justify-center">
-                                        <i class="fas fa-magic mr-1.5"></i> Otomatis
+                                <!-- DUA MODE UTAMA KIOSK -->
+                                <div class="mb-2">
+                                    <div class="grid grid-cols-2 gap-2 bg-slate-100 p-1.5 rounded-2xl border border-slate-200 shadow-2xs">
+                                        <button type="button" id="btnMainModeAbsen" onclick="window.setKioskMainMode('absen')" class="py-2.5 px-3 rounded-xl font-bold text-xs transition flex items-center justify-center gap-1.5 ${kioskCategory === 'absen' ? 'bg-indigo-600 text-white shadow border border-indigo-700' : 'text-slate-600 bg-white hover:bg-slate-50 border border-slate-200'}">
+                                            <i class="fas fa-briefcase text-sm"></i>
+                                            <span>Mode Absen Kerja</span>
+                                        </button>
+                                        <button type="button" id="btnMainModeImk" onclick="window.setKioskMainMode('imk')" class="py-2.5 px-3 rounded-xl font-bold text-xs transition flex items-center justify-center gap-1.5 ${kioskCategory === 'imk' ? 'bg-amber-500 text-white shadow border border-amber-600' : 'text-slate-600 bg-white hover:bg-slate-50 border border-slate-200'}">
+                                            <i class="fas fa-person-walking-arrow-right text-sm"></i>
+                                            <span>Mode Izin Keluar Masuk IMK</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- DUA FUNGSI PADA MODE ABSEN KERJA (MASUK & PULANG) -->
+                                <div id="subModeAbsenContainer" class="${kioskCategory === 'absen' ? 'grid' : 'hidden'} grid-cols-2 gap-2 mb-3 bg-emerald-50/70 p-2 rounded-2xl border border-emerald-200 shadow-2xs">
+                                    <button type="button" id="btnSubMasuk" onclick="window.setKioskSubMode('masuk')" class="py-2.5 px-3 rounded-xl font-bold text-xs transition flex items-center justify-center gap-2 ${kioskAbsenAction === 'masuk' ? 'bg-emerald-600 text-white shadow border border-emerald-700' : 'text-slate-700 bg-white hover:bg-slate-50 border border-slate-200'}">
+                                        <i class="fas fa-sign-in-alt text-sm"></i>
+                                        <span>Masuk</span>
                                     </button>
-                                    <button id="btnModeMasuk" onclick="window.toggleKioskMode('masuk')" class="flex-1 ${kioskModeType === 'masuk' ? 'bg-blue-600 text-white shadow border border-blue-700' : 'text-slate-600 bg-white hover:bg-slate-50'} font-bold py-2 rounded-xl transition text-xs flex items-center justify-center">
-                                        <i class="fas fa-sign-in-alt mr-1.5"></i> Masuk
-                                    </button>
-                                    <button id="btnModePulang" onclick="window.toggleKioskMode('pulang')" class="flex-1 ${kioskModeType === 'pulang' ? 'bg-rose-600 text-white shadow border border-rose-700' : 'text-slate-600 bg-white hover:bg-slate-50'} font-bold py-2 rounded-xl transition text-xs flex items-center justify-center">
-                                        <i class="fas fa-sign-out-alt mr-1.5"></i> Pulang
+                                    <button type="button" id="btnSubPulang" onclick="window.setKioskSubMode('pulang')" class="py-2.5 px-3 rounded-xl font-bold text-xs transition flex items-center justify-center gap-2 ${kioskAbsenAction === 'pulang' ? 'bg-rose-600 text-white shadow border border-rose-700' : 'text-slate-700 bg-white hover:bg-slate-50 border border-slate-200'}">
+                                        <i class="fas fa-sign-out-alt text-sm"></i>
+                                        <span>Pulang</span>
                                     </button>
                                 </div>
-                                <div class="mb-4">
-                                    <button id="btnModeImk" onclick="window.toggleKioskMode('imk')" class="w-full ${kioskModeType === 'imk' ? 'bg-amber-500 text-white shadow border border-amber-600' : 'text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200'} font-bold py-2 rounded-xl transition text-xs flex items-center justify-center">
-                                        <i class="fas fa-person-walking-arrow-right mr-1.5"></i> Mode Izin Keluar Masuk (IMK)
+
+                                <!-- DUA FUNGSI PADA MODE IZIN KELUAR MASUK IMK (KELUAR & KEMBALI) -->
+                                <div id="subModeImkContainer" class="${kioskCategory === 'imk' ? 'grid' : 'hidden'} grid-cols-2 gap-2 mb-3 bg-amber-50/70 p-2 rounded-2xl border border-amber-200 shadow-2xs">
+                                    <button type="button" id="btnSubKeluar" onclick="window.setKioskSubMode('keluar')" class="py-2.5 px-3 rounded-xl font-bold text-xs transition flex items-center justify-center gap-2 ${kioskImkAction === 'keluar' ? 'bg-amber-600 text-white shadow border border-amber-700' : 'text-slate-700 bg-white hover:bg-slate-50 border border-slate-200'}">
+                                        <i class="fas fa-person-walking-arrow-right text-sm"></i>
+                                        <span>Keluar</span>
+                                    </button>
+                                    <button type="button" id="btnSubKembali" onclick="window.setKioskSubMode('kembali')" class="py-2.5 px-3 rounded-xl font-bold text-xs transition flex items-center justify-center gap-2 ${kioskImkAction === 'kembali' ? 'bg-teal-600 text-white shadow border border-teal-700' : 'text-slate-700 bg-white hover:bg-slate-50 border border-slate-200'}">
+                                        <i class="fas fa-rotate-left text-sm"></i>
+                                        <span>Kembali</span>
                                     </button>
                                 </div>
                                 ` : `
-                                <div class="grid grid-cols-3 gap-1.5 bg-slate-100 p-1.5 rounded-2xl mb-3 border border-slate-200 shadow-2xs">
-                                    <button id="btnModeGpsMasuk" onclick="window.toggleKioskMode('masuk')" class="flex-1 ${(kioskModeType === 'masuk' || kioskModeType === 'auto' || kioskModeType === 'absen') ? 'bg-emerald-600 text-white shadow border border-emerald-700' : 'text-slate-600 bg-white hover:bg-slate-50'} font-bold py-2.5 rounded-xl transition text-xs flex items-center justify-center">
-                                        <i class="fas fa-right-to-bracket mr-1.5"></i> Masuk (GPS)
-                                    </button>
-                                    <button id="btnModeGpsPulang" onclick="window.toggleKioskMode('pulang')" class="flex-1 ${kioskModeType === 'pulang' ? 'bg-rose-600 text-white shadow border border-rose-700' : 'text-slate-600 bg-white hover:bg-slate-50'} font-bold py-2.5 rounded-xl transition text-xs flex items-center justify-center">
-                                        <i class="fas fa-right-from-bracket mr-1.5"></i> Pulang (GPS)
-                                    </button>
-                                    <button id="btnModeGpsImk" onclick="window.toggleKioskMode('imk')" class="flex-1 ${kioskModeType === 'imk' ? 'bg-amber-500 text-white shadow border border-amber-600' : 'text-slate-600 bg-white hover:bg-slate-50'} font-bold py-2.5 rounded-xl transition text-xs flex items-center justify-center">
-                                        <i class="fas fa-person-walking mr-1.5"></i> IMK (GPS)
-                                    </button>
+                                <!-- DUA MODE UTAMA GPS (HP) -->
+                                <div class="mb-2">
+                                    <div class="grid grid-cols-2 gap-2 bg-slate-100 p-1.5 rounded-2xl mb-2 border border-slate-200 shadow-2xs">
+                                        <button type="button" id="btnGpsMainModeAbsen" onclick="window.setKioskMainMode('absen')" class="py-2.5 px-3 rounded-xl font-bold text-xs transition flex items-center justify-center gap-1.5 ${kioskCategory === 'absen' ? 'bg-indigo-600 text-white shadow border border-indigo-700' : 'text-slate-600 bg-white hover:bg-slate-50 border border-slate-200'}">
+                                            <i class="fas fa-briefcase text-sm"></i>
+                                            <span>Mode Absen Kerja</span>
+                                        </button>
+                                        <button type="button" id="btnGpsMainModeImk" onclick="window.setKioskMainMode('imk')" class="py-2.5 px-3 rounded-xl font-bold text-xs transition flex items-center justify-center gap-1.5 ${kioskCategory === 'imk' ? 'bg-amber-500 text-white shadow border border-amber-600' : 'text-slate-600 bg-white hover:bg-slate-50 border border-slate-200'}">
+                                            <i class="fas fa-person-walking-arrow-right text-sm"></i>
+                                            <span>Mode Izin Keluar Masuk IMK</span>
+                                        </button>
+                                    </div>
+                                    <!-- DUA FUNGSI PADA MODE ABSEN KERJA (GPS) -->
+                                    <div id="gpsSubModeAbsenContainer" class="${kioskCategory === 'absen' ? 'grid' : 'hidden'} grid-cols-2 gap-2 mb-3 bg-emerald-50/70 p-2 rounded-2xl border border-emerald-200 shadow-2xs">
+                                        <button type="button" id="btnGpsSubMasuk" onclick="window.setKioskSubMode('masuk')" class="py-2.5 px-3 rounded-xl font-bold text-xs transition flex items-center justify-center gap-2 ${kioskAbsenAction === 'masuk' ? 'bg-emerald-600 text-white shadow border border-emerald-700' : 'text-slate-700 bg-white hover:bg-slate-50 border border-slate-200'}">
+                                            <i class="fas fa-right-to-bracket text-sm"></i>
+                                            <span>Masuk (GPS)</span>
+                                        </button>
+                                        <button type="button" id="btnGpsSubPulang" onclick="window.setKioskSubMode('pulang')" class="py-2.5 px-3 rounded-xl font-bold text-xs transition flex items-center justify-center gap-2 ${kioskAbsenAction === 'pulang' ? 'bg-rose-600 text-white shadow border border-rose-700' : 'text-slate-700 bg-white hover:bg-slate-50 border border-slate-200'}">
+                                            <i class="fas fa-right-from-bracket text-sm"></i>
+                                            <span>Pulang (GPS)</span>
+                                        </button>
+                                    </div>
+                                    <!-- DUA FUNGSI PADA MODE IZIN KELUAR MASUK IMK (GPS) -->
+                                    <div id="gpsSubModeImkContainer" class="${kioskCategory === 'imk' ? 'grid' : 'hidden'} grid-cols-2 gap-2 mb-3 bg-amber-50/70 p-2 rounded-2xl border border-amber-200 shadow-2xs">
+                                        <button type="button" id="btnGpsSubKeluar" onclick="window.setKioskSubMode('keluar')" class="py-2.5 px-3 rounded-xl font-bold text-xs transition flex items-center justify-center gap-2 ${kioskImkAction === 'keluar' ? 'bg-amber-600 text-white shadow border border-amber-700' : 'text-slate-700 bg-white hover:bg-slate-50 border border-slate-200'}">
+                                            <i class="fas fa-person-walking-arrow-right text-sm"></i>
+                                            <span>Keluar (GPS)</span>
+                                        </button>
+                                        <button type="button" id="btnGpsSubKembali" onclick="window.setKioskSubMode('kembali')" class="py-2.5 px-3 rounded-xl font-bold text-xs transition flex items-center justify-center gap-2 ${kioskImkAction === 'kembali' ? 'bg-teal-600 text-white shadow border border-teal-700' : 'text-slate-700 bg-white hover:bg-slate-50 border border-slate-200'}">
+                                            <i class="fas fa-rotate-left text-sm"></i>
+                                            <span>Kembali (GPS)</span>
+                                        </button>
+                                    </div>
                                 </div>
                                 <div class="bg-blue-50 border border-blue-200 p-3 rounded-2xl mb-4 text-blue-700 text-xs font-bold">
                                     <div class="flex items-center justify-center gap-2 mb-1">
@@ -3931,10 +4290,10 @@
                                                 return `<option value="${k.nik || k.id}">${k.nama} [Shift: ${s.nama} (${s.jamMasuk}-${s.jamPulang})] [${k.nik || '-'}]</option>`;
                                             }).join('')}
                                         </select>
-                                        <button type="button" id="btnSubmitGPS" onclick="window.absenGPSKaryawanTerpilih()" class="${kioskModeType === 'imk' ? 'bg-amber-600 hover:bg-amber-700' : (kioskModeType === 'pulang' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-600 hover:bg-emerald-700')} active:scale-95 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm transition text-xs flex items-center justify-center shrink-0">
-                                            ${kioskModeType === 'imk' 
-                                                ? '<i class="fas fa-person-walking-arrow-right mr-1.5 text-amber-200"></i> KLIK IZIN KELUAR/MASUK (GPS)' 
-                                                : (kioskModeType === 'pulang' 
+                                        <button type="button" id="btnSubmitGPS" onclick="window.absenGPSKaryawanTerpilih()" class="${kioskCategory === 'imk' ? (kioskImkAction === 'kembali' ? 'bg-teal-600 hover:bg-teal-700' : 'bg-amber-600 hover:bg-amber-700') : (kioskAbsenAction === 'pulang' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-600 hover:bg-emerald-700')} active:scale-95 text-white font-bold py-2.5 px-4 rounded-xl shadow-sm transition text-xs flex items-center justify-center shrink-0">
+                                            ${kioskCategory === 'imk' 
+                                                ? (kioskImkAction === 'kembali' ? '<i class="fas fa-rotate-left mr-1.5 text-teal-200"></i> KLIK KEMBALI KANTOR (GPS)' : '<i class="fas fa-person-walking-arrow-right mr-1.5 text-amber-200"></i> KLIK IZIN KELUAR (GPS)')
+                                                : (kioskAbsenAction === 'pulang' 
                                                     ? '<i class="fas fa-sign-out-alt mr-1.5 text-rose-200"></i> KLIK ABSEN PULANG (GPS)' 
                                                     : '<i class="fas fa-sign-in-alt mr-1.5 text-emerald-200"></i> KLIK ABSEN MASUK (GPS)')}
                                         </button>
@@ -4030,13 +4389,9 @@
                                         <input type="text" id="inputManualNIK" placeholder="Scan Barcode Gun atau Ketik NIK..." autocomplete="off" class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none transition">
                                     </div>
                                     <button type="submit" id="btnSubmitManualKiosk" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2.5 rounded-xl font-bold text-xs shadow transition whitespace-nowrap flex items-center">
-                                        ${kioskModeType === 'imk' 
-                                            ? '<i class="fas fa-person-walking mr-1.5 text-amber-400"></i> Catat IMK' 
-                                            : (kioskModeType === 'masuk' 
-                                                ? '<i class="fas fa-sign-in-alt mr-1.5 text-blue-400"></i> Absen Masuk' 
-                                                : (kioskModeType === 'pulang' 
-                                                    ? '<i class="fas fa-sign-out-alt mr-1.5 text-rose-400"></i> Absen Pulang' 
-                                                    : '<i class="fas fa-magic mr-1.5 text-emerald-400"></i> Absen Otomatis'))}
+                                        ${kioskCategory === 'imk' 
+                                            ? (kioskImkAction === 'kembali' ? '<i class="fas fa-rotate-left mr-1.5 text-teal-400"></i> IMK: Kembali' : '<i class="fas fa-person-walking-arrow-right mr-1.5 text-amber-400"></i> IMK: Keluar') 
+                                            : (kioskAbsenAction === 'pulang' ? '<i class="fas fa-sign-out-alt mr-1.5 text-rose-400"></i> Absen Pulang' : '<i class="fas fa-sign-in-alt mr-1.5 text-emerald-400"></i> Absen Masuk')}
                                     </button>
                                 </form>
                                 <p class="text-[11px] text-slate-400 mt-2 text-center"><i class="fas fa-info-circle mr-1 text-slate-400"></i> Mendukung Barcode Scanner Gun USB/Bluetooth, Webcam & Kamera HP</p>
@@ -6273,6 +6628,45 @@
                 const isOrphan = !k;
                 const shiftNama = a.shiftNama || (k ? getKaryawanShift(k).nama : 'Shift Reguler');
 
+                // Evaluasi status pulang yang akurat (cegah false Pulang Awal jika jam pulang wajar atau input manual)
+                let statusPulangTampil = a.statusPulang;
+                if (a.jamPulang && a.jamPulang !== '-') {
+                    const shfObj = typeof getShiftForAbsensi === 'function' ? getShiftForAbsensi(a, k) : (k ? getKaryawanShift(k) : null);
+                    let isJumat = false;
+                    try {
+                        if (a.tanggal && new Date(a.tanggal + 'T12:00:00').getDay() === 5) isJumat = true;
+                    } catch(e) {}
+
+                    let tgtPulang = shfObj?.jamPulang || (isJumat ? '14:00' : '15:30');
+                    if (isJumat && timeToMinutes(tgtPulang) >= 15 * 60) tgtPulang = '14:00';
+                    const sNamaLower = (shiftNama || '').toLowerCase();
+                    if ((tgtPulang === '17:00' || tgtPulang === '16:00') && (sNamaLower.includes('staff') || sNamaLower.includes('pagi') || sNamaLower.includes('guru') || sNamaLower.includes('standar') || !shfObj?.id || shfObj?.id === 'shift_1' || shfObj?.id === 'default')) {
+                        tgtPulang = isJumat ? '14:00' : '15:30';
+                    }
+
+                    const actMins = timeToMinutes(a.jamPulang);
+                    const tgtMins = timeToMinutes(tgtPulang);
+                    const diff = actMins - tgtMins;
+
+                    let kerjaCukup = false;
+                    if (a.jamMasuk && a.jamMasuk !== '-') {
+                        const durasi = actMins - timeToMinutes(a.jamMasuk);
+                        if (durasi >= (isJumat ? 6 * 60 : 7 * 60)) kerjaCukup = true;
+                    }
+
+                    if (statusPulangTampil === 'Pulang Awal') {
+                        if (diff >= -15 || kerjaCukup || (isJumat && actMins >= 14 * 60) || (!isJumat && actMins >= (15 * 60 + 15)) || a.metode === 'Manual' || a.metode === 'Barcode Gun/Manual') {
+                            statusPulangTampil = 'Tepat Waktu';
+                            a.statusPulang = 'Tepat Waktu';
+                        }
+                    } else if (!statusPulangTampil) {
+                        if (diff >= -15 || kerjaCukup || (isJumat && actMins >= 14 * 60) || (!isJumat && actMins >= (15 * 60 + 15))) {
+                            statusPulangTampil = 'Tepat Waktu';
+                            a.statusPulang = 'Tepat Waktu';
+                        }
+                    }
+                }
+
                 let met = '';
                 if (a.metode === 'GPS' || a.lat || a.lng) {
                     const latNum = a.lat !== null && a.lat !== undefined ? Number(a.lat).toFixed(4) : '-';
@@ -6314,7 +6708,7 @@
                         </td>
                         <td class="py-3.5 px-6 font-mono font-semibold ${a.jamPulang ? 'text-slate-700' : 'text-slate-400'}">
                             ${a.jamPulang || '-'}
-                            ${a.statusPulang ? `<span class="text-[10px] block font-sans font-medium ${a.statusPulang === 'Pulang Awal' ? 'text-amber-600' : (a.statusPulang === 'Lembur' ? 'text-indigo-600' : 'text-slate-400')}">(${a.statusPulang})</span>` : ''}
+                            ${statusPulangTampil ? `<span class="text-[10px] block font-sans font-medium ${statusPulangTampil === 'Pulang Awal' ? 'text-amber-600' : (statusPulangTampil === 'Lembur' ? 'text-indigo-600' : 'text-slate-400')}">(${statusPulangTampil})</span>` : ''}
                         </td>
                         <td class="py-3.5 px-6 whitespace-nowrap">
                             ${met}
@@ -6402,6 +6796,7 @@
         window.handleStatusAbsensiChange = function(val) {
             const masukInput = document.getElementById('fa_masuk');
             const pulangInput = document.getElementById('fa_pulang');
+            const stPulangEl = document.getElementById('fa_status_pulang');
             if (!masukInput || !pulangInput) return;
             if (val === 'Alpha') {
                 masukInput.value = '';
@@ -6410,11 +6805,31 @@
                 masukInput.placeholder = '-';
                 pulangInput.value = '';
                 pulangInput.disabled = true;
+                if (stPulangEl) { stPulangEl.value = ''; stPulangEl.disabled = true; }
             } else {
                 masukInput.disabled = false;
                 masukInput.required = true;
                 if (!masukInput.value) masukInput.value = '08:00';
                 pulangInput.disabled = false;
+                if (stPulangEl) { stPulangEl.disabled = false; }
+            }
+        };
+
+        window.handleJamPulangInputManual = function(val) {
+            const kId = document.getElementById('fa_karyawan')?.value;
+            const tglVal = document.getElementById('fa_tanggal')?.value;
+            const masukVal = document.getElementById('fa_masuk')?.value;
+            const stPulangEl = document.getElementById('fa_status_pulang');
+            if (!stPulangEl) return;
+            if (!val || val === '-') {
+                stPulangEl.value = '';
+                return;
+            }
+            if (stPulangEl.value === 'auto') {
+                const kObj = (state.karyawan || []).find(k => String(k.id) === String(kId));
+                const shiftK = kObj ? getKaryawanShift(kObj) : null;
+                const ev = evaluasiStatusPulang(shiftK, val, tglVal, masukVal);
+                stPulangEl.value = ev.status || 'Tepat Waktu';
             }
         };
 
@@ -6435,6 +6850,30 @@
                 document.getElementById('fa_pulang').value = (a.jamPulang && a.jamPulang !== '-') ? a.jamPulang : '';
                 document.getElementById('fa_status').value = a.statusMasuk || 'Tepat Waktu';
                 window.handleStatusAbsensiChange(a.statusMasuk || 'Tepat Waktu');
+
+                const stPulangEl = document.getElementById('fa_status_pulang');
+                if (stPulangEl) {
+                    if (a.statusPulang === 'Pulang Awal') {
+                        // Periksa apakah ini anomali Pulang Awal pada jam wajar
+                        const kObj = (state.karyawan || []).find(k => k.id == a.karyawanId);
+                        const sh = typeof getShiftForAbsensi === 'function' ? getShiftForAbsensi(a, kObj) : (kObj ? getKaryawanShift(kObj) : null);
+                        const ev = evaluasiStatusPulang(sh, a.jamPulang, a.tanggal, a.jamMasuk);
+                        if (ev.status === 'Tepat Waktu' || a.metode === 'Manual' || a.metode === 'Barcode Gun/Manual') {
+                            stPulangEl.value = 'Tepat Waktu';
+                        } else {
+                            stPulangEl.value = 'Pulang Awal';
+                        }
+                    } else if (a.statusPulang !== undefined && a.statusPulang !== null && a.statusPulang !== '') {
+                        stPulangEl.value = a.statusPulang;
+                    } else if (a.jamPulang && a.jamPulang !== '-') {
+                        const kObj = (state.karyawan || []).find(k => k.id == a.karyawanId);
+                        const sh = typeof getShiftForAbsensi === 'function' ? getShiftForAbsensi(a, kObj) : (kObj ? getKaryawanShift(kObj) : null);
+                        const ev = evaluasiStatusPulang(sh, a.jamPulang, a.tanggal, a.jamMasuk);
+                        stPulangEl.value = ev.status || 'Tepat Waktu';
+                    } else {
+                        stPulangEl.value = 'Tepat Waktu';
+                    }
+                }
             } else {
                 document.getElementById('fa_id').value = '';
                 document.getElementById('fa_karyawan').value = '';
@@ -6444,6 +6883,11 @@
                 document.getElementById('fa_pulang').value = '';
                 document.getElementById('fa_status').value = 'Tepat Waktu';
                 window.handleStatusAbsensiChange('Tepat Waktu');
+
+                const stPulangEl = document.getElementById('fa_status_pulang');
+                if (stPulangEl) {
+                    stPulangEl.value = 'Tepat Waktu';
+                }
             }
             modal.classList.remove('hidden');
         };
@@ -6469,6 +6913,19 @@
             const jamMasukVal = status === 'Alpha' ? '-' : (masuk || '-');
             const jamPulangVal = status === 'Alpha' ? '-' : (pulang || null);
 
+            // Tentukan status pulang secara presisi
+            const stPulangEl = document.getElementById('fa_status_pulang');
+            let statusPulangVal = stPulangEl ? stPulangEl.value : 'Tepat Waktu';
+
+            if (!jamPulangVal || jamPulangVal === '-') {
+                statusPulangVal = null;
+            } else if (statusPulangVal === 'auto') {
+                const ev = evaluasiStatusPulang(shiftK, jamPulangVal, tgl, jamMasukVal);
+                statusPulangVal = ev.status || 'Tepat Waktu';
+            } else if (statusPulangVal === '') {
+                statusPulangVal = null;
+            }
+
             if (id) {
                 const idx = state.absensi.findIndex(a => a.id == parseInt(id, 10));
                 if (idx !== -1) {
@@ -6482,6 +6939,7 @@
                     state.absensi[idx].jamPulang = jamPulangVal;
                     state.absensi[idx].statusMasuk = status;
                     state.absensi[idx].status = status;
+                    state.absensi[idx].statusPulang = statusPulangVal;
                     if (shiftK) {
                         state.absensi[idx].shiftNama = shiftK.nama;
                         state.absensi[idx].shiftId = shiftK.id;
@@ -6490,6 +6948,7 @@
                     if (status === 'Alpha') {
                         state.absensi[idx].keterangan = 'Alpha (Input Manual Admin)';
                     }
+                    if (typeof syncAbsensiAtomic === 'function') syncAbsensiAtomic(state.absensi[idx], true, state.absensi[idx].id);
                 }
             } else {
                 const newRec = {
@@ -6502,6 +6961,7 @@
                     jamPulang: jamPulangVal,
                     statusMasuk: status,
                     status: status,
+                    statusPulang: statusPulangVal,
                     shiftNama: shiftK?.nama || 'Shift Reguler',
                     shiftId: shiftK?.id || 'default',
                     metode: 'Manual',
@@ -7677,15 +8137,15 @@
                     if (diffHours >= 24) isPulangAwal = true;
                 } else {
                     sudahPulang = true;
-                    if (!isPulangAwal) {
-                        if (isNightShift) {
-                            if (!(a.jamPulang >= shift.jamPulang && a.jamPulang < shift.jamMasuk)) {
-                                isPulangAwal = true;
-                            }
-                        } else {
-                            if (!(a.jamPulang >= shift.jamPulang || a.jamPulang < shift.jamMasuk)) {
-                                isPulangAwal = true;
-                            }
+                    if (isPulangAwal) {
+                        const ev = evaluasiStatusPulang(shift, a.jamPulang, a.tanggal, a.jamMasuk);
+                        if (ev.status === 'Tepat Waktu' || a.metode === 'Manual' || a.metode === 'Barcode Gun/Manual') {
+                            isPulangAwal = false;
+                        }
+                    } else {
+                        const ev = evaluasiStatusPulang(shift, a.jamPulang, a.tanggal, a.jamMasuk);
+                        if (ev.status === 'Pulang Awal' && a.metode !== 'Manual') {
+                            isPulangAwal = true;
                         }
                     }
                 }
