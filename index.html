@@ -4490,15 +4490,15 @@
             // LAYAR ADMIN DASHBOARD
             container.innerHTML = `
                 <div class="flex h-screen overflow-hidden bg-slate-50">
-                    <aside class="w-72 bg-slate-900 flex flex-col hidden lg:flex shadow-2xl z-20">
-                        <div class="p-6 flex items-center space-x-4 border-b border-slate-800 bg-slate-950"><div class="bg-emerald-500 text-white w-10 h-10 rounded-xl flex items-center justify-center"><i class="fas fa-shield-alt text-lg"></i></div><div><h2 class="font-bold text-white text-lg leading-tight">HR Admin</h2><div class="flex items-center text-[10px] uppercase tracking-wider text-slate-400 mt-1 font-bold">${isFirebaseConnected ? '<span class="w-2 h-2 rounded-full bg-emerald-500 mr-2 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span> Firebase Cloud' : '<span class="w-2 h-2 rounded-full bg-amber-500 mr-2"></span> Local Mode'}</div></div></div>
-                        <nav class="flex-1 overflow-y-auto py-6 space-y-1.5 px-4 custom-scrollbar">${getNavItemsHTML()}</nav>
-                        <div class="p-5 border-t border-slate-800 bg-slate-950"><button onclick="window.handleLogout()" class="w-full text-left text-red-400 hover:text-white hover:bg-red-500/20 px-4 py-3 rounded-xl transition flex items-center font-medium"><i class="fas fa-sign-out-alt w-6 text-center mr-1"></i> Keluar Sistem</button></div>
+                    <aside class="w-64 xl:w-72 bg-slate-900 flex flex-col hidden lg:flex shadow-2xl z-20 shrink-0">
+                        <div class="p-5 xl:p-6 flex items-center space-x-3.5 border-b border-slate-800 bg-slate-950"><div class="bg-emerald-500 text-white w-10 h-10 rounded-xl flex items-center justify-center shrink-0"><i class="fas fa-shield-alt text-lg"></i></div><div><h2 class="font-bold text-white text-base xl:text-lg leading-tight">HR Admin</h2><div class="flex items-center text-[10px] uppercase tracking-wider text-slate-400 mt-1 font-bold">${isFirebaseConnected ? '<span class="w-2 h-2 rounded-full bg-emerald-500 mr-2 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span> Firebase Cloud' : '<span class="w-2 h-2 rounded-full bg-amber-500 mr-2"></span> Local Mode'}</div></div></div>
+                        <nav class="flex-1 overflow-y-auto py-5 space-y-1 px-3.5 custom-scrollbar">${getNavItemsHTML()}</nav>
+                        <div class="p-4 xl:p-5 border-t border-slate-800 bg-slate-950"><button onclick="window.handleLogout()" class="w-full text-left text-red-400 hover:text-white hover:bg-red-500/20 px-4 py-2.5 rounded-xl transition flex items-center font-medium text-sm"><i class="fas fa-sign-out-alt w-6 text-center mr-1"></i> Keluar Sistem</button></div>
                     </aside>
                     <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
                         <header class="bg-white shadow-sm border-b border-slate-200 h-16 flex items-center justify-between px-4 z-10 lg:hidden"><div class="flex items-center space-x-3"><button onclick="window.toggleMobileMenu()" class="text-slate-600 p-2 rounded-lg bg-slate-100"><i class="fas fa-bars text-lg"></i></button><span class="font-bold text-slate-800">HR Admin</span></div></header>
                         <div id="mobileMenu" class="fixed inset-0 bg-slate-900/60 z-50 hidden lg:hidden flex backdrop-blur-sm" onclick="window.toggleMobileMenu()"><div class="w-72 bg-slate-900 h-full flex flex-col shadow-2xl" onclick="event.stopPropagation()"><div class="p-6 flex items-center justify-between border-b border-slate-800 bg-slate-950"><div class="flex items-center space-x-3 text-white"><div class="bg-emerald-500 p-2 rounded-lg"><i class="fas fa-shield-alt"></i></div><h2 class="font-bold">HR Admin</h2></div><button onclick="window.toggleMobileMenu()" class="text-slate-400 bg-slate-800 p-2 rounded-lg"><i class="fas fa-times"></i></button></div><nav class="flex-1 overflow-y-auto py-6 space-y-1.5 px-4">${getNavItemsHTML(true)}</nav><div class="p-5 border-t border-slate-800 bg-slate-950"><button onclick="window.handleLogout()" class="w-full text-left text-red-400 hover:text-white hover:bg-red-500/20 px-4 py-3 rounded-xl transition flex items-center font-medium"><i class="fas fa-sign-out-alt w-6 text-center mr-1"></i> Keluar Sistem</button></div></div></div>
-                        <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-10 relative"><div class="max-w-7xl mx-auto" id="mainContentArea"></div></main>
+                        <main class="flex-1 overflow-y-auto p-4 sm:p-6 xl:p-8 relative"><div class="w-full max-w-[1600px] mx-auto" id="mainContentArea"></div></main>
                     </div>
                 </div>`;
             startRealTimeClock(); 
@@ -5951,13 +5951,46 @@
         }
 
         function getKaryawanHTML() {
-            return `<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4"><div><h1 class="text-3xl font-bold text-slate-800">Database Karyawan</h1></div><div class="flex flex-wrap gap-2"><button onclick="window.bukaModalCetakKartu()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-xl font-bold text-sm shadow transition flex items-center"><i class="fas fa-id-card mr-2"></i> Cetak ID Card</button><button onclick="window.bukaModalImport()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-xl font-bold text-sm shadow transition flex items-center"><i class="fas fa-file-import mr-2"></i> Import Excel</button><button onclick="window.eksporKaryawan()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-3 rounded-xl font-bold text-sm shadow transition flex items-center"><i class="fas fa-file-export mr-2"></i> Ekspor Excel</button><button onclick="window.bukaModalKaryawan()" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-3 rounded-xl font-bold text-sm shadow transition flex items-center"><i class="fas fa-plus mr-2"></i> Tambah Manual</button></div></div><div class="bg-white rounded-2xl border overflow-x-auto shadow-sm"><table class="min-w-full text-sm text-left"><thead class="bg-slate-50 text-slate-500 uppercase text-xs border-b"><tr><th class="py-4 px-6">Identitas</th><th class="py-4 px-6">Jabatan & Shift</th><th class="py-4 px-6 text-right">Gaji Pokok</th><th class="py-4 px-6 text-center">Tindakan</th></tr></thead><tbody id="tabelKaryawanBody" class="divide-y"></tbody></table></div>`;
+            const totalK = (state.karyawan || []).length;
+            return `
+                <div class="space-y-6 mb-8">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <div class="flex items-center gap-3">
+                                <h1 class="text-2xl sm:text-3xl font-bold text-slate-800 tracking-tight">Database Karyawan</h1>
+                                <span class="bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-bold px-2.5 py-1 rounded-full">${totalK} Pegawai</span>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-1">Kelola identitas pegawai, jabatan, jadwal shift, BPJS, dan cetak kartu ID QR.</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="window.bukaModalCetakKartu()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-2.5 rounded-xl font-bold text-xs sm:text-sm shadow-sm transition flex items-center"><i class="fas fa-id-card mr-2"></i> Cetak ID Card</button>
+                            <button onclick="window.bukaModalImport()" class="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-2.5 rounded-xl font-bold text-xs sm:text-sm shadow-sm transition flex items-center"><i class="fas fa-file-import mr-2"></i> Import Excel</button>
+                            <button onclick="window.eksporKaryawan()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2.5 rounded-xl font-bold text-xs sm:text-sm shadow-sm transition flex items-center"><i class="fas fa-file-export mr-2"></i> Ekspor Excel</button>
+                            <button onclick="window.bukaModalKaryawan()" class="bg-slate-800 hover:bg-slate-900 text-white px-3.5 py-2.5 rounded-xl font-bold text-xs sm:text-sm shadow-sm transition flex items-center"><i class="fas fa-plus mr-2"></i> Tambah Manual</button>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-3xl border border-slate-200/90 overflow-hidden shadow-sm">
+                        <div class="overflow-x-auto custom-scrollbar">
+                            <table class="w-full text-sm text-left">
+                                <thead class="bg-slate-50 text-slate-500 uppercase text-[11px] font-bold tracking-wider border-b border-slate-200">
+                                    <tr>
+                                        <th class="py-3.5 px-4 sm:px-5">Identitas Pegawai</th>
+                                        <th class="py-3.5 px-4 sm:px-5">Jabatan & Shift</th>
+                                        <th class="py-3.5 px-4 sm:px-5 text-right whitespace-nowrap">Gaji Pokok</th>
+                                        <th class="py-3.5 px-4 sm:px-5 text-center whitespace-nowrap">Tindakan</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tabelKaryawanBody" class="divide-y divide-slate-100"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>`;
         }
         function renderKaryawanTable() {
             const tbody = document.getElementById('tabelKaryawanBody'); if(!tbody) return; tbody.innerHTML = '';
             state.karyawan.forEach(k => {
                 const jab = state.jabatan.find(j => j.id == k.jabatanId)?.nama || '-'; const shf = state.pengaturan.shifts.find(s => s.id == k.shiftId)?.nama || state.pengaturan.shifts[0]?.nama;
-                const statusBadge = k.statusKaryawan ? `<span class="bg-blue-50 text-blue-700 border border-blue-200 text-[10px] px-2 py-0.5 rounded font-bold ml-1">${k.statusKaryawan}</span>` : '';
+                const statusBadge = k.statusKaryawan ? `<span class="bg-blue-50 text-blue-700 border border-blue-200 text-[10px] px-2 py-0.5 rounded font-bold ml-1.5">${k.statusKaryawan}</span>` : '';
                 const tglKeluarBadge = k.tanggalKeluar ? `<span class="bg-red-50 text-red-700 border border-red-200 text-[10px] px-2 py-0.5 rounded font-bold block w-max mt-1">Resign: ${formatDateID(k.tanggalKeluar)}</span>` : '';
                 
                 const kesNo = k.bpjsKesehatan || k.bpjs;
@@ -5970,7 +6003,7 @@
                     </div>`;
                 }
 
-                tbody.innerHTML += `<tr class="hover:bg-slate-50"><td class="py-4 px-6 font-bold text-slate-800">${k.nama}${statusBadge}<br><span class="text-xs text-slate-500 font-normal font-mono bg-slate-100 px-1 rounded border mr-1">${k.nik}</span><span class="text-xs text-slate-400 font-normal mt-1">NIP: ${k.nip || '-'}</span><div class="text-xs text-emerald-600 mt-1"><i class="fab fa-whatsapp mr-1"></i><a href="https://wa.me/${formatWANumber(k.noWa)}" target="_blank">${k.noWa || '-'}</a></div>${tglKeluarBadge}</td><td class="py-4 px-6"><span class="bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs px-2 py-1 rounded font-bold block mb-1 w-max">${jab}</span><span class="text-xs text-slate-500 block mb-1"><i class="fas fa-clock mr-1"></i>${shf}</span>${k.kontrakSelesai ? `<span class="text-[10px] text-amber-600 font-bold block mb-0.5"><i class="fas fa-file-signature mr-1"></i>s.d ${formatDateID(k.kontrakSelesai)}</span>` : ''}${bpjsBadges}</td><td class="py-4 px-6 text-right font-bold text-slate-700">${formatRupiah(k.gajiPokok)}</td><td class="py-4 px-6 text-center space-x-1 whitespace-nowrap"><button onclick="window.lihatDetailKaryawan('${k.id}')" class="text-indigo-600 bg-indigo-50 hover:bg-indigo-600 hover:text-white transition p-2 rounded-lg" title="Lihat Profil Pegawai"><i class="fas fa-eye"></i></button> <button onclick="window.bukaModalCetakKartu('${k.id}')" class="text-indigo-600 bg-indigo-50 hover:bg-indigo-600 hover:text-white transition p-2 rounded-lg" title="Cetak ID Card"><i class="fas fa-id-card"></i></button> <button onclick="window.tampilkanQR('${k.nik}', '${String(k.nama || '').replace(/'/g, "\\'")}')" class="text-emerald-600 bg-emerald-50 hover:bg-emerald-500 hover:text-white transition p-2 rounded-lg" title="Lihat QR Code"><i class="fas fa-qrcode"></i></button> <button onclick="window.bukaModalKaryawan('${k.id}')" class="text-blue-600 bg-blue-50 hover:bg-blue-500 hover:text-white transition p-2 rounded-lg" title="Edit Data"><i class="fas fa-edit"></i></button> <button onclick="window.confirmDelete('karyawan', '${k.id}')" class="text-red-600 bg-red-50 hover:bg-red-500 hover:text-white transition p-2 rounded-lg" title="Hapus"><i class="fas fa-trash"></i></button></td></tr>`;
+                tbody.innerHTML += `<tr class="hover:bg-slate-50/80 transition"><td class="py-3.5 px-4 sm:px-5 font-bold text-slate-800"><div class="flex items-center flex-wrap gap-y-0.5"><span>${k.nama}</span>${statusBadge}</div><div class="flex items-center flex-wrap gap-1.5 mt-1"><span class="text-[11px] text-slate-500 font-normal font-mono bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">${k.nik}</span><span class="text-[11px] text-slate-400 font-normal">NIP: ${k.nip || '-'}</span></div><div class="text-xs text-emerald-600 mt-1"><i class="fab fa-whatsapp mr-1"></i><a href="https://wa.me/${formatWANumber(k.noWa)}" target="_blank" class="hover:underline">${k.noWa || '-'}</a></div>${tglKeluarBadge}</td><td class="py-3.5 px-4 sm:px-5"><span class="bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs px-2.5 py-0.5 rounded-lg font-bold inline-block mb-1">${jab}</span><span class="text-xs text-slate-500 block mb-0.5"><i class="fas fa-clock mr-1 text-slate-400"></i>${shf}</span>${k.kontrakSelesai ? `<span class="text-[10px] text-amber-600 font-bold block mb-0.5"><i class="fas fa-file-signature mr-1"></i>s.d ${formatDateID(k.kontrakSelesai)}</span>` : ''}${bpjsBadges}</td><td class="py-3.5 px-4 sm:px-5 text-right font-bold text-slate-700 whitespace-nowrap">${formatRupiah(k.gajiPokok)}</td><td class="py-3.5 px-4 sm:px-5 text-center whitespace-nowrap"><div class="inline-flex items-center justify-center gap-1"><button onclick="window.lihatDetailKaryawan('${k.id}')" class="text-indigo-600 bg-indigo-50 hover:bg-indigo-600 hover:text-white transition p-2 rounded-xl" title="Lihat Profil Pegawai"><i class="fas fa-eye text-xs"></i></button><button onclick="window.bukaModalCetakKartu('${k.id}')" class="text-indigo-600 bg-indigo-50 hover:bg-indigo-600 hover:text-white transition p-2 rounded-xl" title="Cetak ID Card"><i class="fas fa-id-card text-xs"></i></button><button onclick="window.tampilkanQR('${k.nik}', '${String(k.nama || '').replace(/'/g, "\\'")}')" class="text-emerald-600 bg-emerald-50 hover:bg-emerald-500 hover:text-white transition p-2 rounded-xl" title="Lihat QR Code"><i class="fas fa-qrcode text-xs"></i></button><button onclick="window.bukaModalKaryawan('${k.id}')" class="text-blue-600 bg-blue-50 hover:bg-blue-500 hover:text-white transition p-2 rounded-xl" title="Edit Data"><i class="fas fa-edit text-xs"></i></button><button onclick="window.confirmDelete('karyawan', '${k.id}')" class="text-red-600 bg-red-50 hover:bg-red-500 hover:text-white transition p-2 rounded-xl" title="Hapus"><i class="fas fa-trash text-xs"></i></button></div></td></tr>`;
             });
         }
         window.lihatDetailKaryawan = function(id) {
@@ -6571,17 +6604,17 @@
 
                 <!-- TABLE CARD -->
                 <div class="bg-white rounded-3xl border border-slate-200/90 overflow-hidden shadow-sm">
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full text-sm text-left">
-                            <thead class="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    <div class="overflow-x-auto custom-scrollbar">
+                        <table class="w-full text-sm text-left">
+                            <thead class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                                 <tr>
-                                    <th class="py-4 px-6">Tgl Presensi</th>
-                                    <th class="py-4 px-6">Karyawan</th>
-                                    <th class="py-4 px-6">Jam Masuk</th>
-                                    <th class="py-4 px-6">Jam Pulang</th>
-                                    <th class="py-4 px-6">Metode</th>
-                                    <th class="py-4 px-6">Status</th>
-                                    <th class="py-4 px-6 text-center">Tindakan</th>
+                                    <th class="py-3.5 px-4 sm:px-5 whitespace-nowrap">Tgl Presensi</th>
+                                    <th class="py-3.5 px-4 sm:px-5">Karyawan</th>
+                                    <th class="py-3.5 px-3.5 sm:px-4 whitespace-nowrap">Jam Masuk</th>
+                                    <th class="py-3.5 px-3.5 sm:px-4 whitespace-nowrap">Jam Pulang</th>
+                                    <th class="py-3.5 px-3.5 sm:px-4 whitespace-nowrap">Metode</th>
+                                    <th class="py-3.5 px-3.5 sm:px-4 whitespace-nowrap">Status</th>
+                                    <th class="py-3.5 px-4 sm:px-5 text-center whitespace-nowrap">Tindakan</th>
                                 </tr>
                             </thead>
                             <tbody id="tabelAbsensiBody" class="divide-y divide-slate-100"></tbody>
@@ -6759,16 +6792,16 @@
 
                 return `
                     <tr class="hover:bg-slate-50/80 transition">
-                        <td class="py-3.5 px-6 text-slate-600 font-medium whitespace-nowrap">
+                        <td class="py-3.5 px-4 sm:px-5 text-slate-600 font-medium whitespace-nowrap text-xs sm:text-sm">
                             ${formatDateID(a.tanggal)}
                         </td>
-                        <td class="py-3.5 px-6">
-                            <div class="flex items-center space-x-3">
+                        <td class="py-3.5 px-4 sm:px-5">
+                            <div class="flex items-center space-x-2.5">
                                 <div class="w-8 h-8 rounded-xl ${isOrphan ? 'bg-slate-100 text-slate-500 border border-slate-200' : 'bg-indigo-50 text-indigo-700 border border-indigo-100'} flex items-center justify-center text-xs font-black shrink-0">
                                     ${initial}
                                 </div>
-                                <div>
-                                    <span class="font-bold ${isOrphan ? 'text-slate-600' : 'text-slate-800'} block text-sm leading-tight">${namaTampil}</span>
+                                <div class="min-w-0">
+                                    <span class="font-bold ${isOrphan ? 'text-slate-600' : 'text-slate-800'} block text-xs sm:text-sm leading-tight">${namaTampil}</span>
                                     <div class="flex items-center gap-1.5 flex-wrap mt-0.5">
                                         <span class="text-[11px] text-slate-400 font-mono">${nikTampil} ${isOrphan ? '<span class="text-[9px] text-amber-700 bg-amber-50 border border-amber-200 px-1 py-0.5 rounded font-sans ml-1 font-semibold">Non-Aktif</span>' : ''}</span>
                                         <span class="text-[10px] text-indigo-600 bg-indigo-50 border border-indigo-100 px-1.5 py-0.2 rounded font-medium"><i class="fas fa-clock text-[9px] mr-1"></i>${shiftNama}</span>
@@ -6776,28 +6809,30 @@
                                 </div>
                             </div>
                         </td>
-                        <td class="py-3.5 px-6 font-mono font-semibold text-slate-700">
+                        <td class="py-3.5 px-3.5 sm:px-4 font-mono font-semibold text-slate-700 whitespace-nowrap text-xs sm:text-sm">
                             ${a.jamMasuk || '-'}
                         </td>
-                        <td class="py-3.5 px-6 font-mono font-semibold ${a.jamPulang ? 'text-slate-700' : 'text-slate-400'}">
+                        <td class="py-3.5 px-3.5 sm:px-4 font-mono font-semibold whitespace-nowrap text-xs sm:text-sm ${a.jamPulang ? 'text-slate-700' : 'text-slate-400'}">
                             ${a.jamPulang || '-'}
                             ${statusPulangTampil ? `<span class="text-[10px] block font-sans font-medium ${statusPulangTampil === 'Pulang Awal' ? 'text-amber-600' : (statusPulangTampil === 'Lembur' ? 'text-indigo-600' : 'text-slate-400')}">(${statusPulangTampil})</span>` : ''}
                         </td>
-                        <td class="py-3.5 px-6 whitespace-nowrap">
+                        <td class="py-3.5 px-3.5 sm:px-4 whitespace-nowrap">
                             ${met}
                         </td>
-                        <td class="py-3.5 px-6 whitespace-nowrap">
+                        <td class="py-3.5 px-3.5 sm:px-4 whitespace-nowrap">
                             <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider inline-flex items-center ${badge}">
                                 ${a.statusMasuk}
                             </span>
                         </td>
-                        <td class="py-3.5 px-6 text-center whitespace-nowrap">
-                            <button onclick="window.bukaModalAbsensi('${a.id}')" class="text-blue-600 bg-blue-50 hover:bg-blue-600 hover:text-white p-2 rounded-xl transition mr-1.5 shadow-2xs" title="Edit Catatan">
-                                <i class="fas fa-edit text-xs"></i>
-                            </button>
-                            <button onclick="window.confirmDelete('absensi', '${a.id}')" class="text-rose-600 bg-rose-50 hover:bg-rose-600 hover:text-white p-2 rounded-xl transition shadow-2xs" title="Hapus Catatan">
-                                <i class="fas fa-trash text-xs"></i>
-                            </button>
+                        <td class="py-3.5 px-4 sm:px-5 text-center whitespace-nowrap">
+                            <div class="inline-flex items-center justify-center gap-1.5">
+                                <button onclick="window.bukaModalAbsensi('${a.id}')" class="text-blue-600 bg-blue-50 hover:bg-blue-600 hover:text-white p-2 rounded-xl transition shadow-2xs" title="Edit Catatan">
+                                    <i class="fas fa-edit text-xs"></i>
+                                </button>
+                                <button onclick="window.confirmDelete('absensi', '${a.id}')" class="text-rose-600 bg-rose-50 hover:bg-rose-600 hover:text-white p-2 rounded-xl transition shadow-2xs" title="Hapus Catatan">
+                                    <i class="fas fa-trash text-xs"></i>
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 `;
@@ -7048,16 +7083,55 @@
             showToast('Sukses', 'Riwayat Absensi berhasil disimpan');
         };
 
-        function getImkHTML() { return `<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4"><div><h1 class="text-3xl font-bold text-slate-800">Riwayat IMK</h1><p class="text-slate-500 text-sm mt-1">Izin Keluar Sementara</p></div><div class="flex gap-2"><button onclick="window.bukaModalHapusTanggal('imk')" class="bg-amber-500 hover:bg-amber-600 text-white font-semibold px-4 py-3 rounded-xl shadow text-sm transition"><i class="fas fa-calendar-times mr-2"></i>Hapus via Tanggal</button><button onclick="window.confirmDelete('semua_imk', 'all')" class="bg-red-500 hover:bg-red-600 text-white font-semibold px-4 py-3 rounded-xl shadow text-sm transition"><i class="fas fa-trash-alt mr-2"></i>Kosongkan</button></div></div><div class="bg-white rounded-2xl border overflow-x-auto shadow-sm"><table class="min-w-full text-sm text-left"><thead class="bg-slate-50 border-b text-xs text-slate-500 uppercase"><tr><th class="py-4 px-6">Tanggal</th><th class="py-4 px-6">Nama Karyawan</th><th class="py-4 px-6">Jam Keluar</th><th class="py-4 px-6">Jam Kembali</th><th class="py-4 px-6">Durasi di Luar</th><th class="py-4 px-6 text-center">Aksi</th></tr></thead><tbody id="tabelImkBody" class="divide-y"></tbody></table></div>`; }
+        function getImkHTML() { 
+            const totalImk = (state.imk || []).length;
+            const sedangKeluar = (state.imk || []).filter(i => !i.jamKembali).length;
+            return `
+                <div class="space-y-6 mb-8">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <div class="flex items-center gap-3">
+                                <h1 class="text-2xl sm:text-3xl font-bold text-slate-800 tracking-tight">Riwayat IMK</h1>
+                                <span class="bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-bold px-2.5 py-1 rounded-full">${totalImk} Total Data</span>
+                                ${sedangKeluar > 0 ? `<span class="bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold px-2.5 py-1 rounded-full animate-pulse">${sedangKeluar} Sedang di Luar</span>` : ''}
+                            </div>
+                            <p class="text-xs text-slate-500 mt-1">Pencatatan Izin Meninggalkan Kantor (Keluar & Kembali Sementara).</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="window.bukaModalHapusTanggal('imk')" class="bg-amber-500 hover:bg-amber-600 text-white font-semibold px-4 py-2.5 rounded-xl shadow-sm text-xs sm:text-sm transition flex items-center"><i class="fas fa-calendar-times mr-2"></i>Hapus via Tanggal</button>
+                            <button onclick="window.confirmDelete('semua_imk', 'all')" class="bg-rose-500 hover:bg-rose-600 text-white font-semibold px-4 py-2.5 rounded-xl shadow-sm text-xs sm:text-sm transition flex items-center"><i class="fas fa-trash-alt mr-2"></i>Kosongkan</button>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-3xl border border-slate-200/90 overflow-hidden shadow-sm">
+                        <div class="overflow-x-auto custom-scrollbar">
+                            <table class="w-full text-sm text-left">
+                                <thead class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                                    <tr>
+                                        <th class="py-3.5 px-4 sm:px-5 whitespace-nowrap">Tanggal</th>
+                                        <th class="py-3.5 px-4 sm:px-5">Nama Karyawan</th>
+                                        <th class="py-3.5 px-4 sm:px-5 whitespace-nowrap">Jam Keluar</th>
+                                        <th class="py-3.5 px-4 sm:px-5 whitespace-nowrap">Jam Kembali</th>
+                                        <th class="py-3.5 px-4 sm:px-5 whitespace-nowrap">Durasi di Luar</th>
+                                        <th class="py-3.5 px-4 sm:px-5 text-center whitespace-nowrap">Tindakan</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tabelImkBody" class="divide-y divide-slate-100"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>`; 
+        }
         function renderImkTable() {
             const tbody = document.getElementById('tabelImkBody'); if(!tbody) return; tbody.innerHTML = '';
             const sorted = [...(state.imk || [])].sort((a,b) => b.id - a.id);
-            if(sorted.length === 0) { tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-slate-400">Belum ada riwayat IMK tercatat.</td></tr>'; return; }
+            if(sorted.length === 0) { tbody.innerHTML = '<tr><td colspan="6" class="py-12 text-center text-slate-400"><div class="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-2 text-lg"><i class="fas fa-inbox"></i></div><span class="font-bold text-slate-600 block text-sm">Belum ada riwayat IMK tercatat</span><span class="text-xs text-slate-400 mt-0.5">Data scan izin keluar & kembali karyawan akan tampil di sini.</span></td></tr>'; return; }
             sorted.forEach(i => {
                 const k = (state.karyawan || []).find(x => x.id == i.karyawanId || String(x.id) === String(i.karyawanId)); 
                 const namaImk = k ? k.nama : (i.karyawanNama || 'Karyawan Non-Aktif');
-                const statusKembali = i.jamKembali ? `<span class="font-mono">${i.jamKembali}</span>` : `<span class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-xs font-bold animate-pulse">Sedang di Luar</span>`;
-                tbody.innerHTML += `<tr class="hover:bg-slate-50"><td class="py-4 px-6 text-slate-600 whitespace-nowrap">${formatDateID(i.tanggal)}</td><td class="py-4 px-6 font-bold text-slate-800">${namaImk} ${!k ? '<span class="text-[10px] text-amber-600 bg-amber-50 border border-amber-200 px-1 py-0.2 rounded font-normal ml-1">Non-Aktif</span>' : ''}</td><td class="py-4 px-6 font-mono text-amber-600">${i.jamKeluar}</td><td class="py-4 px-6">${statusKembali}</td><td class="py-4 px-6 font-semibold text-slate-700">${i.durasi}</td><td class="py-4 px-6 text-center"><button onclick="window.confirmDelete('imk', '${i.id}')" class="text-red-500 bg-red-50 hover:bg-red-500 hover:text-white p-2 rounded-lg transition"><i class="fas fa-trash"></i></button></td></tr>`;
+                const nikImk = k ? (k.nik || '-') : (i.karyawanNik || '-');
+                const initial = (namaImk.charAt(0) || 'P').toUpperCase();
+                const statusKembali = i.jamKembali ? `<span class="font-mono font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-lg text-xs">${i.jamKembali}</span>` : `<span class="bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider animate-pulse inline-flex items-center"><i class="fas fa-person-walking-arrow-right mr-1"></i>Sedang di Luar</span>`;
+                tbody.innerHTML += `<tr class="hover:bg-slate-50/80 transition"><td class="py-3.5 px-4 sm:px-5 text-slate-600 font-medium whitespace-nowrap text-xs sm:text-sm">${formatDateID(i.tanggal)}</td><td class="py-3.5 px-4 sm:px-5"><div class="flex items-center space-x-2.5"><div class="w-8 h-8 rounded-xl bg-amber-50 text-amber-700 border border-amber-200 flex items-center justify-center text-xs font-black shrink-0">${initial}</div><div><span class="font-bold text-slate-800 block text-xs sm:text-sm leading-tight">${namaImk} ${!k ? '<span class="text-[10px] text-amber-600 bg-amber-50 border border-amber-200 px-1 py-0.2 rounded font-normal ml-1">Non-Aktif</span>' : ''}</span><span class="text-[11px] text-slate-400 font-mono">${nikImk}</span></div></div></td><td class="py-3.5 px-4 sm:px-5 font-mono font-semibold text-amber-600 whitespace-nowrap">${i.jamKeluar}</td><td class="py-3.5 px-4 sm:px-5 whitespace-nowrap">${statusKembali}</td><td class="py-3.5 px-4 sm:px-5 font-semibold text-slate-700 whitespace-nowrap text-xs sm:text-sm">${i.durasi}</td><td class="py-3.5 px-4 sm:px-5 text-center whitespace-nowrap"><button onclick="window.confirmDelete('imk', '${i.id}')" class="text-rose-600 bg-rose-50 hover:bg-rose-600 hover:text-white p-2 rounded-xl transition shadow-2xs" title="Hapus Riwayat IMK"><i class="fas fa-trash text-xs"></i></button></td></tr>`;
             });
         }
 
@@ -7205,17 +7279,17 @@
 
                 <!-- TABLE CARD -->
                 <div class="bg-white rounded-3xl border border-slate-200/90 overflow-hidden shadow-sm">
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full text-sm text-left">
-                            <thead class="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    <div class="overflow-x-auto custom-scrollbar">
+                        <table class="w-full text-sm text-left">
+                            <thead class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                                 <tr>
-                                    <th class="py-4 px-6">Tgl Kirim</th>
-                                    <th class="py-4 px-6">Karyawan</th>
-                                    <th class="py-4 px-6">Jenis</th>
-                                    <th class="py-4 px-6">Periode / Durasi</th>
-                                    <th class="py-4 px-6">Alasan</th>
-                                    <th class="py-4 px-6">Status</th>
-                                    <th class="py-4 px-6 text-center">Tindakan</th>
+                                    <th class="py-3.5 px-4 sm:px-5 whitespace-nowrap">Tgl Kirim</th>
+                                    <th class="py-3.5 px-4 sm:px-5">Karyawan</th>
+                                    <th class="py-3.5 px-3.5 sm:px-4 whitespace-nowrap">Jenis</th>
+                                    <th class="py-3.5 px-3.5 sm:px-4 whitespace-nowrap">Periode / Durasi</th>
+                                    <th class="py-3.5 px-3.5 sm:px-4">Alasan</th>
+                                    <th class="py-3.5 px-3.5 sm:px-4 whitespace-nowrap">Status</th>
+                                    <th class="py-3.5 px-4 sm:px-5 text-center whitespace-nowrap">Tindakan</th>
                                 </tr>
                             </thead>
                             <tbody id="tabelCutiBody" class="divide-y divide-slate-100"></tbody>
@@ -7461,40 +7535,42 @@
 
                 return `
                     <tr class="hover:bg-slate-50/80 transition">
-                        <td class="py-3.5 px-6 text-slate-600 font-medium whitespace-nowrap">
+                        <td class="py-3.5 px-4 sm:px-5 text-slate-600 font-medium whitespace-nowrap text-xs sm:text-sm">
                             ${tglPengajuanFormatted}
                         </td>
-                        <td class="py-3.5 px-6">
-                            <div class="flex items-center space-x-3">
+                        <td class="py-3.5 px-4 sm:px-5">
+                            <div class="flex items-center space-x-2.5">
                                 <div class="w-8 h-8 rounded-xl ${isOrphan ? 'bg-slate-100 text-slate-500 border border-slate-200' : 'bg-amber-50 text-amber-700 border border-amber-200'} flex items-center justify-center text-xs font-black shrink-0">
                                     ${initial}
                                 </div>
-                                <div>
-                                    <span class="font-bold ${isOrphan ? 'text-slate-600' : 'text-slate-800'} block text-sm leading-tight">${namaTampil}</span>
-                                    <span class="text-[11px] text-slate-400 font-mono">${nikTampil} ${jabatanTampil ? '• ' + jabatanTampil : ''} ${isOrphan ? '<span class="text-[9px] text-amber-700 bg-amber-50 border border-amber-200 px-1 py-0.5 rounded font-sans ml-1 font-semibold">Non-Aktif</span>' : ''}</span>
+                                <div class="min-w-0">
+                                    <span class="font-bold ${isOrphan ? 'text-slate-600' : 'text-slate-800'} block text-xs sm:text-sm leading-tight">${namaTampil}</span>
+                                    <span class="text-[11px] text-slate-400 font-mono block truncate max-w-[180px] xl:max-w-[230px]">${nikTampil} ${jabatanTampil ? '• ' + jabatanTampil : ''} ${isOrphan ? '<span class="text-[9px] text-amber-700 bg-amber-50 border border-amber-200 px-1 py-0.5 rounded font-sans ml-1 font-semibold">Non-Aktif</span>' : ''}</span>
                                 </div>
                             </div>
                         </td>
-                        <td class="py-3.5 px-6 whitespace-nowrap">
+                        <td class="py-3.5 px-3.5 sm:px-4 whitespace-nowrap">
                             ${jenisBadge}
                         </td>
-                        <td class="py-3.5 px-6 whitespace-nowrap">
-                            <div class="font-medium text-xs text-slate-700">${c.mulai ? formatDateID(c.mulai) : '-'} s.d ${c.selesai ? formatDateID(c.selesai) : '-'}</div>
-                            <span class="text-[10px] text-indigo-600 font-bold bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded">${durasiText}</span>
+                        <td class="py-3.5 px-3.5 sm:px-4 whitespace-nowrap">
+                            <div class="font-medium text-xs text-slate-700">${c.mulai && c.selesai && c.mulai === c.selesai ? formatDateID(c.mulai) : `${c.mulai ? formatDateID(c.mulai) : '-'} s.d ${c.selesai ? formatDateID(c.selesai) : '-'}`}</div>
+                            <span class="text-[10px] text-indigo-600 font-bold bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded inline-block mt-0.5">${durasiText}</span>
                         </td>
-                        <td class="py-3.5 px-6 text-xs text-slate-600 max-w-xs truncate" title="${c.alasan || '-'}">
-                            ${c.alasan || '-'}
+                        <td class="py-3.5 px-3.5 sm:px-4 text-xs text-slate-600 max-w-[160px] xl:max-w-[240px]" title="${c.alasan || '-'}">
+                            <div class="line-clamp-2 leading-relaxed">${c.alasan || '-'}</div>
                         </td>
-                        <td class="py-3.5 px-6 whitespace-nowrap">
+                        <td class="py-3.5 px-3.5 sm:px-4 whitespace-nowrap">
                             ${statusBadge}
                         </td>
-                        <td class="py-3.5 px-6 text-center whitespace-nowrap">
-                            <button onclick="window.bukaModalDetailCuti('${c.id}')" class="text-blue-600 bg-blue-50 hover:bg-blue-600 hover:text-white p-2 rounded-xl transition mr-1.5 shadow-2xs" title="Lihat Detail & Konfirmasi">
-                                <i class="fas fa-eye text-xs"></i>
-                            </button>
-                            <button onclick="window.confirmDelete('cuti', '${c.id}')" class="text-rose-600 bg-rose-50 hover:bg-rose-600 hover:text-white p-2 rounded-xl transition shadow-2xs" title="Hapus Catatan">
-                                <i class="fas fa-trash text-xs"></i>
-                            </button>
+                        <td class="py-3.5 px-4 sm:px-5 text-center whitespace-nowrap">
+                            <div class="inline-flex items-center justify-center gap-1.5">
+                                <button onclick="window.bukaModalDetailCuti('${c.id}')" class="text-blue-600 bg-blue-50 hover:bg-blue-600 hover:text-white p-2 rounded-xl transition shadow-2xs" title="Lihat Detail & Konfirmasi">
+                                    <i class="fas fa-eye text-xs"></i>
+                                </button>
+                                <button onclick="window.confirmDelete('cuti', '${c.id}')" class="text-rose-600 bg-rose-50 hover:bg-rose-600 hover:text-white p-2 rounded-xl transition shadow-2xs" title="Hapus Catatan">
+                                    <i class="fas fa-trash text-xs"></i>
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 `;
@@ -8144,16 +8220,16 @@
                     <div class="bg-white rounded-3xl border border-slate-200/90 overflow-hidden shadow-sm" id="gajiResult" style="display:none;">
                         <div class="overflow-x-auto">
                             <table class="min-w-full text-sm text-left">
-                                <thead class="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                <thead class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                                     <tr>
-                                        <th class="py-4 px-6">Pegawai</th>
-                                        <th class="py-4 px-6 text-center">Kehadiran</th>
-                                        <th class="py-4 px-6 text-center bg-amber-50/40 text-amber-900 border-x border-amber-100/80">Cuti, Izin & Tidak Hadir</th>
-                                        <th class="py-4 px-6 text-right">Gaji Pokok</th>
-                                        <th class="py-4 px-6 text-right">+ Tunj. Hadir</th>
-                                        <th class="py-4 px-6 text-right">- Denda Telat</th>
-                                        <th class="py-4 px-6 text-right font-black text-slate-700">Total Bersih (THP)</th>
-                                        <th class="py-4 px-6 text-center border-l bg-slate-50/80">Slip Gaji</th>
+                                        <th class="py-3.5 px-4 sm:px-5">Pegawai</th>
+                                        <th class="py-3.5 px-3.5 sm:px-4 text-center">Kehadiran</th>
+                                        <th class="py-3.5 px-3.5 sm:px-4 text-center bg-amber-50/40 text-amber-900 border-x border-amber-100/80">Cuti, Izin & Tidak Hadir</th>
+                                        <th class="py-3.5 px-3.5 sm:px-4 text-right whitespace-nowrap">Gaji Pokok</th>
+                                        <th class="py-3.5 px-3.5 sm:px-4 text-right whitespace-nowrap">+ Tunj. Hadir</th>
+                                        <th class="py-3.5 px-3.5 sm:px-4 text-right whitespace-nowrap">- Denda Telat</th>
+                                        <th class="py-3.5 px-3.5 sm:px-4 text-right font-black text-slate-700 whitespace-nowrap">Total Bersih (THP)</th>
+                                        <th class="py-3.5 px-4 sm:px-5 text-center border-l bg-slate-50/80 whitespace-nowrap">Slip Gaji</th>
                                     </tr>
                                 </thead>
                                 <tbody id="tg_body" class="divide-y divide-slate-100"></tbody>
@@ -8381,50 +8457,50 @@
                 
                 tb.innerHTML += `
                     <tr class="hover:bg-slate-50/80 transition row-pegawai-gaji" data-nama="${(item.nama || '').toLowerCase()}" data-nik="${(item.nik || '').toLowerCase()}" data-jabatan="${item.jabatan.toLowerCase()}">
-                        <td class="py-3.5 px-6">
-                            <div class="flex items-center space-x-3">
-                                <div class="w-9 h-9 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-700 font-black text-xs flex items-center justify-center shrink-0">
+                        <td class="py-3.5 px-4 sm:px-5">
+                            <div class="flex items-center space-x-2.5">
+                                <div class="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-700 font-black text-xs flex items-center justify-center shrink-0">
                                     ${initial}
                                 </div>
-                                <div>
-                                    <span class="font-bold text-slate-800 block text-sm leading-tight">${item.nama}</span>
-                                    <span class="text-[11px] text-slate-400 font-mono">${item.nik} • ${item.jabatan}</span>
+                                <div class="min-w-0">
+                                    <span class="font-bold text-slate-800 block text-xs sm:text-sm leading-tight">${item.nama}</span>
+                                    <span class="text-[11px] text-slate-400 font-mono block truncate max-w-[180px] xl:max-w-[230px]">${item.nik} • ${item.jabatan}</span>
                                 </div>
                             </div>
                         </td>
-                        <td class="py-3.5 px-6 text-center whitespace-nowrap">
+                        <td class="py-3.5 px-3.5 sm:px-4 text-center whitespace-nowrap">
                             <span class="text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-lg text-xs font-bold inline-flex items-center">
                                 <i class="fas fa-check mr-1 text-[10px]"></i>${item.hadir} Hadir
                             </span>
-                            <div class="flex items-center justify-center gap-1.5 mt-1 text-[11px]">
+                            <div class="flex items-center justify-center gap-1 mt-1 text-[10px]">
                                 <span class="${item.telat > 0 ? 'text-rose-600 font-bold' : 'text-slate-400'}">${item.telat} Telat</span>
                                 <span class="text-slate-300">•</span>
                                 <span class="${item.pulangAwal > 0 ? 'text-amber-600 font-medium' : 'text-slate-400'}">${item.pulangAwal} Pulang Awal</span>
                             </div>
                         </td>
-                        <td class="py-3.5 px-6 text-center whitespace-nowrap bg-amber-50/20 border-x border-amber-100/60">
+                        <td class="py-3.5 px-3.5 sm:px-4 text-center whitespace-nowrap bg-amber-50/20 border-x border-amber-100/60">
                             ${cutiBadgeHTML}
                         </td>
-                        <td class="py-3.5 px-6 text-right font-medium text-slate-700 whitespace-nowrap">
+                        <td class="py-3.5 px-3.5 sm:px-4 text-right font-medium text-slate-700 whitespace-nowrap text-xs sm:text-sm">
                             ${formatRupiah(item.gajiPokok)}
                         </td>
-                        <td class="py-3.5 px-6 text-right whitespace-nowrap">
+                        <td class="py-3.5 px-3.5 sm:px-4 text-right whitespace-nowrap">
                             <div class="text-emerald-600 text-xs font-bold">+ ${formatRupiah(item.tunjangan)}</div>
                             <span class="text-[10px] text-slate-400 font-normal">(${item.hariValid}x valid)</span>
                         </td>
-                        <td class="py-3.5 px-6 text-right whitespace-nowrap">
+                        <td class="py-3.5 px-3.5 sm:px-4 text-right whitespace-nowrap">
                             <div class="text-rose-600 text-xs font-bold">- ${formatRupiah(item.denda)}</div>
                             <span class="text-[10px] text-slate-400 font-normal">(${item.telat}x denda)</span>
                         </td>
-                        <td class="py-3.5 px-6 text-right font-black text-slate-800 whitespace-nowrap text-sm">
+                        <td class="py-3.5 px-3.5 sm:px-4 text-right font-black text-slate-800 whitespace-nowrap text-xs sm:text-sm">
                             ${formatRupiah(item.totalBersih)}
                         </td>
-                        <td class="py-3.5 px-6 text-center border-l bg-slate-50/80 whitespace-nowrap">
-                            <div class="flex items-center justify-center gap-1.5">
-                                <button onclick="window.bukaSlipGaji(${item.id})" class="bg-indigo-50 text-indigo-700 hover:bg-indigo-600 hover:text-white px-2.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center shadow-2xs" title="Pratinjau & Cetak PDF Slip Gaji">
+                        <td class="py-3.5 px-4 sm:px-5 text-center border-l bg-slate-50/80 whitespace-nowrap">
+                            <div class="inline-flex items-center justify-center gap-1.5">
+                                <button onclick="window.bukaSlipGaji('${item.id}')" class="bg-indigo-50 text-indigo-700 hover:bg-indigo-600 hover:text-white px-2.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center shadow-2xs" title="Pratinjau & Cetak PDF Slip Gaji">
                                     <i class="fas fa-print mr-1"></i> Slip
                                 </button>
-                                <button onclick="window.kirimSlipWA(${item.id})" class="bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white px-2.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center shadow-2xs" title="Kirim Rincian Slip ke WhatsApp Karyawan">
+                                <button onclick="window.kirimSlipWA('${item.id}')" class="bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white px-2.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center shadow-2xs" title="Kirim Rincian Slip ke WhatsApp Karyawan">
                                     <i class="fab fa-whatsapp mr-1 text-sm"></i> WA
                                 </button>
                             </div>
