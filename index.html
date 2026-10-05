@@ -1020,7 +1020,7 @@
             }
         }
 
-        function pastikanDataMigrasi() {
+        function pastikanDataMigrasi(fromSaveData = false) {
             if (!state.pengaturan) state.pengaturan = {};
             if (!state.pengaturan.shifts || state.pengaturan.shifts.length === 0) {
                 state.pengaturan.shifts = [ { id: 'shift_1', nama: 'Shift Standar (Pagi)', jamMasuk: '07:30', jamPulang: '15:30' } ];
@@ -1132,13 +1132,13 @@
                         a.metode === 'Barcode Gun/Manual') {
                         a.statusPulang = 'Tepat Waktu';
                         absensiDiperbaiki = true;
-                        if (typeof syncAbsensiAtomic === 'function') syncAbsensiAtomic(a, true, a.id);
+                        if (!fromSaveData && typeof syncAbsensiAtomic === 'function') syncAbsensiAtomic(a, true, a.id);
                     }
                 }
             });
 
-            if (absensiDiperbaiki && typeof saveData === 'function') {
-                saveData();
+            if (!fromSaveData && absensiDiperbaiki && typeof saveData === 'function') {
+                saveData(true);
             }
 
             // 3. Normalisasi Riwayat IMK
@@ -1188,8 +1188,20 @@
         function removePendingSync(type, recordId) {
             const q = getPendingSyncQueue();
             if (q[type]) {
-                q[type] = q[type].filter(item => item.record && String(item.record.id) !== String(recordId));
+                if (recordId === 'all') {
+                    q[type] = [];
+                } else {
+                    q[type] = q[type].filter(item => item.record && String(item.record.id) !== String(recordId));
+                }
                 savePendingSyncQueue(q);
+            }
+        }
+
+        function sanitizeForFirebase(obj) {
+            try {
+                return JSON.parse(JSON.stringify(obj));
+            } catch(e) {
+                return obj;
             }
         }
 
@@ -1233,14 +1245,16 @@
                 }, (error, committed) => {
                     if (error || !committed) {
                         console.warn("Absensi transaction gagal atau konflik, simpan ke offline queue:", error);
-                        queuePendingSync('absensi', record, isUpdate, targetId);
+                        const stillInState = (state.absensi || []).some(a => a && String(a.id) === String(record.id));
+                        if (stillInState) queuePendingSync('absensi', record, isUpdate, targetId);
                     } else {
                         removePendingSync('absensi', record.id);
                     }
                 });
             } catch(err) {
                 console.warn("syncAbsensiAtomic exception:", err);
-                queuePendingSync('absensi', record, isUpdate, targetId);
+                const stillInState = (state.absensi || []).some(a => a && String(a.id) === String(record.id));
+                if (stillInState) queuePendingSync('absensi', record, isUpdate, targetId);
             }
         }
 
@@ -1281,13 +1295,15 @@
                     return arr;
                 }, (error, committed) => {
                     if (error || !committed) {
-                        queuePendingSync('imk', record, isUpdate, targetId);
+                        const stillInState = (state.imk || []).some(i => i && String(i.id) === String(record.id));
+                        if (stillInState) queuePendingSync('imk', record, isUpdate, targetId);
                     } else {
                         removePendingSync('imk', record.id);
                     }
                 });
             } catch(err) {
-                queuePendingSync('imk', record, isUpdate, targetId);
+                const stillInState = (state.imk || []).some(i => i && String(i.id) === String(record.id));
+                if (stillInState) queuePendingSync('imk', record, isUpdate, targetId);
             }
         }
 
@@ -1295,26 +1311,40 @@
         function flushPendingSyncQueue() {
             if (!isFirebaseConnected) return;
             const q = getPendingSyncQueue();
+            let qModified = false;
             if (q.absensi && q.absensi.length > 0) {
+                // Hanya proses item yang memang masih ada di state.absensi (bukan item yang sudah dihapus)
+                const validAbsensi = q.absensi.filter(item => item.record && (state.absensi || []).some(a => a && String(a.id) === String(item.record.id)));
+                if (validAbsensi.length !== q.absensi.length) {
+                    q.absensi = validAbsensi;
+                    qModified = true;
+                }
                 const itemsToSync = [...q.absensi];
                 itemsToSync.forEach(item => {
                     syncAbsensiAtomic(item.record, item.isUpdate, item.targetId);
                 });
             }
             if (q.imk && q.imk.length > 0) {
+                // Hanya proses item yang memang masih ada di state.imk (bukan item yang sudah dihapus)
+                const validImk = q.imk.filter(item => item.record && (state.imk || []).some(i => i && String(i.id) === String(item.record.id)));
+                if (validImk.length !== q.imk.length) {
+                    q.imk = validImk;
+                    qModified = true;
+                }
                 const itemsToSync = [...q.imk];
                 itemsToSync.forEach(item => {
                     syncImkAtomic(item.record, item.isUpdate, item.targetId);
                 });
             }
+            if (qModified) savePendingSyncQueue(q);
         }
 
         // Interval pemeriksaan antrean offline
         setInterval(flushPendingSyncQueue, 8000);
 
-        async function saveData() {
-            pastikanDataMigrasi(); 
-            const dataToSave = {
+        async function saveData(skipMigration = false) {
+            if (!skipMigration) pastikanDataMigrasi(true); 
+            const rawDataToSave = {
                 karyawan: state.karyawan || [],
                 jabatan: state.jabatan || [],
                 absensi: state.absensi || [],
@@ -1322,10 +1352,19 @@
                 cuti: state.cuti || [],
                 pengaturan: state.pengaturan || {}
             };
+            const dataToSave = sanitizeForFirebase(rawDataToSave);
             // FIX: Hanya simpan data, JANGAN simpan status UI (currentView/currentUserRole)
-            localStorage.setItem('destinyAbsensiData', JSON.stringify(dataToSave));
+            try {
+                localStorage.setItem('destinyAbsensiData', JSON.stringify(dataToSave));
+            } catch(e) {
+                console.warn("localStorage save warning:", e);
+            }
             if (isFirebaseConnected) { 
-                try { await firebase.database().ref('hr_system_data').set(dataToSave); } catch (err) {} 
+                try { 
+                    await firebase.database().ref('hr_system_data').set(dataToSave); 
+                } catch (err) {
+                    console.error("Firebase saveData error:", err);
+                } 
             }
         }
 
@@ -1336,22 +1375,33 @@
             }));
         }
 
-        // SMART MERGE: Menggabungkan snapshot server dan record lokal
-        // Mencegah data presensi lokal terhapus jika snapshot baru dari Firebase belum merefleksikannya
-        function mergeLists(serverList, localList, idField = 'id') {
+        // SMART MERGE: Menggabungkan snapshot server dan antrean offline lokal yang belum tersinkron
+        // Memastikan data yang sudah dihapus dari server TIDAK muncul kembali, kecuali memang masih berada di antrean offline
+        function mergeLists(serverList, localList, idField = 'id', syncType = null) {
             const map = new Map();
             const sArr = Array.isArray(serverList) ? serverList : (serverList && typeof serverList === 'object' ? Object.values(serverList) : []);
             
-            // 1. Masukkan semua data dari server
+            // 1. Masukkan semua data resmi dari server
             sArr.forEach(item => {
-                if (item && item[idField] !== undefined) {
+                if (!item) return;
+                if (item[idField] !== undefined) {
                     map.set(String(item[idField]), item);
-                } else if (item && item.karyawanId && item.tanggal) {
+                } else if (item.karyawanId && item.tanggal) {
                     map.set(`${item.karyawanId}_${item.tanggal}_${item.jamMasuk || item.jamKeluar || ''}`, item);
                 }
             });
 
-            // 2. Gabungkan data lokal yang belum tersinkron
+            // 2. Hanya gabungkan data lokal jika ada di antrean offline (belum terkirim ke Firebase)
+            const q = getPendingSyncQueue();
+            const pendingIds = new Set();
+            if (syncType && q[syncType] && Array.isArray(q[syncType])) {
+                q[syncType].forEach(p => {
+                    if (p && p.record && p.record[idField] !== undefined) {
+                        pendingIds.add(String(p.record[idField]));
+                    }
+                });
+            }
+
             (localList || []).forEach(localItem => {
                 if (!localItem) return;
                 const key = localItem[idField] !== undefined 
@@ -1359,11 +1409,12 @@
                     : `${localItem.karyawanId}_${localItem.tanggal}_${localItem.jamMasuk || localItem.jamKeluar || ''}`;
                 
                 if (!map.has(key)) {
-                    // Item presensi yang baru discan di device ini dan belum masuk snapshot server -> PERTAHANKAN!
-                    map.set(key, localItem);
-                } else {
+                    // Hanya pertahankan jika item ini memang masih berada dalam antrean offline yang belum terkirim
+                    if (pendingIds.has(key)) {
+                        map.set(key, localItem);
+                    }
+                } else if (pendingIds.has(key)) {
                     const serverItem = map.get(key);
-                    // Pertahankan update lokal jamPulang/jamKembali jika server belum punya
                     if (localItem.jamPulang && !serverItem.jamPulang) {
                         map.set(key, { ...serverItem, ...localItem });
                     }
@@ -1406,14 +1457,16 @@
                         const activeView = state.currentView;
                         const activeRole = state.currentUserRole;
 
-                        // Smart Merge untuk Absensi, IMK, dan Cuti agar scan bersamaan tidak hilang
-                        const mergedAbsensi = mergeLists(data.absensi, state.absensi, 'id');
-                        const mergedImk = mergeLists(data.imk, state.imk, 'id');
-                        const mergedCuti = mergeLists(data.cuti, state.cuti, 'id');
+                        // Smart Merge untuk Absensi, IMK, dan Cuti agar antrean offline tidak hilang namun data yang dihapus tidak muncul kembali
+                        const mergedAbsensi = mergeLists(data.absensi, state.absensi, 'id', 'absensi');
+                        const mergedImk = mergeLists(data.imk, state.imk, 'id', 'imk');
+                        const mergedCuti = mergeLists(data.cuti, state.cuti, 'id', null);
 
                         state = { 
                             ...state, 
                             ...data,
+                            karyawan: Array.isArray(data.karyawan) ? data.karyawan : (data.karyawan ? Object.values(data.karyawan) : []),
+                            jabatan: Array.isArray(data.jabatan) ? data.jabatan : (data.jabatan ? Object.values(data.jabatan) : []),
                             absensi: mergedAbsensi,
                             imk: mergedImk,
                             cuti: mergedCuti
@@ -1891,7 +1944,6 @@
                         dalamRadiusKeluar: dalamRadiusKantor
                     };
                     state.imk.push(newImk);
-                    syncImkAtomic(newImk, false);
                     saveData(); 
                     window.playSound('imk_keluar'); 
                     const infoJarak = jarakDariKantor !== null ? ` (Jarak ${jarakDariKantor}m)` : '';
@@ -1931,7 +1983,6 @@
                         imkTerakhir.dalamRadiusKembali = dalamRadiusKantor;
                     }
 
-                    syncImkAtomic(imkTerakhir, true, imkTerakhir.id);
                     saveData(); 
                     window.playSound('imk_kembali'); 
                     showToast('IMK: Kembali', `${karyawan.nama} KEMBALI ke kantor. Durasi: ${imkTerakhir.durasi}`);
@@ -1991,7 +2042,6 @@
                         rec.dalamRadiusPulang = dalamRadiusKantor;
                     }
 
-                    syncAbsensiAtomic(rec, true, rec.id);
                     saveData(); 
                     window.playSound('pulang'); 
                     const infoJarak = jarakDariKantor !== null ? ` [${jarakDariKantor}m]` : '';
@@ -2027,7 +2077,6 @@
                     };
 
                     state.absensi.push(recordBaru);
-                    syncAbsensiAtomic(recordBaru, false);
                     saveData(); 
                     window.playSound('masuk'); 
                     const infoJarak = jarakDariKantor !== null ? ` [${jarakDariKantor}m]` : '';
@@ -2442,7 +2491,6 @@
 
                 if (!state.absensi) state.absensi = [];
                 state.absensi.push(recordAlpha);
-                if (typeof syncAbsensiAtomic === 'function') syncAbsensiAtomic(recordAlpha, false);
                 addedCount++;
             });
 
@@ -2466,6 +2514,7 @@
             if (!confirm('Apakah Anda yakin ingin membatalkan/menghapus status Alpha untuk karyawan ini?')) return;
             const idx = (state.absensi || []).findIndex(a => a.id === recId || String(a.id) === String(recId));
             if (idx !== -1) {
+                removePendingSync('absensi', recId);
                 state.absensi.splice(idx, 1);
                 saveData();
                 showToast('Sukses', 'Status Alpha berhasil dibatalkan.', 'info');
@@ -3362,17 +3411,37 @@
                 state.karyawan = (state.karyawan || []).filter(x => x.id !== id && String(x.id) !== String(id));
             }
             else if (type === 'jabatan') {
-                if (state.karyawan.some(k => k.jabatanId == id)) { showToast('Gagal', 'Jabatan masih digunakan Karyawan.', 'error'); window.closeDeleteModal(); return; }
-                state.jabatan = state.jabatan.filter(x => x.id !== id);
+                if ((state.karyawan || []).some(k => String(k.jabatanId) === String(id))) { showToast('Gagal', 'Jabatan masih digunakan Karyawan.', 'error'); window.closeDeleteModal(); return; }
+                state.jabatan = (state.jabatan || []).filter(x => String(x.id) !== String(id));
             }
-            else if (type === 'absensi') state.absensi = state.absensi.filter(x => x.id !== id);
-            else if (type === 'cuti') state.cuti = (state.cuti || []).filter(x => x.id !== id);
-            else if (type === 'imk') state.imk = state.imk.filter(x => x.id !== id);
-            else if (type === 'semua_absensi') state.absensi = [];
-            else if (type === 'semua_cuti') state.cuti = [];
-            else if (type === 'semua_imk') state.imk = [];
-            else if (type === 'shift') state.pengaturan.shifts = state.pengaturan.shifts.filter(x => x.id !== id);
-            else if (type === 'libur') state.pengaturan.liburNasional = state.pengaturan.liburNasional.filter(x => x.id !== id);
+            else if (type === 'absensi') {
+                state.absensi = (state.absensi || []).filter(x => String(x.id) !== String(id));
+                removePendingSync('absensi', id);
+            }
+            else if (type === 'cuti') {
+                state.cuti = (state.cuti || []).filter(x => String(x.id) !== String(id));
+            }
+            else if (type === 'imk') {
+                state.imk = (state.imk || []).filter(x => String(x.id) !== String(id));
+                removePendingSync('imk', id);
+            }
+            else if (type === 'semua_absensi') {
+                state.absensi = [];
+                removePendingSync('absensi', 'all');
+            }
+            else if (type === 'semua_cuti') {
+                state.cuti = [];
+            }
+            else if (type === 'semua_imk') {
+                state.imk = [];
+                removePendingSync('imk', 'all');
+            }
+            else if (type === 'shift') {
+                state.pengaturan.shifts = (state.pengaturan.shifts || []).filter(x => String(x.id) !== String(id));
+            }
+            else if (type === 'libur') {
+                state.pengaturan.liburNasional = (state.pengaturan.liburNasional || []).filter(x => String(x.id) !== String(id));
+            }
             
             saveData(); window.closeDeleteModal(); window.renderMainContent(); showToast('Sukses', 'Proses hapus berhasil');
         });
@@ -3845,7 +3914,9 @@
             if(!start || !end) return showToast('Error', 'Isi rentang tanggal dengan benar!', 'error');
             
             if (activeHapusMode === 'imk') {
-                state.imk = state.imk.filter(i => i.tanggal < start || i.tanggal > end);
+                const removed = (state.imk || []).filter(i => i.tanggal >= start && i.tanggal <= end);
+                removed.forEach(r => removePendingSync('imk', r.id));
+                state.imk = (state.imk || []).filter(i => i.tanggal < start || i.tanggal > end);
                 showToast('Sukses', 'Riwayat IMK rentang tanggal telah dibersihkan.');
             } else if (activeHapusMode === 'cuti') {
                 state.cuti = (state.cuti || []).filter(c => {
@@ -3854,7 +3925,9 @@
                 });
                 showToast('Sukses', 'Riwayat Cuti & Izin rentang tanggal telah dibersihkan.');
             } else {
-                state.absensi = state.absensi.filter(a => a.tanggal < start || a.tanggal > end);
+                const removed = (state.absensi || []).filter(a => a.tanggal >= start && a.tanggal <= end);
+                removed.forEach(r => removePendingSync('absensi', r.id));
+                state.absensi = (state.absensi || []).filter(a => a.tanggal < start || a.tanggal > end);
                 showToast('Sukses', 'Riwayat Absensi rentang tanggal telah dibersihkan.');
             }
             saveData(); window.tutupModalHapusTanggal(); window.renderMainContent();
@@ -5897,11 +5970,11 @@
                     </div>`;
                 }
 
-                tbody.innerHTML += `<tr class="hover:bg-slate-50"><td class="py-4 px-6 font-bold text-slate-800">${k.nama}${statusBadge}<br><span class="text-xs text-slate-500 font-normal font-mono bg-slate-100 px-1 rounded border mr-1">${k.nik}</span><span class="text-xs text-slate-400 font-normal mt-1">NIP: ${k.nip || '-'}</span><div class="text-xs text-emerald-600 mt-1"><i class="fab fa-whatsapp mr-1"></i><a href="https://wa.me/${formatWANumber(k.noWa)}" target="_blank">${k.noWa || '-'}</a></div>${tglKeluarBadge}</td><td class="py-4 px-6"><span class="bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs px-2 py-1 rounded font-bold block mb-1 w-max">${jab}</span><span class="text-xs text-slate-500 block mb-1"><i class="fas fa-clock mr-1"></i>${shf}</span>${k.kontrakSelesai ? `<span class="text-[10px] text-amber-600 font-bold block mb-0.5"><i class="fas fa-file-signature mr-1"></i>s.d ${formatDateID(k.kontrakSelesai)}</span>` : ''}${bpjsBadges}</td><td class="py-4 px-6 text-right font-bold text-slate-700">${formatRupiah(k.gajiPokok)}</td><td class="py-4 px-6 text-center space-x-1 whitespace-nowrap"><button onclick="window.lihatDetailKaryawan(${k.id})" class="text-indigo-600 bg-indigo-50 hover:bg-indigo-600 hover:text-white transition p-2 rounded-lg" title="Lihat Profil Pegawai"><i class="fas fa-eye"></i></button> <button onclick="window.bukaModalCetakKartu(${k.id})" class="text-indigo-600 bg-indigo-50 hover:bg-indigo-600 hover:text-white transition p-2 rounded-lg" title="Cetak ID Card"><i class="fas fa-id-card"></i></button> <button onclick="window.tampilkanQR('${k.nik}', '${k.nama}')" class="text-emerald-600 bg-emerald-50 hover:bg-emerald-500 hover:text-white transition p-2 rounded-lg" title="Lihat QR Code"><i class="fas fa-qrcode"></i></button> <button onclick="window.bukaModalKaryawan(${k.id})" class="text-blue-600 bg-blue-50 hover:bg-blue-500 hover:text-white transition p-2 rounded-lg" title="Edit Data"><i class="fas fa-edit"></i></button> <button onclick="window.confirmDelete('karyawan', ${k.id})" class="text-red-600 bg-red-50 hover:bg-red-500 hover:text-white transition p-2 rounded-lg" title="Hapus"><i class="fas fa-trash"></i></button></td></tr>`;
+                tbody.innerHTML += `<tr class="hover:bg-slate-50"><td class="py-4 px-6 font-bold text-slate-800">${k.nama}${statusBadge}<br><span class="text-xs text-slate-500 font-normal font-mono bg-slate-100 px-1 rounded border mr-1">${k.nik}</span><span class="text-xs text-slate-400 font-normal mt-1">NIP: ${k.nip || '-'}</span><div class="text-xs text-emerald-600 mt-1"><i class="fab fa-whatsapp mr-1"></i><a href="https://wa.me/${formatWANumber(k.noWa)}" target="_blank">${k.noWa || '-'}</a></div>${tglKeluarBadge}</td><td class="py-4 px-6"><span class="bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs px-2 py-1 rounded font-bold block mb-1 w-max">${jab}</span><span class="text-xs text-slate-500 block mb-1"><i class="fas fa-clock mr-1"></i>${shf}</span>${k.kontrakSelesai ? `<span class="text-[10px] text-amber-600 font-bold block mb-0.5"><i class="fas fa-file-signature mr-1"></i>s.d ${formatDateID(k.kontrakSelesai)}</span>` : ''}${bpjsBadges}</td><td class="py-4 px-6 text-right font-bold text-slate-700">${formatRupiah(k.gajiPokok)}</td><td class="py-4 px-6 text-center space-x-1 whitespace-nowrap"><button onclick="window.lihatDetailKaryawan('${k.id}')" class="text-indigo-600 bg-indigo-50 hover:bg-indigo-600 hover:text-white transition p-2 rounded-lg" title="Lihat Profil Pegawai"><i class="fas fa-eye"></i></button> <button onclick="window.bukaModalCetakKartu('${k.id}')" class="text-indigo-600 bg-indigo-50 hover:bg-indigo-600 hover:text-white transition p-2 rounded-lg" title="Cetak ID Card"><i class="fas fa-id-card"></i></button> <button onclick="window.tampilkanQR('${k.nik}', '${String(k.nama || '').replace(/'/g, "\\'")}')" class="text-emerald-600 bg-emerald-50 hover:bg-emerald-500 hover:text-white transition p-2 rounded-lg" title="Lihat QR Code"><i class="fas fa-qrcode"></i></button> <button onclick="window.bukaModalKaryawan('${k.id}')" class="text-blue-600 bg-blue-50 hover:bg-blue-500 hover:text-white transition p-2 rounded-lg" title="Edit Data"><i class="fas fa-edit"></i></button> <button onclick="window.confirmDelete('karyawan', '${k.id}')" class="text-red-600 bg-red-50 hover:bg-red-500 hover:text-white transition p-2 rounded-lg" title="Hapus"><i class="fas fa-trash"></i></button></td></tr>`;
             });
         }
         window.lihatDetailKaryawan = function(id) {
-            const k = (state.karyawan || []).find(x => x.id === id);
+            const k = (state.karyawan || []).find(x => String(x.id) === String(id));
             if (!k) return showToast('Peringatan', 'Data karyawan tidak ditemukan', 'warning');
 
             const jab = (state.jabatan || []).find(j => j.id == k.jabatanId)?.nama || '-';
@@ -6123,7 +6196,7 @@
             const modal = document.getElementById('modalKaryawan');
             if (!modal) return;
             if (id) { 
-                const k = state.karyawan.find(x => x.id === id); 
+                const k = (state.karyawan || []).find(x => String(x.id) === String(id)); 
                 if (!k) return;
                 document.getElementById('fk_id').value = k.id; 
                 document.getElementById('fk_nama').value = k.nama; 
@@ -6202,7 +6275,7 @@
             };
             if(!data.nama || !data.jabatanId || isNaN(data.gajiPokok)) return showToast('Error', 'Nama, Jabatan, Shift, dan Gaji wajib diisi!', 'error');
             const id = document.getElementById('fk_id').value;
-            if (id) { const idx = state.karyawan.findIndex(k => k.id == parseInt(id, 10)); state.karyawan[idx] = { ...state.karyawan[idx], ...data }; } else { data.id = Date.now(); state.karyawan.push(data); }
+            if (id) { const idx = state.karyawan.findIndex(k => String(k.id) === String(id)); if (idx !== -1) state.karyawan[idx] = { ...state.karyawan[idx], ...data }; } else { data.id = Date.now(); state.karyawan.push(data); }
             saveData(); document.getElementById('modalKaryawan').classList.add('hidden'); window.renderMainContent(); showToast('Tersimpan', 'Data Karyawan Diperbarui');
         };
 
@@ -6367,10 +6440,10 @@
         function getJabatanHTML() { return `<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4"><div><h1 class="text-3xl font-bold">Struktur Jabatan</h1></div><button onclick="window.bukaModalJabatan()" class="bg-indigo-600 text-white px-5 py-3 rounded-xl font-bold shadow text-sm"><i class="fas fa-plus mr-2"></i>Tambah Jabatan</button></div><div class="bg-white rounded-2xl border overflow-hidden max-w-3xl shadow-sm"><table class="w-full text-sm text-left"><thead class="bg-slate-50 border-b text-xs text-slate-500 uppercase"><tr><th class="py-4 px-6">Nama Jabatan</th><th class="py-4 px-6 text-center">Anggota</th><th class="py-4 px-6 text-center">Aksi</th></tr></thead><tbody id="tabelJabatanBody" class="divide-y"></tbody></table></div><div id="modalJabatan" class="fixed inset-0 bg-slate-900 bg-opacity-60 hidden z-[100] flex justify-center items-center p-4"><div class="bg-white rounded-3xl w-full max-w-md p-6"><h3 class="font-bold text-lg mb-4">Jabatan</h3><input type="hidden" id="fj_id"><label class="block text-xs font-bold mb-2">Nama Jabatan</label><input type="text" id="fj_nama" class="w-full border rounded-xl p-3"><div class="mt-6 flex justify-end gap-2"><button onclick="document.getElementById('modalJabatan').classList.add('hidden')" class="px-4 py-2 bg-slate-100 rounded-lg font-bold">Batal</button><button onclick="window.simpanJabatan()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg font-bold">Simpan</button></div></div></div>`; }
         function renderJabatanTable() {
             const tbody = document.getElementById('tabelJabatanBody'); if(!tbody) return; tbody.innerHTML = '';
-            state.jabatan.forEach(j => { const jml = state.karyawan.filter(k => k.jabatanId == j.id).length; tbody.innerHTML += `<tr><td class="py-4 px-6 font-bold text-indigo-700">${j.nama}</td><td class="py-4 px-6 text-center"><span class="bg-slate-100 px-3 py-1 rounded-full text-xs font-bold border">${jml} Orang</span></td><td class="py-4 px-6 text-center"><button onclick="window.bukaModalJabatan(${j.id})" class="text-indigo-500 bg-indigo-50 p-2 rounded-lg"><i class="fas fa-edit"></i></button> <button onclick="window.confirmDelete('jabatan', ${j.id})" class="text-red-500 bg-red-50 p-2 rounded-lg"><i class="fas fa-trash"></i></button></td></tr>`; });
+            state.jabatan.forEach(j => { const jml = state.karyawan.filter(k => k.jabatanId == j.id).length; tbody.innerHTML += `<tr><td class="py-4 px-6 font-bold text-indigo-700">${j.nama}</td><td class="py-4 px-6 text-center"><span class="bg-slate-100 px-3 py-1 rounded-full text-xs font-bold border">${jml} Orang</span></td><td class="py-4 px-6 text-center"><button onclick="window.bukaModalJabatan('${j.id}')" class="text-indigo-500 bg-indigo-50 p-2 rounded-lg"><i class="fas fa-edit"></i></button> <button onclick="window.confirmDelete('jabatan', '${j.id}')" class="text-red-500 bg-red-50 p-2 rounded-lg"><i class="fas fa-trash"></i></button></td></tr>`; });
         }
-        window.bukaModalJabatan = function(id = null) { if(id) { const j = state.jabatan.find(x => x.id === id); document.getElementById('fj_id').value = j.id; document.getElementById('fj_nama').value = j.nama; } else { document.getElementById('fj_id').value = ''; document.getElementById('fj_nama').value = ''; } document.getElementById('modalJabatan').classList.remove('hidden'); };
-        window.simpanJabatan = function() { const id = document.getElementById('fj_id').value; const nama = document.getElementById('fj_nama').value; if(!nama) return; if(id) { const idx = state.jabatan.findIndex(j => j.id == parseInt(id, 10)); state.jabatan[idx].nama = nama; } else { state.jabatan.push({ id: Date.now(), nama }); } saveData(); document.getElementById('modalJabatan').classList.add('hidden'); window.renderMainContent(); };
+        window.bukaModalJabatan = function(id = null) { if(id) { const j = state.jabatan.find(x => String(x.id) === String(id)); if(!j) return; document.getElementById('fj_id').value = j.id; document.getElementById('fj_nama').value = j.nama; } else { document.getElementById('fj_id').value = ''; document.getElementById('fj_nama').value = ''; } document.getElementById('modalJabatan').classList.remove('hidden'); };
+        window.simpanJabatan = function() { const id = document.getElementById('fj_id').value; const nama = document.getElementById('fj_nama').value; if(!nama) return; if(id) { const idx = state.jabatan.findIndex(j => String(j.id) === String(id)); if(idx !== -1) state.jabatan[idx].nama = nama; } else { state.jabatan.push({ id: Date.now(), nama }); } saveData(); document.getElementById('modalJabatan').classList.add('hidden'); window.renderMainContent(); showToast('Tersimpan', 'Data Jabatan berhasil disimpan'); };
 
         window.absensiPagination = {
             page: 1,
@@ -6719,10 +6792,10 @@
                             </span>
                         </td>
                         <td class="py-3.5 px-6 text-center whitespace-nowrap">
-                            <button onclick="window.bukaModalAbsensi(${a.id})" class="text-blue-600 bg-blue-50 hover:bg-blue-600 hover:text-white p-2 rounded-xl transition mr-1.5 shadow-2xs" title="Edit Catatan">
+                            <button onclick="window.bukaModalAbsensi('${a.id}')" class="text-blue-600 bg-blue-50 hover:bg-blue-600 hover:text-white p-2 rounded-xl transition mr-1.5 shadow-2xs" title="Edit Catatan">
                                 <i class="fas fa-edit text-xs"></i>
                             </button>
-                            <button onclick="window.confirmDelete('absensi', ${a.id})" class="text-rose-600 bg-rose-50 hover:bg-rose-600 hover:text-white p-2 rounded-xl transition shadow-2xs" title="Hapus Catatan">
+                            <button onclick="window.confirmDelete('absensi', '${a.id}')" class="text-rose-600 bg-rose-50 hover:bg-rose-600 hover:text-white p-2 rounded-xl transition shadow-2xs" title="Hapus Catatan">
                                 <i class="fas fa-trash text-xs"></i>
                             </button>
                         </td>
@@ -6841,7 +6914,7 @@
             const modal = document.getElementById('modalAbsensiManual');
             if (!modal) return;
             if (id) {
-                const a = state.absensi.find(x => x.id === id);
+                const a = (state.absensi || []).find(x => String(x.id) === String(id));
                 if (!a) return;
                 document.getElementById('fa_id').value = a.id;
                 document.getElementById('fa_karyawan').value = a.karyawanId;
@@ -6927,9 +7000,9 @@
             }
 
             if (id) {
-                const idx = state.absensi.findIndex(a => a.id == parseInt(id, 10));
+                const idx = state.absensi.findIndex(a => String(a.id) === String(id));
                 if (idx !== -1) {
-                    state.absensi[idx].karyawanId = parseInt(kId, 10);
+                    state.absensi[idx].karyawanId = kObj ? kObj.id : parseInt(kId, 10);
                     if (kObj) {
                         state.absensi[idx].karyawanNama = kObj.nama;
                         state.absensi[idx].karyawanNik = kObj.nik || '';
@@ -6948,12 +7021,11 @@
                     if (status === 'Alpha') {
                         state.absensi[idx].keterangan = 'Alpha (Input Manual Admin)';
                     }
-                    if (typeof syncAbsensiAtomic === 'function') syncAbsensiAtomic(state.absensi[idx], true, state.absensi[idx].id);
                 }
             } else {
                 const newRec = {
                     id: Date.now(),
-                    karyawanId: parseInt(kId, 10),
+                    karyawanId: kObj ? kObj.id : parseInt(kId, 10),
                     karyawanNama: kObj ? kObj.nama : '',
                     karyawanNik: kObj ? (kObj.nik || '') : '',
                     tanggal: tgl,
@@ -6968,7 +7040,6 @@
                     keterangan: status === 'Alpha' ? 'Alpha (Input Manual Admin)' : 'Presensi Input Manual'
                 };
                 state.absensi.push(newRec);
-                if (typeof syncAbsensiAtomic === 'function') syncAbsensiAtomic(newRec, false);
             }
             
             saveData(); 
@@ -6986,7 +7057,7 @@
                 const k = (state.karyawan || []).find(x => x.id == i.karyawanId || String(x.id) === String(i.karyawanId)); 
                 const namaImk = k ? k.nama : (i.karyawanNama || 'Karyawan Non-Aktif');
                 const statusKembali = i.jamKembali ? `<span class="font-mono">${i.jamKembali}</span>` : `<span class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-xs font-bold animate-pulse">Sedang di Luar</span>`;
-                tbody.innerHTML += `<tr class="hover:bg-slate-50"><td class="py-4 px-6 text-slate-600 whitespace-nowrap">${formatDateID(i.tanggal)}</td><td class="py-4 px-6 font-bold text-slate-800">${namaImk} ${!k ? '<span class="text-[10px] text-amber-600 bg-amber-50 border border-amber-200 px-1 py-0.2 rounded font-normal ml-1">Non-Aktif</span>' : ''}</td><td class="py-4 px-6 font-mono text-amber-600">${i.jamKeluar}</td><td class="py-4 px-6">${statusKembali}</td><td class="py-4 px-6 font-semibold text-slate-700">${i.durasi}</td><td class="py-4 px-6 text-center"><button onclick="window.confirmDelete('imk', ${i.id})" class="text-red-500 bg-red-50 hover:bg-red-500 hover:text-white p-2 rounded-lg transition"><i class="fas fa-trash"></i></button></td></tr>`;
+                tbody.innerHTML += `<tr class="hover:bg-slate-50"><td class="py-4 px-6 text-slate-600 whitespace-nowrap">${formatDateID(i.tanggal)}</td><td class="py-4 px-6 font-bold text-slate-800">${namaImk} ${!k ? '<span class="text-[10px] text-amber-600 bg-amber-50 border border-amber-200 px-1 py-0.2 rounded font-normal ml-1">Non-Aktif</span>' : ''}</td><td class="py-4 px-6 font-mono text-amber-600">${i.jamKeluar}</td><td class="py-4 px-6">${statusKembali}</td><td class="py-4 px-6 font-semibold text-slate-700">${i.durasi}</td><td class="py-4 px-6 text-center"><button onclick="window.confirmDelete('imk', '${i.id}')" class="text-red-500 bg-red-50 hover:bg-red-500 hover:text-white p-2 rounded-lg transition"><i class="fas fa-trash"></i></button></td></tr>`;
             });
         }
 
@@ -7418,10 +7489,10 @@
                             ${statusBadge}
                         </td>
                         <td class="py-3.5 px-6 text-center whitespace-nowrap">
-                            <button onclick="window.bukaModalDetailCuti(${c.id})" class="text-blue-600 bg-blue-50 hover:bg-blue-600 hover:text-white p-2 rounded-xl transition mr-1.5 shadow-2xs" title="Lihat Detail & Konfirmasi">
+                            <button onclick="window.bukaModalDetailCuti('${c.id}')" class="text-blue-600 bg-blue-50 hover:bg-blue-600 hover:text-white p-2 rounded-xl transition mr-1.5 shadow-2xs" title="Lihat Detail & Konfirmasi">
                                 <i class="fas fa-eye text-xs"></i>
                             </button>
-                            <button onclick="window.confirmDelete('cuti', ${c.id})" class="text-rose-600 bg-rose-50 hover:bg-rose-600 hover:text-white p-2 rounded-xl transition shadow-2xs" title="Hapus Catatan">
+                            <button onclick="window.confirmDelete('cuti', '${c.id}')" class="text-rose-600 bg-rose-50 hover:bg-rose-600 hover:text-white p-2 rounded-xl transition shadow-2xs" title="Hapus Catatan">
                                 <i class="fas fa-trash text-xs"></i>
                             </button>
                         </td>
@@ -7610,7 +7681,7 @@
         let idCutiAktif = null;
         window.bukaModalDetailCuti = function(id) {
             idCutiAktif = id; 
-            const c = (state.cuti || []).find(x => x.id === id); 
+            const c = (state.cuti || []).find(x => String(x.id) === String(id)); 
             if(!c) return; 
 
             // Cari karyawan dengan multi-field matching
@@ -7750,7 +7821,7 @@
         };
         
         window.forwardWAKepsek = function() {
-            const c = (state.cuti || []).find(x => x.id === idCutiAktif); if(!c) return; 
+            const c = (state.cuti || []).find(x => String(x.id) === String(idCutiAktif)); if(!c) return; 
             const k = (state.karyawan || []).find(x => 
                 x.id == c.karyawanId || 
                 String(x.id) === String(c.karyawanId) || 
@@ -7779,7 +7850,7 @@
         };
 
         window.kirimWAKaryawanCuti = function() {
-            const c = (state.cuti || []).find(x => x.id === idCutiAktif); if(!c) return; 
+            const c = (state.cuti || []).find(x => String(x.id) === String(idCutiAktif)); if(!c) return; 
             const k = (state.karyawan || []).find(x => 
                 x.id == c.karyawanId || 
                 String(x.id) === String(c.karyawanId) || 
@@ -7806,7 +7877,7 @@
         };
         
         window.updateStatusCuti = function(status) {
-            const idx = (state.cuti || []).findIndex(x => x.id === idCutiAktif); 
+            const idx = (state.cuti || []).findIndex(x => String(x.id) === String(idCutiAktif)); 
             if(idx === -1) return; 
             const c = state.cuti[idx]; 
             const k = (state.karyawan || []).find(x => 
@@ -8508,7 +8579,13 @@
                 `==============================%0A` +
                 `_Slip ini resmi diterbitkan secara otomatis oleh Divisi HR Destiny Institute._`;
 
-            window.open(`https://wa.me/${formatWANumber(k.noWa)}?text=${pesan}`, '_blank');
+            const link = document.createElement('a');
+            link.href = `https://wa.me/${formatWANumber(k.noWa)}?text=${pesan}`;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         };
 
         // HELPER AUTO-FIT LEBAR KOLOM EXCEL AGAR RAPI DI SEMUA APLIKASI SPREADSHEET
@@ -8968,7 +9045,7 @@
         };
         function renderLiburTable() {
             const tb = document.getElementById('tb_libur'); if(!tb) return; tb.innerHTML = '';
-            state.pengaturan.liburNasional.forEach(l => { tb.innerHTML += `<tr><td class="py-2"><b class="text-rose-600">${formatDateID(l.tanggal)}</b><br><span class="text-xs text-slate-500">${l.keterangan}</span></td><td class="text-right"><button onclick="window.confirmDelete('libur',${l.id})" class="text-red-500 hover:bg-red-50 p-2 rounded transition"><i class="fas fa-trash"></i></button></td></tr>`; });
+            state.pengaturan.liburNasional.forEach(l => { tb.innerHTML += `<tr><td class="py-2"><b class="text-rose-600">${formatDateID(l.tanggal)}</b><br><span class="text-xs text-slate-500">${l.keterangan}</span></td><td class="text-right"><button onclick="window.confirmDelete('libur','${l.id}')" class="text-red-500 hover:bg-red-50 p-2 rounded transition"><i class="fas fa-trash"></i></button></td></tr>`; });
         }
         window.bukaModalLibur = function() { document.getElementById('m_libur').classList.remove('hidden'); document.getElementById('ml_tgl').value = ''; document.getElementById('ml_ket').value = ''; };
         window.simpanLibur = function() {
