@@ -41,13 +41,13 @@ const initialSeedData = {
   imk: [],
   cuti: [],
   pengaturan: {
-    jamMasuk: "08:00",
+    jamMasuk: "07:30",
     tunjanganHadir: 50000,
     dendaTelat: 20000,
     adminUsername: "admin",
     adminPassword: "admin123",
     shifts: [
-      { id: "shift_1", nama: "Shift Standar (Pagi)", jamMasuk: "08:00", jamPulang: "17:00" }
+      { id: "shift_1", nama: "Shift Standar (Pagi)", jamMasuk: "07:30", jamPulang: "15:30" }
     ],
     liburNasional: []
   }
@@ -142,7 +142,7 @@ function processScanAtomic(scanPayload) {
         if (!db.absensi) db.absensi = [];
 
         const shifts = db.pengaturan?.shifts || initialSeedData.pengaturan.shifts;
-        const shiftKaryawan = shifts.find(s => s.id === karyawan.shiftId) || shifts[0] || { jamMasuk: '08:00', jamPulang: '17:00' };
+        const shiftKaryawan = shifts.find(s => s.id === karyawan.shiftId) || shifts[0] || { jamMasuk: '07:30', jamPulang: '15:30' };
         const isLibur = (db.pengaturan?.liburNasional || []).find(l => l.tanggal === dateString);
 
         let absenTerakhir = [...db.absensi].reverse().find(a => a.karyawanId === karyawan.id);
@@ -194,7 +194,7 @@ function processScanAtomic(scanPayload) {
           let absenHariIni = db.absensi.find(a => a.karyawanId === karyawan.id && a.tanggal === dateString);
           if (!absenHariIni) {
             action = 'masuk';
-            const statusMasuk = isLibur ? 'Hadir (Libur)' : (timeString > (shiftKaryawan?.jamMasuk || '08:00') ? 'Terlambat' : 'Tepat Waktu');
+            const statusMasuk = isLibur ? 'Hadir (Libur)' : (timeString > (shiftKaryawan?.jamMasuk || '07:30') ? 'Terlambat' : 'Tepat Waktu');
             const newRecord = {
               id: Date.now() + Math.floor(Math.random() * 1000),
               karyawanId: karyawan.id,
