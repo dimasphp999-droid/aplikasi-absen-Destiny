@@ -1598,6 +1598,40 @@
             return (parts[0] || 0) * 60 + (parts[1] || 0);
         }
 
+        // Helper parsing tanggal & waktu yang tangguh untuk format ISO, YYYY-MM-DD, DD-MM-YYYY, DD/MM/YYYY, dan HH:mm[:ss]
+        function parseDateTimeSafely(dateStr, timeStr) {
+            if (!dateStr) return new Date();
+            const tParts = String(timeStr || '00:00').trim().split(':').map(x => parseInt(x, 10) || 0);
+            const hours = tParts[0] || 0;
+            const mins = tParts[1] || 0;
+            const secs = tParts[2] || 0;
+
+            if (typeof dateStr === 'string') {
+                const cleanDate = dateStr.trim();
+                if (cleanDate.includes('-')) {
+                    const parts = cleanDate.split('-').map(x => parseInt(x, 10) || 0);
+                    if (parts[0] > 1000) {
+                        return new Date(parts[0], Math.max(0, parts[1] - 1), parts[2] || 1, hours, mins, secs);
+                    } else if (parts[2] > 1000) {
+                        return new Date(parts[2], Math.max(0, parts[1] - 1), parts[0] || 1, hours, mins, secs);
+                    }
+                } else if (cleanDate.includes('/')) {
+                    const parts = cleanDate.split('/').map(x => parseInt(x, 10) || 0);
+                    if (parts[2] > 1000) {
+                        return new Date(parts[2], Math.max(0, parts[1] - 1), parts[0] || 1, hours, mins, secs);
+                    } else if (parts[0] > 1000) {
+                        return new Date(parts[0], Math.max(0, parts[1] - 1), parts[1] || 1, hours, mins, secs);
+                    }
+                }
+            }
+            const d = new Date(dateStr);
+            if (!isNaN(d.getTime())) {
+                d.setHours(hours, mins, secs, 0);
+                return d;
+            }
+            return new Date();
+        }
+
         // Kalkulasi jarak Haversine dalam meter antara dua titik koordinat GPS
         function hitungJarakGPS(lat1, lon1, lat2, lon2) {
             if (lat1 === null || lon1 === null || lat2 === null || lon2 === null || 
@@ -1821,7 +1855,7 @@
             // ==========================================
             const isImkMode = (kioskCategory === 'imk' || kioskModeType === 'imk' || kioskModeType === 'imk_keluar' || kioskModeType === 'imk_kembali');
             if (isImkMode) {
-                if(!state.imk) state.imk = [];
+                if (!state.imk) state.imk = [];
                 
                 const yesterday = new Date(now);
                 yesterday.setDate(yesterday.getDate() - 1);
@@ -1831,49 +1865,55 @@
                 const pulangMins = timeToMinutes(shiftKaryawan.jamPulang);
                 const isNightShift = pulangMins < masukMins;
 
-                // Validasi: Karyawan harus memiliki presensi masuk hari ini (atau kemarin malam jika shift malam)
+                // Cari presensi masuk karyawan hari ini
                 const absenAktifHariIni = (state.absensi || []).find(a => 
                     (a.karyawanId == karyawan.id || String(a.karyawanId) === String(karyawan.id)) && 
                     (a.tanggal === dateString || (isNightShift && a.tanggal === yDateStr && !a.jamPulang))
                 );
 
-                if (!absenAktifHariIni) {
-                    window.playSound('error');
-                    showToast('Akses IMK Ditolak', `${karyawan.nama} belum melakukan presensi Masuk hari ini. Harap absen masuk terlebih dahulu.`, 'warning');
-                    return;
-                }
-
-                if (absenAktifHariIni.jamPulang) {
-                    window.playSound('error');
-                    showToast('Akses IMK Ditolak', `${karyawan.nama} sudah menyelesaikan jam kerja / absen pulang hari ini.`, 'warning');
-                    return;
-                }
-
-                // Cek apakah karyawan sedang di luar kantor
-                let imkTerakhir = [...state.imk].reverse().find(i => 
-                    (i.karyawanId == karyawan.id || String(i.karyawanId) === String(karyawan.id))
+                // Cari record IMK aktif yang masih keluar / belum tercatat jamKembali
+                let imkAktif = [...state.imk].reverse().find(i => 
+                    (i.karyawanId == karyawan.id || String(i.karyawanId) === String(karyawan.id)) &&
+                    !i.jamKembali
                 );
-                let isMasihDiLuar = imkTerakhir && !imkTerakhir.jamKembali;
 
-                // Abaikan jika gantung lebih dari 24 jam
-                if (isMasihDiLuar) {
-                    const diffHours = (now.getTime() - new Date(`${imkTerakhir.tanggal}T${imkTerakhir.jamKeluar}:00`).getTime()) / 3600000;
-                    if (diffHours > 24) isMasihDiLuar = false;
+                let isMasihDiLuar = !!imkAktif;
+                if (isMasihDiLuar && imkAktif) {
+                    const tKeluar = parseDateTimeSafely(imkAktif.tanggal, imkAktif.jamKeluar);
+                    const diffHours = (now.getTime() - tKeluar.getTime()) / 3600000;
+                    // Abaikan jika sudah menggantung lebih dari 24 jam (hari yang lama)
+                    if (diffHours > 24) {
+                        isMasihDiLuar = false;
+                        imkAktif = null;
+                    }
                 }
 
                 const targetImkAction = (kioskImkAction === 'kembali' || kioskModeType === 'imk_kembali') ? 'kembali' : 'keluar';
 
                 if (targetImkAction === 'keluar') {
-                    if (isMasihDiLuar) {
+                    // Validasi: Karyawan harus memiliki presensi masuk hari ini untuk izin keluar kantor
+                    if (!absenAktifHariIni) {
                         window.playSound('error');
-                        showToast('Sudah Tercatat Keluar', `${karyawan.nama} sudah tercatat izin KELUAR pukul ${imkTerakhir.jamKeluar}. Jika sudah balik ke kantor, silakan pilih fungsi 'Kembali'.`, 'warning');
+                        showToast('Akses IMK Ditolak', `${karyawan.nama} belum melakukan presensi Masuk hari ini. Harap absen masuk terlebih dahulu.`, 'warning');
+                        return;
+                    }
+
+                    if (absenAktifHariIni.jamPulang) {
+                        window.playSound('error');
+                        showToast('Akses IMK Ditolak', `${karyawan.nama} sudah menyelesaikan jam kerja / absen pulang hari ini.`, 'warning');
+                        return;
+                    }
+
+                    if (isMasihDiLuar && imkAktif) {
+                        window.playSound('error');
+                        showToast('Sudah Tercatat Keluar', `${karyawan.nama} sudah tercatat izin KELUAR pukul ${imkAktif.jamKeluar}. Jika sudah balik ke kantor, silakan pilih fungsi 'Kembali'.`, 'warning');
                         if (typeof window.tampilkanOverlayScanBerhasil === 'function') {
-                            window.tampilkanOverlayScanBerhasil(karyawan, 'SUDAH KELUAR', imkTerakhir.jamKeluar, 'Silakan pilih fungsi Kembali', metode);
+                            window.tampilkanOverlayScanBerhasil(karyawan, 'SUDAH KELUAR', imkAktif.jamKeluar, 'Silakan pilih fungsi Kembali', metode);
                         }
                         return;
                     }
 
-                    // CATAT IZIN KELUAR KANTOR
+                    // CATAT IZIN KELUAR KANTOR BARU
                     const uniqueId = Date.now() * 1000 + Math.floor(Math.random() * 1000);
                     const newImk = {
                         id: uniqueId, 
@@ -1892,49 +1932,104 @@
                     };
                     state.imk.push(newImk);
                     saveData(); 
+                    syncImkAtomic(newImk, false);
                     window.playSound('imk_keluar'); 
                     const infoJarak = jarakDariKantor !== null ? ` (Jarak ${jarakDariKantor}m)` : '';
-                    showToast('IMK: Izin Keluar', `${karyawan.nama} tercatat KELUAR kantor pukul ${timeString}${infoJarak}`);
+                    showToast('IMK: Izin Keluar', `${karyawan.nama} tercatat KELUAR kantor pukul ${timeString}${infoJarak}`, 'success');
                     if (typeof window.tampilkanOverlayScanBerhasil === 'function') {
                         window.tampilkanOverlayScanBerhasil(karyawan, 'IMK: KELUAR', timeString, 'Izin Keluar Kantor', metode);
                     }
+                    if (typeof window.renderRecentKioskScans === 'function') {
+                        window.renderRecentKioskScans();
+                    }
                     return;
                 } else {
+                    // ==========================================
                     // targetImkAction === 'kembali'
-                    if (!isMasihDiLuar) {
-                        window.playSound('error');
-                        showToast('Belum Izin Keluar', `${karyawan.nama} belum mencatat izin KELUAR hari ini. Silakan pilih fungsi 'Keluar' terlebih dahulu.`, 'warning');
+                    // ==========================================
+                    if (isMasihDiLuar && imkAktif) {
+                        // KASUS 1: ADA IZIN KELUAR AKTIF -> CATAT KEMBALI KE KANTOR
+                        const tglKeluar = parseDateTimeSafely(imkAktif.tanggal, imkAktif.jamKeluar);
+                        const tglKembali = parseDateTimeSafely(dateString, timeString);
+                        let diffMins = Math.round((tglKembali.getTime() - tglKeluar.getTime()) / 60000);
+                        if (isNaN(diffMins) || diffMins < 0) diffMins = 0;
+
+                        let durasiTeks = '';
+                        if (diffMins < 1) {
+                            durasiTeks = '< 1 menit';
+                        } else {
+                            const jam = Math.floor(diffMins / 60);
+                            const menit = diffMins % 60;
+                            durasiTeks = `${jam > 0 ? jam + ' jam ' : ''}${menit} menit`;
+                        }
+                        
+                        imkAktif.jamKembali = timeString;
+                        imkAktif.durasi = durasiTeks;
+                        if (lat && lng) {
+                            imkAktif.latKembali = lat;
+                            imkAktif.lngKembali = lng;
+                            imkAktif.jarakKembali = jarakDariKantor;
+                            imkAktif.dalamRadiusKembali = dalamRadiusKantor;
+                        }
+
+                        saveData(); 
+                        syncImkAtomic(imkAktif, true, imkAktif.id);
+                        window.playSound('imk_kembali'); 
+                        const infoJarak = jarakDariKantor !== null ? ` (Jarak ${jarakDariKantor}m)` : '';
+                        showToast('IMK: Kembali', `${karyawan.nama} KEMBALI ke kantor pukul ${timeString}. Durasi: ${durasiTeks}${infoJarak}`, 'success');
                         if (typeof window.tampilkanOverlayScanBerhasil === 'function') {
-                            window.tampilkanOverlayScanBerhasil(karyawan, 'BELUM KELUAR', timeString, 'Silakan pilih fungsi Keluar', metode);
+                            window.tampilkanOverlayScanBerhasil(karyawan, 'IMK: KEMBALI', timeString, `Durasi: ${durasiTeks}`, metode);
+                        }
+                        if (typeof window.renderRecentKioskScans === 'function') {
+                            window.renderRecentKioskScans();
                         }
                         return;
                     }
 
-                    // CATAT KEMBALI KE KANTOR
-                    const tglKeluar = new Date(`${imkTerakhir.tanggal}T${imkTerakhir.jamKeluar}:00`);
-                    const tglKembali = new Date(`${dateString}T${timeString}:00`);
-                    let diffMins = Math.floor((tglKembali - tglKeluar) / 60000);
-                    if (diffMins < 1) {
-                        window.playSound('error');
-                        showToast('Peringatan IMK', `${karyawan.nama} baru saja mencatat Izin Keluar pukul ${imkTerakhir.jamKeluar}. Harap tunggu sebentar.`, 'warning');
+                    // KASUS 2: KARYAWAN SUDAH TERCATAT KEMBALI HARI INI (SCAN ULANG / DOUBLE SCAN)
+                    const imkSelesaiHariIni = [...state.imk].reverse().find(i => 
+                        (i.karyawanId == karyawan.id || String(i.karyawanId) === String(karyawan.id)) && 
+                        i.jamKembali && 
+                        i.tanggal === dateString
+                    );
+
+                    if (imkSelesaiHariIni) {
+                        window.playSound('imk_kembali');
+                        showToast('Sudah Tercatat Kembali', `${karyawan.nama} sudah tercatat KEMBALI ke kantor pukul ${imkSelesaiHariIni.jamKembali} (Durasi: ${imkSelesaiHariIni.durasi}). Data tersimpan aman.`, 'info');
+                        if (typeof window.tampilkanOverlayScanBerhasil === 'function') {
+                            window.tampilkanOverlayScanBerhasil(karyawan, 'SUDAH KEMBALI', imkSelesaiHariIni.jamKembali, `Durasi: ${imkSelesaiHariIni.durasi}`, metode);
+                        }
                         return;
                     }
-                    if(diffMins < 0) diffMins = 0;
-                    
-                    imkTerakhir.jamKembali = timeString;
-                    imkTerakhir.durasi = `${Math.floor(diffMins / 60) > 0 ? Math.floor(diffMins / 60) + ' jam ' : ''}${diffMins % 60} menit`;
-                    if (lat && lng) {
-                        imkTerakhir.latKembali = lat;
-                        imkTerakhir.lngKembali = lng;
-                        imkTerakhir.jarakKembali = jarakDariKantor;
-                        imkTerakhir.dalamRadiusKembali = dalamRadiusKantor;
-                    }
 
+                    // KASUS 3: KARYAWAN SCAN KEMBALI TAPI SEBELUMNYA BELUM SCAN KELUAR
+                    // Catat kembali secara langsung agar karyawan tidak error/terhambat, dengan catatan rapi
+                    const uniqueId = Date.now() * 1000 + Math.floor(Math.random() * 1000);
+                    const newImkKembali = {
+                        id: uniqueId, 
+                        karyawanId: karyawan.id, 
+                        karyawanNama: karyawan.nama,
+                        karyawanNik: karyawan.nik || '',
+                        tanggal: dateString, 
+                        jamKeluar: '- (Langsung)', 
+                        jamKembali: timeString, 
+                        durasi: 'Kembali Langsung',
+                        metode: metode,
+                        latKembali: lat,
+                        lngKembali: lng,
+                        jarakKembali: jarakDariKantor,
+                        dalamRadiusKembali: dalamRadiusKantor
+                    };
+                    state.imk.push(newImkKembali);
                     saveData(); 
+                    syncImkAtomic(newImkKembali, false);
                     window.playSound('imk_kembali'); 
-                    showToast('IMK: Kembali', `${karyawan.nama} KEMBALI ke kantor. Durasi: ${imkTerakhir.durasi}`);
+                    showToast('IMK: Kembali Dicatat', `${karyawan.nama} tercatat KEMBALI ke kantor pukul ${timeString}. (Catatan: Belum ada scan keluar hari ini).`, 'info');
                     if (typeof window.tampilkanOverlayScanBerhasil === 'function') {
-                        window.tampilkanOverlayScanBerhasil(karyawan, 'IMK: KEMBALI', timeString, `Durasi: ${imkTerakhir.durasi}`, metode);
+                        window.tampilkanOverlayScanBerhasil(karyawan, 'IMK: KEMBALI', timeString, 'Kembali ke Kantor (Langsung)', metode);
+                    }
+                    if (typeof window.renderRecentKioskScans === 'function') {
+                        window.renderRecentKioskScans();
                     }
                     return;
                 }
