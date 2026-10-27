@@ -4438,12 +4438,17 @@
         function getNavItemsHTML(isMobile = false) {
             const items = [
                 { id: 'dashboard', icon: 'fa-chart-pie', label: 'Ringkasan Dasbor' },
+                { 
+                    id: 'bukuKas', 
+                    icon: 'fa-book-bookmark', 
+                    label: 'Buku Kas',
+                    img: '/assets/buku_kas_logo.jpg'
+                },
                 { id: 'jabatan', icon: 'fa-user-tie', label: 'Struktur Jabatan' }, 
                 { id: 'karyawan', icon: 'fa-users', label: 'Database Karyawan' },
                 { id: 'absensi', icon: 'fa-history', label: 'Riwayat Kehadiran' }, 
                 { id: 'imk', icon: 'fa-running', label: 'Riwayat IMK' }, 
                 { id: 'cuti', icon: 'fa-envelope-open-text', label: 'Cuti & Izin' },
-                { id: 'bukuKas', icon: 'fa-book-bookmark', label: 'Buku Kas' },
                 { id: 'gaji', icon: 'fa-file-invoice-dollar', label: 'Penggajian' }, 
                 { id: 'laporan', icon: 'fa-print', label: 'Rapor Individu' }, 
                 { id: 'pengaturan', icon: 'fa-sliders-h', label: 'Pengaturan Sistem' }
@@ -4451,7 +4456,19 @@
             return items.map(item => {
                 const isActive = state.currentView === item.id;
                 const activeClass = isActive ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200';
-                return `<button onclick="window.setView('${item.id}'); ${isMobile ? "window.toggleMobileMenu();" : ""}" class="w-full text-left px-4 py-3 rounded-xl transition flex items-center font-medium ${activeClass}"><i class="fas ${item.icon} w-6 text-center mr-1"></i> ${item.label}</button>`;
+                
+                let iconHTML = '';
+                if (item.img) {
+                    iconHTML = `
+                        <span class="w-6 h-6 rounded-lg overflow-hidden shrink-0 mr-2.5 inline-flex items-center justify-center bg-slate-800 border border-emerald-400/30 shadow-2xs">
+                            <img src="${item.img}" alt="${item.label}" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=\\\'fas ${item.icon} text-emerald-400\\\'></i>'">
+                        </span>
+                    `;
+                } else {
+                    iconHTML = `<i class="fas ${item.icon} w-6 text-center mr-1"></i>`;
+                }
+
+                return `<button onclick="window.setView('${item.id}'); ${isMobile ? "window.toggleMobileMenu();" : ""}" class="w-full text-left px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-xl transition flex items-center font-medium ${activeClass}">${iconHTML} <span class="truncate">${item.label}</span></button>`;
             }).join('');
         }
 
@@ -8483,14 +8500,19 @@
                 <div class="space-y-6 mb-8">
                     <!-- HEADER & AKSI UTAMA -->
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                        <div>
-                            <div class="flex items-center gap-3">
-                                <h1 class="text-2xl sm:text-3xl font-bold text-slate-800 tracking-tight">Buku Kas & Keuangan</h1>
-                                <span class="bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-bold px-2.5 py-1 rounded-full" id="bukuKasTotalBadge">
-                                    ${(state.bukuKas || []).length} Transaksi
-                                </span>
+                        <div class="flex items-center gap-3.5">
+                            <div class="w-12 h-12 rounded-2xl overflow-hidden shrink-0 shadow-sm border border-emerald-500/20 bg-slate-900 flex items-center justify-center">
+                                <img src="/assets/buku_kas_logo.jpg" alt="Logo Buku Kas" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i class=\\\'fas fa-book-bookmark text-emerald-400 text-xl\\\'></i>'">
                             </div>
-                            <p class="text-xs text-slate-500 mt-1">Pencatatan arus kas masuk & keluar, saldo realtime, serta kustomisasi kategori keuangan.</p>
+                            <div>
+                                <div class="flex items-center gap-3">
+                                    <h1 class="text-2xl sm:text-3xl font-bold text-slate-800 tracking-tight">Buku Kas & Keuangan</h1>
+                                    <span class="bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-bold px-2.5 py-1 rounded-full" id="bukuKasTotalBadge">
+                                        ${(state.bukuKas || []).length} Transaksi
+                                    </span>
+                                </div>
+                                <p class="text-xs text-slate-500 mt-0.5">Pencatatan arus kas masuk & keluar, saldo realtime, serta kustomisasi kategori keuangan.</p>
+                            </div>
                         </div>
                         <div class="flex flex-wrap items-center gap-2">
                             <button onclick="window.bukaModalTransaksiKas(null, 'masuk')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl shadow-xs text-xs sm:text-sm transition flex items-center shadow-emerald-600/20">
