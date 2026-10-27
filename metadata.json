@@ -1,6 +1,6 @@
 {
   "name": "Destiny Institute HR System",
-  "description": "Sistem Informasi Manajemen HR dan Absensi Real-Time Destiny Institute dengan QR Code scanner dan slip gaji.",
+  "description": "Sistem Informasi Manajemen HR, Absensi Real-Time, dan Buku Kas Keuangan Destiny Institute dengan QR Code scanner, slip gaji, dan pembukuan kas.",
   "requestFramePermissions": [
     "camera",
     "geolocation"

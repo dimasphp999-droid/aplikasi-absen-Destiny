@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Destiny Institute HR System</title>
-    <meta name="description" content="Sistem Informasi Manajemen HR dan Absensi Real-Time Destiny Institute dengan QR Code scanner dan slip gaji.">
+    <meta name="description" content="Sistem Informasi Manajemen HR, Absensi Real-Time, dan Buku Kas Keuangan Destiny Institute dengan QR Code scanner, slip gaji, dan pembukuan kas.">
     <meta property="og:title" content="Destiny Institute HR System">
-    <meta property="og:description" content="Sistem Informasi Manajemen HR dan Absensi Real-Time Destiny Institute dengan QR Code scanner dan slip gaji.">
+    <meta property="og:description" content="Sistem Informasi Manajemen HR, Absensi Real-Time, dan Buku Kas Keuangan Destiny Institute dengan QR Code scanner, slip gaji, dan pembukuan kas.">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
@@ -807,6 +807,244 @@
         </div>
     </div>
 
+    <!-- MODAL TRANSAKSI BUKU KAS (GLOBAL) -->
+    <div id="modalTransaksiKas" class="fixed inset-0 bg-slate-900 bg-opacity-80 hidden z-[300] flex justify-center items-center p-3 sm:p-4 backdrop-blur-sm transition-opacity duration-300 opacity-0">
+        <div class="bg-white rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden transform scale-95 transition-all duration-300 flex flex-col max-h-[92vh]" id="modalTransaksiKasContent">
+            <div class="px-5 sm:px-6 py-4 sm:py-5 border-b bg-slate-50/80 flex justify-between items-center shrink-0">
+                <div class="flex items-center space-x-3">
+                    <span id="modalTransaksiKasIconWrap" class="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-base sm:text-lg border border-emerald-200 shrink-0">
+                        <i class="fas fa-file-invoice-dollar" id="modalTransaksiKasIcon"></i>
+                    </span>
+                    <div>
+                        <h3 class="font-bold text-lg sm:text-xl text-slate-800" id="modalTransaksiKasTitle">Catat Transaksi Kas</h3>
+                        <p class="text-xs text-slate-500">Kelola arus dana masuk atau keluar perusahaan.</p>
+                    </div>
+                </div>
+                <button type="button" onclick="window.tutupModalTransaksiKas()" class="text-slate-400 hover:text-red-500 transition w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100"><i class="fas fa-times text-lg"></i></button>
+            </div>
+            <div class="p-4 sm:p-6 overflow-y-auto flex-1 custom-scrollbar">
+                <form id="formTransaksiKas" onsubmit="window.simpanTransaksiKas(event)" class="space-y-4 text-left">
+                    <input type="hidden" id="kas_id" value="">
+                    <input type="hidden" id="kas_tipe" value="masuk">
+
+                    <!-- PILIH JENIS ARUS KAS: PEMASUKAN ATAU PENGELUARAN -->
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Jenis Transaksi</label>
+                        <div class="grid grid-cols-2 gap-2.5">
+                            <button type="button" id="btnKasTipeMasuk" onclick="window.toggleTipeTransaksiKas('masuk')" class="py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm transition flex items-center justify-center gap-2 bg-emerald-600 text-white shadow-sm border border-emerald-700">
+                                <i class="fas fa-arrow-down-left"></i>
+                                <span>Pemasukan (+)</span>
+                            </button>
+                            <button type="button" id="btnKasTipeKeluar" onclick="window.toggleTipeTransaksiKas('keluar')" class="py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm transition flex items-center justify-center gap-2 text-slate-600 bg-slate-50 hover:bg-slate-100 border border-slate-200">
+                                <i class="fas fa-arrow-up-right"></i>
+                                <span>Pengeluaran (-)</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- TANGGAL & KATEGORI KAS -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Tanggal Transaksi</label>
+                            <input type="date" id="kas_tanggal" required class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition font-semibold text-slate-800">
+                        </div>
+                        <div>
+                            <div class="flex justify-between items-center mb-1.5">
+                                <label class="block text-xs font-bold uppercase text-slate-500">Kategori Kas</label>
+                                <button type="button" onclick="window.bukaModalKategoriKas(document.getElementById('kas_tipe').value)" class="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 transition flex items-center gap-1">
+                                    <i class="fas fa-plus-circle"></i> Kategori Baru
+                                </button>
+                            </div>
+                            <select id="kas_kategori" required class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition font-semibold text-slate-800">
+                                <!-- Populated dynamically based on selected tipe -->
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- NOMINAL RUPIAH & LIVE PREVIEW -->
+                    <div>
+                        <div class="flex justify-between items-center mb-1.5">
+                            <label class="block text-xs font-bold uppercase text-slate-500">Nominal Jumlah (Rp)</label>
+                            <span id="kas_nominal_badge" class="text-xs font-mono font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">Rp 0</span>
+                        </div>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 font-bold text-sm">Rp</span>
+                            <input type="number" id="kas_nominal" min="1" step="1" required placeholder="0" oninput="window.handleNominalKasInput(this.value)" class="w-full pl-11 pr-3 py-2.5 sm:py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:bg-white outline-none transition font-mono">
+                        </div>
+                    </div>
+
+                    <!-- KETERANGAN / URAIAN -->
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Keterangan / Keperluan Transaksi</label>
+                        <textarea id="kas_keterangan" rows="2" required placeholder="Contoh: Pembayaran invoice proyek, pembelian ATK kantor..." class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition"></textarea>
+                    </div>
+
+                    <!-- PENANGGUNG JAWAB & METODE PEMBAYARAN -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Penanggung Jawab / Dicatat Oleh</label>
+                            <input type="text" id="kas_pj" placeholder="Contoh: Admin Keuangan / Nama Staff" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Metode Pembayaran</label>
+                            <select id="kas_metode" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 sm:p-3 text-xs sm:text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition font-semibold text-slate-800">
+                                <option value="Tunai / Kas Fisik">Tunai / Kas Fisik</option>
+                                <option value="Transfer Bank (BCA)">Transfer Bank (BCA)</option>
+                                <option value="Transfer Bank (Mandiri)">Transfer Bank (Mandiri)</option>
+                                <option value="Transfer Bank (BRI)">Transfer Bank (BRI)</option>
+                                <option value="Transfer Bank (Lainnya)">Transfer Bank (Lainnya)</option>
+                                <option value="QRIS / E-Wallet">QRIS / E-Wallet</option>
+                                <option value="Cek / Bilyet Giro">Cek / Bilyet Giro</option>
+                                <option value="Lain-lain">Lain-lain</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- FOTO BUKTI / NOTA / KWITANSI (OPSIONAL) -->
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Bukti Transaksi / Nota / Kwitansi (Opsional)</label>
+                        <div class="border-2 border-dashed border-slate-200 hover:border-emerald-400 rounded-2xl p-3 text-center transition bg-slate-50/50">
+                            <input type="file" id="kas_bukti_file" accept="image/*" onchange="window.handleBuktiKasUpload(event)" class="hidden">
+                            <div id="kas_upload_placeholder" onclick="document.getElementById('kas_bukti_file').click()" class="cursor-pointer py-2">
+                                <i class="fas fa-camera text-slate-400 text-xl mb-1"></i>
+                                <span class="text-xs font-semibold text-slate-600 block">Klik untuk Ambil Foto / Upload Nota</span>
+                                <span class="text-[10px] text-slate-400">Format JPG, PNG (Maks 2 MB)</span>
+                            </div>
+                            <div id="kas_bukti_preview" class="hidden relative inline-block">
+                                <img id="kas_bukti_img" src="" alt="Bukti Kas" class="h-28 w-auto max-w-full rounded-xl object-contain mx-auto border border-slate-200 shadow-sm">
+                                <button type="button" onclick="window.hapusBuktiKas()" class="absolute -top-2 -right-2 bg-rose-500 hover:bg-rose-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs shadow-md transition" title="Hapus foto"><i class="fas fa-times"></i></button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-3 border-t flex gap-2 justify-end">
+                        <button type="button" onclick="window.tutupModalTransaksiKas()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl font-bold text-xs transition">Batal</button>
+                        <button type="submit" id="btnSubmitKas" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow-md shadow-emerald-600/30 transition flex items-center">
+                            <i class="fas fa-save mr-1.5"></i> Simpan Transaksi
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL KELOLA KATEGORI BUKU KAS (GLOBAL) -->
+    <div id="modalKategoriKas" class="fixed inset-0 bg-slate-900 bg-opacity-80 hidden z-[350] flex justify-center items-center p-3 sm:p-4 backdrop-blur-sm transition-opacity duration-300 opacity-0">
+        <div class="bg-white rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden transform scale-95 transition-all duration-300 flex flex-col max-h-[92vh]" id="modalKategoriKasContent">
+            <div class="px-5 sm:px-6 py-4 sm:py-5 border-b bg-slate-50/80 flex justify-between items-center shrink-0">
+                <div class="flex items-center space-x-3">
+                    <span class="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-base sm:text-lg border border-indigo-200 shrink-0">
+                        <i class="fas fa-tags"></i>
+                    </span>
+                    <div>
+                        <h3 class="font-bold text-lg sm:text-xl text-slate-800">Kelola Kategori Buku Kas</h3>
+                        <p class="text-xs text-slate-500">Tambah dan kelola jenis pengeluaran atau pemasukan kas.</p>
+                    </div>
+                </div>
+                <button type="button" onclick="window.tutupModalKategoriKas()" class="text-slate-400 hover:text-red-500 transition w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100"><i class="fas fa-times text-lg"></i></button>
+            </div>
+            
+            <div class="p-4 sm:p-6 overflow-y-auto flex-1 custom-scrollbar space-y-5">
+                <!-- FORM TAMBAH / EDIT KATEGORI KAS -->
+                <div class="bg-slate-50/90 border border-slate-200 rounded-2xl p-4 text-left shadow-2xs">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center">
+                            <i class="fas fa-plus-circle text-indigo-600 mr-1.5"></i> <span id="judulFormKategori">Tambah Kategori Baru</span>
+                        </span>
+                        <button type="button" id="btnResetEditKategori" onclick="window.resetFormKategoriKas()" class="text-xs text-slate-400 hover:text-slate-600 hidden font-semibold">Batal Edit</button>
+                    </div>
+                    <form id="formKategoriKas" onsubmit="window.simpanKategoriKas(event)" class="space-y-3">
+                        <input type="hidden" id="kat_id" value="">
+                        
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div class="sm:col-span-2">
+                                <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Nama Kategori</label>
+                                <input type="text" id="kat_nama" required placeholder="Contoh: Penjualan Produk, ATK, Biaya Konsumsi..." class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none transition">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Jenis Kategori</label>
+                                <select id="kat_tipe" required class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none transition">
+                                    <option value="masuk">Pemasukan (+)</option>
+                                    <option value="keluar">Pengeluaran (-)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Warna Badge</label>
+                                <select id="kat_warna" class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none transition">
+                                    <option value="emerald">Emerald (Hijau Kas)</option>
+                                    <option value="teal">Teal (Toska)</option>
+                                    <option value="blue">Blue (Biru Terang)</option>
+                                    <option value="indigo">Indigo (Ungu Biru)</option>
+                                    <option value="purple">Purple (Ungu)</option>
+                                    <option value="amber">Amber (Kuning Keemasan)</option>
+                                    <option value="orange">Orange (Jingga)</option>
+                                    <option value="rose">Rose (Merah Muda)</option>
+                                    <option value="red">Red (Merah Tegas)</option>
+                                    <option value="slate">Slate (Abu-abu Netral)</option>
+                                </select>
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Deskripsi / Keterangan (Opsional)</label>
+                                <div class="flex gap-2">
+                                    <input type="text" id="kat_deskripsi" placeholder="Penjelasan singkat penggunaan kategori..." class="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none transition">
+                                    <button type="submit" id="btnSimpanKatSubmit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-xl text-xs transition shadow-xs flex items-center shrink-0">
+                                        <i class="fas fa-plus mr-1"></i> Simpan
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- TAB SWITCHER DAFTAR KATEGORI: PEMASUKAN VS PENGELUARAN -->
+                <div>
+                    <div class="flex items-center justify-between border-b border-slate-200 pb-2 mb-3">
+                        <div class="flex gap-2">
+                            <button type="button" id="tabKatMasuk" onclick="window.gantiTabKategoriKas('masuk')" class="py-1.5 px-3 rounded-xl font-bold text-xs transition flex items-center gap-1.5 bg-emerald-600 text-white shadow-2xs">
+                                <i class="fas fa-arrow-down-left"></i> Pemasukan (<span id="countKatMasuk">0</span>)
+                            </button>
+                            <button type="button" id="tabKatKeluar" onclick="window.gantiTabKategoriKas('keluar')" class="py-1.5 px-3 rounded-xl font-semibold text-xs transition flex items-center gap-1.5 text-slate-600 bg-slate-100 hover:bg-slate-200">
+                                <i class="fas fa-arrow-up-right"></i> Pengeluaran (<span id="countKatKeluar">0</span>)
+                            </button>
+                        </div>
+                        <span class="text-[11px] text-slate-400 hidden sm:inline">Daftar Kategori Aktif</span>
+                    </div>
+
+                    <div id="daftarKategoriKasContainer" class="space-y-2">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="px-5 py-3 border-t bg-slate-50 flex justify-end shrink-0">
+                <button type="button" onclick="window.tutupModalKategoriKas()" class="bg-slate-800 hover:bg-slate-900 text-white font-bold px-5 py-2.5 rounded-xl text-xs shadow-sm transition">
+                    Selesai
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DETAIL TRANSAKSI BUKU KAS (GLOBAL) -->
+    <div id="modalDetailKas" class="fixed inset-0 bg-slate-900 bg-opacity-80 hidden z-[320] flex justify-center items-center p-3 sm:p-4 backdrop-blur-sm transition-opacity duration-300 opacity-0">
+        <div class="bg-white rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden transform scale-95 transition-all duration-300 flex flex-col max-h-[92vh]" id="modalDetailKasContent">
+            <div class="px-5 sm:px-6 py-4 border-b bg-slate-50/80 flex justify-between items-center shrink-0">
+                <h3 class="font-bold text-lg text-slate-800 flex items-center">
+                    <i class="fas fa-receipt text-indigo-600 mr-2"></i> Rincian Transaksi Kas
+                </h3>
+                <button type="button" onclick="window.tutupModalDetailKas()" class="text-slate-400 hover:text-red-500 transition w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100"><i class="fas fa-times text-lg"></i></button>
+            </div>
+            <div class="p-5 sm:p-6 overflow-y-auto flex-1 custom-scrollbar text-left space-y-4" id="modalDetailKasBody">
+                <!-- Populated dynamically -->
+            </div>
+            <div class="px-5 py-3.5 border-t bg-slate-50 flex justify-between items-center shrink-0" id="modalDetailKasFooter">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+    </div>
+
     <!-- MAIN APP CONTAINER -->
     <div id="appContainer" class="w-full h-full min-h-screen">
         <div class="min-h-screen flex items-center justify-center p-4" style="background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);">
@@ -887,6 +1125,8 @@
             absensi: [],
             imk: [],
             cuti: [],
+            bukuKas: [],
+            kategoriKas: [],
             pengaturan: {
                 jamMasuk: '07:30',
                 toleransiTelat: 0,
@@ -1055,6 +1295,63 @@
             if (!state.karyawan) state.karyawan = [];
             if (!state.jabatan) state.jabatan = [];
             if (!state.absensi) state.absensi = [];
+            if (!state.bukuKas) state.bukuKas = [];
+            if (!state.kategoriKas || state.kategoriKas.length === 0) {
+                state.kategoriKas = [
+                    { id: 'kat_in_1', tipe: 'masuk', nama: 'Pendapatan Usaha / Penjualan', warna: 'emerald', deskripsi: 'Pemasukan dari hasil penjualan produk atau jasa' },
+                    { id: 'kat_in_2', tipe: 'masuk', nama: 'Suntikan Modal / Kas Awal', warna: 'teal', deskripsi: 'Modal awal atau setoran pemilik/investor' },
+                    { id: 'kat_in_3', tipe: 'masuk', nama: 'Penerimaan Piutang', warna: 'blue', deskripsi: 'Pelunasan piutang pelanggan atau pihak ketiga' },
+                    { id: 'kat_in_4', tipe: 'masuk', nama: 'Pendapatan Lain-lain', warna: 'indigo', deskripsi: 'Pendapatan non-operasional lainnya' },
+                    { id: 'kat_out_1', tipe: 'keluar', nama: 'Gaji & Upah Karyawan', warna: 'rose', deskripsi: 'Pembayaran gaji, upah harian, atau bonus' },
+                    { id: 'kat_out_2', tipe: 'keluar', nama: 'Operasional Kantor & Utilitas', warna: 'amber', deskripsi: 'Listrik, air, internet, ATK, dan kebersihan' },
+                    { id: 'kat_out_3', tipe: 'keluar', nama: 'Pembelian Bahan & Perlengkapan', warna: 'orange', deskripsi: 'Pengadaan barang operasional dan perlengkapan' },
+                    { id: 'kat_out_4', tipe: 'keluar', nama: 'Transportasi & Logistik', warna: 'purple', deskripsi: 'BBM, ongkir, tol, dan akomodasi perjalanan' },
+                    { id: 'kat_out_5', tipe: 'keluar', nama: 'Pengeluaran Lain-lain', warna: 'slate', deskripsi: 'Biaya tak terduga atau pengeluaran insidental' }
+                ];
+            }
+            // Sinkronkan nama kategori di transaksi bukuKas
+            (state.bukuKas || []).forEach(b => {
+                if (!b) return;
+                b.jumlah = parseFloat(b.jumlah) || 0;
+                if (!b.kategoriNama && b.kategoriId) {
+                    const kat = (state.kategoriKas || []).find(k => k.id === b.kategoriId);
+                    if (kat) b.kategoriNama = kat.nama;
+                }
+            });
+
+            // Sample data awal jika pertama kali dan belum ada transaksi
+            if (state.bukuKas.length === 0 && !fromSaveData && !localStorage.getItem('destinyAbsensiData')) {
+                const nowD = new Date();
+                const todayStr = `${nowD.getFullYear()}-${String(nowD.getMonth() + 1).padStart(2, '0')}-${String(nowD.getDate()).padStart(2, '0')}`;
+                state.bukuKas = [
+                    {
+                        id: 'kas_init_1',
+                        tanggal: todayStr,
+                        tipe: 'masuk',
+                        kategoriId: 'kat_in_2',
+                        kategoriNama: 'Suntikan Modal / Kas Awal',
+                        jumlah: 15000000,
+                        keterangan: 'Kas awal operasional perusahaan',
+                        pj: 'Admin Keuangan',
+                        metode: 'Transfer Bank (BCA)',
+                        bukti: null,
+                        createdAt: Date.now() - 86400000
+                    },
+                    {
+                        id: 'kas_init_2',
+                        tanggal: todayStr,
+                        tipe: 'keluar',
+                        kategoriId: 'kat_out_2',
+                        kategoriNama: 'Operasional Kantor & Utilitas',
+                        jumlah: 850000,
+                        keterangan: 'Pembayaran tagihan listrik & internet kantor',
+                        pj: 'Staff Administrasi',
+                        metode: 'Transfer Bank (BCA)',
+                        bukti: null,
+                        createdAt: Date.now() - 3600000
+                    }
+                ];
+            }
 
             // Self-healing: Cek dan perbaiki relasi data karyawan pada Cuti, Absensi, dan IMK
             const cariPegawai = (id, nik, nama) => {
@@ -1352,6 +1649,8 @@
                 absensi: state.absensi || [],
                 imk: state.imk || [],
                 cuti: state.cuti || [],
+                bukuKas: state.bukuKas || [],
+                kategoriKas: state.kategoriKas || [],
                 pengaturan: state.pengaturan || {}
             };
             const dataToSave = sanitizeForFirebase(rawDataToSave);
@@ -1473,7 +1772,9 @@
                             jabatan: Array.isArray(data.jabatan) ? data.jabatan : (data.jabatan ? Object.values(data.jabatan) : []),
                             absensi: mergedAbsensi,
                             imk: mergedImk,
-                            cuti: mergedCuti
+                            cuti: mergedCuti,
+                            bukuKas: Array.isArray(data.bukuKas) ? data.bukuKas : (data.bukuKas ? Object.values(data.bukuKas) : (state.bukuKas || [])),
+                            kategoriKas: Array.isArray(data.kategoriKas) ? data.kategoriKas : (data.kategoriKas ? Object.values(data.kategoriKas) : (state.kategoriKas || []))
                         }; 
                         state.currentView = activeView;
                         state.currentUserRole = activeRole;
@@ -1487,6 +1788,8 @@
                                 absensi: state.absensi || [],
                                 imk: state.imk || [],
                                 cuti: state.cuti || [],
+                                bukuKas: state.bukuKas || [],
+                                kategoriKas: state.kategoriKas || [],
                                 pengaturan: state.pengaturan || {}
                             }));
                         } catch(e) {}
@@ -3406,6 +3709,9 @@
                 else if (type === 'semua_imk') msg.innerText = "Kosongkan SELURUH riwayat IMK secara permanen?";
                 else if (type === 'cuti') msg.innerText = "Hapus permohonan cuti / izin ini?";
                 else if (type === 'imk') msg.innerText = "Hapus riwayat Izin Keluar Masuk ini?";
+                else if (type === 'bukuKas') msg.innerText = "Hapus catatan transaksi kas ini?";
+                else if (type === 'semua_bukuKas') msg.innerText = "Kosongkan SELURUH catatan transaksi Buku Kas secara permanen?";
+                else if (type === 'kategoriKas') msg.innerText = "Hapus kategori kas ini?";
                 else msg.innerText = `Yakin menghapus data ${type} ini?`;
             }
             if (modal) {
@@ -3477,6 +3783,22 @@
             else if (type === 'semua_imk') {
                 state.imk = [];
                 removePendingSync('imk', 'all');
+            }
+            else if (type === 'bukuKas') {
+                state.bukuKas = (state.bukuKas || []).filter(x => String(x.id) !== String(id));
+            }
+            else if (type === 'semua_bukuKas') {
+                state.bukuKas = [];
+            }
+            else if (type === 'kategoriKas') {
+                const inUse = (state.bukuKas || []).some(b => String(b.kategoriId) === String(id));
+                if (inUse) {
+                    showToast('Gagal Hapus', 'Kategori ini masih digunakan oleh transaksi Buku Kas.', 'error');
+                    window.closeDeleteModal();
+                    return;
+                }
+                state.kategoriKas = (state.kategoriKas || []).filter(x => String(x.id) !== String(id));
+                if (typeof window.renderKategoriKasList === 'function') window.renderKategoriKasList();
             }
             else if (type === 'shift') {
                 state.pengaturan.shifts = (state.pengaturan.shifts || []).filter(x => String(x.id) !== String(id));
@@ -3934,7 +4256,7 @@
             const sEl = document.getElementById('del_startDate'); if (sEl) sEl.value = ''; 
             const eEl = document.getElementById('del_endDate'); if (eEl) eEl.value = '';
             const tEl = document.getElementById('modalHapusTanggalTitle');
-            if (tEl) tEl.innerText = mode === 'imk' ? 'Hapus IMK via Tanggal' : (mode === 'cuti' ? 'Hapus Cuti & Izin via Tanggal' : 'Hapus Absen via Tanggal');
+            if (tEl) tEl.innerText = mode === 'imk' ? 'Hapus IMK via Tanggal' : (mode === 'cuti' ? 'Hapus Cuti & Izin via Tanggal' : (mode === 'bukuKas' ? 'Hapus Transaksi Kas via Tanggal' : 'Hapus Absen via Tanggal'));
             const modal = document.getElementById('modalHapusTanggal'); const content = document.getElementById('modalHapusTanggalContent');
             if (modal) {
                 modal.classList.remove('hidden'); 
@@ -3966,6 +4288,9 @@
                     return t < start || t > end;
                 });
                 showToast('Sukses', 'Riwayat Cuti & Izin rentang tanggal telah dibersihkan.');
+            } else if (activeHapusMode === 'bukuKas') {
+                state.bukuKas = (state.bukuKas || []).filter(b => b.tanggal < start || b.tanggal > end);
+                showToast('Sukses', 'Riwayat Buku Kas rentang tanggal telah dibersihkan.');
             } else {
                 const removed = (state.absensi || []).filter(a => a.tanggal >= start && a.tanggal <= end);
                 removed.forEach(r => removePendingSync('absensi', r.id));
@@ -4118,6 +4443,7 @@
                 { id: 'absensi', icon: 'fa-history', label: 'Riwayat Kehadiran' }, 
                 { id: 'imk', icon: 'fa-running', label: 'Riwayat IMK' }, 
                 { id: 'cuti', icon: 'fa-envelope-open-text', label: 'Cuti & Izin' },
+                { id: 'bukuKas', icon: 'fa-book-bookmark', label: 'Buku Kas' },
                 { id: 'gaji', icon: 'fa-file-invoice-dollar', label: 'Penggajian' }, 
                 { id: 'laporan', icon: 'fa-print', label: 'Rapor Individu' }, 
                 { id: 'pengaturan', icon: 'fa-sliders-h', label: 'Pengaturan Sistem' }
@@ -4974,6 +5300,7 @@
             else if(state.currentView === 'absensi') { area.innerHTML = getAbsensiHTML(); renderAbsensiTable(); }
             else if(state.currentView === 'imk') { area.innerHTML = getImkHTML(); renderImkTable(); }
             else if(state.currentView === 'cuti') { area.innerHTML = getCutiHTML(); renderCutiTable(); }
+            else if(state.currentView === 'bukuKas') { area.innerHTML = getBukuKasHTML(); renderBukuKasTable(); }
             else if(state.currentView === 'gaji') { area.innerHTML = getGajiHTML(); if (typeof window.hitungGaji === 'function') setTimeout(window.hitungGaji, 10); }
             else if(state.currentView === 'laporan') area.innerHTML = getLaporanHTML();
             else if(state.currentView === 'pengaturan') { area.innerHTML = getPengaturanHTML(); renderShiftTable(); renderLiburTable(); }
@@ -8108,6 +8435,1293 @@
             showToast('Berhasil', `Status pengajuan berhasil diubah menjadi ${status}`); 
             window.tutupModalDetailCuti(); 
             renderCutiTable();
+        };
+
+        // =========================================================================
+        // FITUR BUKU KAS & KELOLA KATEGORI KEUANGAN (PEMASUKAN & PENGELUARAN)
+        // =========================================================================
+
+        window.bukuKasPagination = {
+            page: 1,
+            perPage: 25,
+            search: '',
+            tipe: '', // '' (semua), 'masuk', 'keluar'
+            kategoriId: '',
+            tanggalMulai: '',
+            tanggalSampai: '',
+            quickPreset: 'semua'
+        };
+
+        window.tempBuktiKasBase64 = null;
+
+        function getKategoriKasBadge(kategoriId, defaultNama = '', tipe = 'masuk') {
+            const kat = (state.kategoriKas || []).find(k => String(k.id) === String(kategoriId));
+            const nama = kat ? kat.nama : (defaultNama || 'Umum');
+            const warna = kat ? (kat.warna || (tipe === 'masuk' ? 'emerald' : 'rose')) : (tipe === 'masuk' ? 'emerald' : 'rose');
+            
+            const colorClasses = {
+                emerald: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                teal: 'bg-teal-50 text-teal-700 border-teal-200',
+                blue: 'bg-blue-50 text-blue-700 border-blue-200',
+                indigo: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+                purple: 'bg-purple-50 text-purple-700 border-purple-200',
+                amber: 'bg-amber-50 text-amber-800 border-amber-200',
+                orange: 'bg-orange-50 text-orange-800 border-orange-200',
+                rose: 'bg-rose-50 text-rose-700 border-rose-200',
+                red: 'bg-red-50 text-red-700 border-red-200',
+                slate: 'bg-slate-100 text-slate-700 border-slate-200'
+            };
+            const cls = colorClasses[warna] || colorClasses.slate;
+            return `<span class="px-2.5 py-0.5 rounded-lg text-xs font-bold border inline-flex items-center gap-1 ${cls}"><i class="fas fa-tag text-[10px] opacity-70"></i>${nama}</span>`;
+        }
+
+        function getBukuKasHTML() {
+            const kategoriOptions = '<option value="">Semua Kategori</option>' + 
+                (state.kategoriKas || []).map(k => `<option value="${k.id}" ${window.bukuKasPagination.kategoriId === String(k.id) ? 'selected' : ''}>[${k.tipe === 'masuk' ? '+' : '-'}] ${k.nama}</option>`).join('');
+
+            return `
+                <div class="space-y-6 mb-8">
+                    <!-- HEADER & AKSI UTAMA -->
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <div class="flex items-center gap-3">
+                                <h1 class="text-2xl sm:text-3xl font-bold text-slate-800 tracking-tight">Buku Kas & Keuangan</h1>
+                                <span class="bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-bold px-2.5 py-1 rounded-full" id="bukuKasTotalBadge">
+                                    ${(state.bukuKas || []).length} Transaksi
+                                </span>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-1">Pencatatan arus kas masuk & keluar, saldo realtime, serta kustomisasi kategori keuangan.</p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button onclick="window.bukaModalTransaksiKas(null, 'masuk')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl shadow-xs text-xs sm:text-sm transition flex items-center shadow-emerald-600/20">
+                                <i class="fas fa-plus mr-1.5"></i> Catat Pemasukan
+                            </button>
+                            <button onclick="window.bukaModalTransaksiKas(null, 'keluar')" class="bg-rose-600 hover:bg-rose-700 text-white font-semibold px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl shadow-xs text-xs sm:text-sm transition flex items-center shadow-rose-600/20">
+                                <i class="fas fa-minus mr-1.5"></i> Catat Pengeluaran
+                            </button>
+                            <button onclick="window.bukaModalKategoriKas()" class="bg-white hover:bg-slate-50 text-indigo-700 border border-indigo-200 font-semibold px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl shadow-2xs text-xs sm:text-sm transition flex items-center">
+                                <i class="fas fa-tags mr-1.5 text-indigo-600"></i> Kelola Kategori
+                            </button>
+                            <button onclick="window.eksporBukuKasCSV()" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-semibold px-3 sm:px-3.5 py-2 sm:py-2.5 rounded-xl shadow-2xs text-xs sm:text-sm transition flex items-center" title="Unduh CSV">
+                                <i class="fas fa-file-csv mr-1.5 text-emerald-600"></i> CSV
+                            </button>
+                            <button onclick="window.cetakLaporanBukuKas()" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-semibold px-3 sm:px-3.5 py-2 sm:py-2.5 rounded-xl shadow-2xs text-xs sm:text-sm transition flex items-center" title="Cetak Rekap Kas">
+                                <i class="fas fa-print mr-1.5 text-blue-600"></i> Cetak
+                            </button>
+                            <button onclick="window.bukaModalHapusTanggal('bukuKas')" class="bg-amber-500 hover:bg-amber-600 text-white font-semibold px-3 py-2 sm:py-2.5 rounded-xl shadow-xs text-xs sm:text-sm transition flex items-center" title="Hapus transaksi via tanggal">
+                                <i class="fas fa-calendar-times"></i>
+                            </button>
+                            <button onclick="window.confirmDelete('semua_bukuKas', 'all')" class="bg-rose-500 hover:bg-rose-600 text-white font-semibold px-3 py-2 sm:py-2.5 rounded-xl shadow-xs text-xs sm:text-sm transition flex items-center" title="Kosongkan semua transaksi kas">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- RINGKASAN METRIK KEUANGAN (4 KARTU) -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <!-- SALDO KAS SAAT INI -->
+                        <div class="bg-white p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-xs relative overflow-hidden">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Saldo Kas Bersih</span>
+                                <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center text-base">
+                                    <i class="fas fa-wallet"></i>
+                                </div>
+                            </div>
+                            <div id="statKasSaldo" class="text-xl sm:text-2xl font-black text-slate-800 tracking-tight font-mono">Rp 0</div>
+                            <span class="text-[11px] text-slate-400 mt-1 block" id="statKasSaldoKet">Saldo total kas saat ini</span>
+                        </div>
+
+                        <!-- TOTAL PEMASUKAN -->
+                        <div class="bg-white p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-emerald-100 bg-emerald-50/20 shadow-xs relative overflow-hidden">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-[11px] font-bold text-emerald-700 uppercase tracking-wider">Total Pemasukan</span>
+                                <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 border border-emerald-200 flex items-center justify-center text-base">
+                                    <i class="fas fa-arrow-down-left"></i>
+                                </div>
+                            </div>
+                            <div id="statKasMasuk" class="text-xl sm:text-2xl font-black text-emerald-700 tracking-tight font-mono">Rp 0</div>
+                            <span class="text-[11px] text-emerald-600/80 mt-1 block font-medium" id="statKasMasukCount">0 transaksi masuk</span>
+                        </div>
+
+                        <!-- TOTAL PENGELUARAN -->
+                        <div class="bg-white p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-rose-100 bg-rose-50/20 shadow-xs relative overflow-hidden">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-[11px] font-bold text-rose-700 uppercase tracking-wider">Total Pengeluaran</span>
+                                <div class="w-9 h-9 rounded-xl bg-rose-100 text-rose-700 border border-rose-200 flex items-center justify-center text-base">
+                                    <i class="fas fa-arrow-up-right"></i>
+                                </div>
+                            </div>
+                            <div id="statKasKeluar" class="text-xl sm:text-2xl font-black text-rose-700 tracking-tight font-mono">Rp 0</div>
+                            <span class="text-[11px] text-rose-600/80 mt-1 block font-medium" id="statKasKeluarCount">0 transaksi keluar</span>
+                        </div>
+
+                        <!-- NET CASH FLOW PERIODE AKTIF -->
+                        <div class="bg-white p-4 sm:p-5 rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-xs relative overflow-hidden">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Arus Kas Periode</span>
+                                <div class="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 border border-slate-200 flex items-center justify-center text-base" id="statKasNetIcon">
+                                    <i class="fas fa-scale-balanced"></i>
+                                </div>
+                            </div>
+                            <div id="statKasNet" class="text-xl sm:text-2xl font-black text-slate-800 tracking-tight font-mono">Rp 0</div>
+                            <span class="text-[11px] text-slate-500 mt-1 block" id="statKasNetKet">Selisih Masuk - Keluar</span>
+                        </div>
+                    </div>
+
+                    <!-- FILTER & PENCARIAN TOOLBAR -->
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-xs space-y-3">
+                        <div class="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+                            <!-- SEARCH INPUT -->
+                            <div class="relative flex-1">
+                                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                    <i class="fas fa-search text-xs"></i>
+                                </span>
+                                <input type="text" id="filterKasSearch" value="${window.bukuKasPagination.search || ''}" oninput="window.filterBukuKasSearch(this.value)" placeholder="Cari keterangan, penanggung jawab, kategori, atau metode..." class="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
+                            </div>
+
+                            <!-- FILTER TIPE (SEMUA / MASUK / KELUAR) -->
+                            <div class="flex flex-wrap items-center gap-2">
+                                <select id="filterKasTipe" onchange="window.filterBukuKasTipe(this.value)" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 font-semibold outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                                    <option value="" ${!window.bukuKasPagination.tipe ? 'selected' : ''}>Semua Jenis Arus</option>
+                                    <option value="masuk" ${window.bukuKasPagination.tipe === 'masuk' ? 'selected' : ''}>Pemasukan (+)</option>
+                                    <option value="keluar" ${window.bukuKasPagination.tipe === 'keluar' ? 'selected' : ''}>Pengeluaran (-)</option>
+                                </select>
+
+                                <!-- FILTER KATEGORI KAS -->
+                                <select id="filterKasKategori" onchange="window.filterBukuKasKategori(this.value)" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 font-semibold outline-none focus:ring-2 focus:ring-indigo-500 transition max-w-[200px] truncate">
+                                    ${kategoriOptions}
+                                </select>
+
+                                <!-- PER PAGE -->
+                                <div class="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+                                    <span class="hidden sm:inline">Per hal:</span>
+                                    <select id="filterKasPerPage" onchange="window.gantiPerPageBukuKas(this.value)" class="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs text-slate-800 font-bold outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                                        <option value="25" ${window.bukuKasPagination.perPage === 25 ? 'selected' : ''}>25</option>
+                                        <option value="50" ${window.bukuKasPagination.perPage === 50 ? 'selected' : ''}>50</option>
+                                        <option value="100" ${window.bukuKasPagination.perPage === 100 ? 'selected' : ''}>100</option>
+                                    </select>
+                                </div>
+
+                                <!-- RESET FILTER -->
+                                <button type="button" onclick="window.resetFilterBukuKas()" class="px-3 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition flex items-center" title="Reset Semua Filter">
+                                    <i class="fas fa-rotate-left mr-1.5 text-[10px]"></i> Reset
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- DATE RANGE & QUICK PRESET TOOLBAR -->
+                        <div class="pt-2.5 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2.5 text-xs">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="font-bold text-slate-500 text-[11px] uppercase tracking-wider mr-1">
+                                    <i class="fas fa-calendar-alt text-indigo-500 mr-1"></i>Rentang Tanggal:
+                                </span>
+                                <input type="date" id="filterKasTanggalMulai" value="${window.bukuKasPagination.tanggalMulai || ''}" onchange="window.filterBukuKasTanggal(this.value)" class="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 font-medium" title="Dari Tanggal">
+                                <span class="text-slate-400 font-medium">s.d</span>
+                                <input type="date" id="filterKasTanggalSampai" value="${window.bukuKasPagination.tanggalSampai || ''}" onchange="window.filterBukuKasTanggalSampai(this.value)" class="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 font-medium" title="Sampai Tanggal">
+                            </div>
+
+                            <!-- QUICK PRESET BUTTONS -->
+                            <div class="flex flex-wrap items-center gap-1.5">
+                                <button type="button" onclick="window.setBukuKasQuickDate('hari_ini')" class="px-2.5 py-1 rounded-lg text-xs font-semibold transition ${window.bukuKasPagination.quickPreset === 'hari_ini' ? 'bg-indigo-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}">Hari Ini</button>
+                                <button type="button" onclick="window.setBukuKasQuickDate('bulan_ini')" class="px-2.5 py-1 rounded-lg text-xs font-semibold transition ${window.bukuKasPagination.quickPreset === 'bulan_ini' ? 'bg-indigo-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}">Bulan Ini</button>
+                                <button type="button" onclick="window.setBukuKasQuickDate('bulan_lalu')" class="px-2.5 py-1 rounded-lg text-xs font-semibold transition ${window.bukuKasPagination.quickPreset === 'bulan_lalu' ? 'bg-indigo-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}">Bulan Lalu</button>
+                                <button type="button" onclick="window.setBukuKasQuickDate('semua')" class="px-2.5 py-1 rounded-lg text-xs font-semibold transition ${window.bukuKasPagination.quickPreset === 'semua' ? 'bg-indigo-600 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}">Semua</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TABEL DATA BUKU KAS -->
+                    <div class="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 overflow-hidden shadow-sm">
+                        <div class="overflow-x-auto custom-scrollbar">
+                            <table class="w-full min-w-[820px] text-sm text-left">
+                                <thead class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                                    <tr>
+                                        <th class="py-3.5 px-4 sm:px-5 whitespace-nowrap">Tanggal</th>
+                                        <th class="py-3.5 px-3.5 sm:px-4 whitespace-nowrap">Arus</th>
+                                        <th class="py-3.5 px-3.5 sm:px-4 whitespace-nowrap">Kategori</th>
+                                        <th class="py-3.5 px-4 sm:px-5">Keterangan & PIC</th>
+                                        <th class="py-3.5 px-3.5 sm:px-4 text-right whitespace-nowrap">Nominal (Rp)</th>
+                                        <th class="py-3.5 px-3.5 sm:px-4 text-right whitespace-nowrap">Saldo Kas (Rp)</th>
+                                        <th class="py-3.5 px-3 sm:px-3 text-center whitespace-nowrap">Bukti</th>
+                                        <th class="py-3.5 px-4 sm:px-5 text-center whitespace-nowrap">Tindakan</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tabelBukuKasBody" class="divide-y divide-slate-100"></tbody>
+                            </table>
+                        </div>
+
+                        <!-- PAGINATION FOOTER -->
+                        <div id="bukuKasPaginationContainer" class="p-3.5 sm:p-5 border-t border-slate-200 bg-slate-50/70 flex flex-col sm:flex-row items-center justify-between gap-3">
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderBukuKasTable() {
+            const tbody = document.getElementById('tabelBukuKasBody');
+            const pageContainer = document.getElementById('bukuKasPaginationContainer');
+            if (!tbody) return;
+
+            const allKas = state.bukuKas || [];
+
+            // 1. Hitung Saldo Kumulatif Berdasarkan Urutan Kronologis (Tanggal Ascending, lalu ID Ascending)
+            const chronological = [...allKas].sort((a, b) => {
+                const tA = a.tanggal || '';
+                const tB = b.tanggal || '';
+                if (tA !== tB) return tA.localeCompare(tB);
+                return (a.id || 0) - (b.id || 0);
+            });
+
+            let runningSaldo = 0;
+            let totalMasukGlobal = 0;
+            let totalKeluarGlobal = 0;
+            let countMasukGlobal = 0;
+            let countKeluarGlobal = 0;
+
+            const saldoMap = new Map();
+            chronological.forEach(item => {
+                const nom = Math.max(0, Number(item.nominal) || 0);
+                if (item.tipe === 'masuk') {
+                    runningSaldo += nom;
+                    totalMasukGlobal += nom;
+                    countMasukGlobal++;
+                } else {
+                    runningSaldo -= nom;
+                    totalKeluarGlobal += nom;
+                    countKeluarGlobal++;
+                }
+                saldoMap.set(String(item.id), runningSaldo);
+            });
+
+            // Update Kartu Metrik Global
+            const statKasSaldo = document.getElementById('statKasSaldo');
+            if (statKasSaldo) {
+                statKasSaldo.innerText = formatRupiah(runningSaldo);
+                statKasSaldo.className = `text-xl sm:text-2xl font-black tracking-tight font-mono ${runningSaldo >= 0 ? 'text-slate-800' : 'text-rose-600'}`;
+            }
+            const statKasMasuk = document.getElementById('statKasMasuk');
+            if (statKasMasuk) statKasMasuk.innerText = formatRupiah(totalMasukGlobal);
+            const statKasMasukCount = document.getElementById('statKasMasukCount');
+            if (statKasMasukCount) statKasMasukCount.innerText = `${countMasukGlobal} transaksi masuk`;
+
+            const statKasKeluar = document.getElementById('statKasKeluar');
+            if (statKasKeluar) statKasKeluar.innerText = formatRupiah(totalKeluarGlobal);
+            const statKasKeluarCount = document.getElementById('statKasKeluarCount');
+            if (statKasKeluarCount) statKasKeluarCount.innerText = `${countKeluarGlobal} transaksi keluar`;
+
+            const netGlobal = totalMasukGlobal - totalKeluarGlobal;
+            const statKasNet = document.getElementById('statKasNet');
+            if (statKasNet) {
+                statKasNet.innerText = (netGlobal >= 0 ? '+' : '') + formatRupiah(netGlobal);
+                statKasNet.className = `text-xl sm:text-2xl font-black tracking-tight font-mono ${netGlobal >= 0 ? 'text-emerald-700' : 'text-rose-600'}`;
+            }
+            const statKasNetKet = document.getElementById('statKasNetKet');
+            if (statKasNetKet) {
+                statKasNetKet.innerText = netGlobal >= 0 ? 'Surplus / Arus Kas Positif' : 'Defisit / Pengeluaran Berlebih';
+            }
+            const totalBadge = document.getElementById('bukuKasTotalBadge');
+            if (totalBadge) totalBadge.innerText = `${allKas.length} Transaksi`;
+
+            // 2. Filter data sesuai input pencarian dan kriteria filter
+            const p = window.bukuKasPagination;
+            const filtered = allKas.filter(item => {
+                if (p.tipe && item.tipe !== p.tipe) return false;
+                if (p.kategoriId && String(item.kategoriId) !== String(p.kategoriId)) return false;
+                if (p.tanggalMulai && item.tanggal < p.tanggalMulai) return false;
+                if (p.tanggalSampai && item.tanggal > p.tanggalSampai) return false;
+
+                if (p.search) {
+                    const q = p.search.toLowerCase();
+                    const kat = (state.kategoriKas || []).find(k => String(k.id) === String(item.kategoriId));
+                    const katNama = kat ? kat.nama.toLowerCase() : (item.kategoriNama || '').toLowerCase();
+                    const ket = (item.keterangan || '').toLowerCase();
+                    const pj = (item.penanggungJawab || '').toLowerCase();
+                    const met = (item.metode || '').toLowerCase();
+                    const tgl = (item.tanggal || '').toLowerCase();
+                    const nomStr = String(item.nominal || '');
+                    if (!ket.includes(q) && !pj.includes(q) && !katNama.includes(q) && !met.includes(q) && !tgl.includes(q) && !nomStr.includes(q)) {
+                        return false;
+                    }
+                }
+                return true;
+            });
+
+            // 3. Urutkan tampilan data secara terbalik (Paling baru di atas)
+            filtered.sort((a, b) => {
+                const tA = a.tanggal || '';
+                const tB = b.tanggal || '';
+                if (tA !== tB) return tB.localeCompare(tA);
+                return (b.id || 0) - (a.id || 0);
+            });
+
+            // 4. Pagination
+            const totalRecords = filtered.length;
+            const totalPages = Math.max(1, Math.ceil(totalRecords / p.perPage));
+            if (p.page > totalPages) p.page = totalPages;
+            const currentPage = Math.max(1, p.page);
+            const startIndex = (currentPage - 1) * p.perPage;
+            const endIndex = Math.min(startIndex + p.perPage, totalRecords);
+            const pageItems = filtered.slice(startIndex, endIndex);
+
+            // Empty state
+            if (pageItems.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="py-12 text-center text-slate-400">
+                            <div class="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-2 text-lg">
+                                <i class="fas fa-receipt"></i>
+                            </div>
+                            <span class="font-bold text-slate-600 block text-sm">Tidak ada transaksi kas yang sesuai</span>
+                            <span class="text-xs text-slate-400 mt-0.5">Silakan catat transaksi baru atau ubah kriteria filter pencarian.</span>
+                        </td>
+                    </tr>
+                `;
+                if (pageContainer) pageContainer.innerHTML = '';
+                return;
+            }
+
+            // Render Rows
+            tbody.innerHTML = pageItems.map(item => {
+                const isMasuk = (item.tipe === 'masuk');
+                const badgeArus = isMasuk 
+                    ? `<span class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider inline-flex items-center"><i class="fas fa-arrow-down-left mr-1 text-[11px]"></i>Masuk</span>`
+                    : `<span class="bg-rose-50 text-rose-700 border border-rose-200 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider inline-flex items-center"><i class="fas fa-arrow-up-right mr-1 text-[11px]"></i>Keluar</span>`;
+
+                const kategoriBadge = getKategoriKasBadge(item.kategoriId, item.kategoriNama, item.tipe);
+                const saldoItem = saldoMap.get(String(item.id)) !== undefined ? saldoMap.get(String(item.id)) : 0;
+                const saldoItemClass = saldoItem >= 0 ? 'text-slate-800' : 'text-rose-600';
+
+                const nominalFormatted = isMasuk 
+                    ? `<span class="font-bold text-emerald-600 font-mono text-xs sm:text-sm">+${formatRupiah(item.nominal)}</span>`
+                    : `<span class="font-bold text-rose-600 font-mono text-xs sm:text-sm">-${formatRupiah(item.nominal)}</span>`;
+
+                const buktiButton = item.bukti 
+                    ? `<button onclick="window.bukaModalDetailKas('${item.id}')" class="text-indigo-600 hover:text-indigo-800 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 px-2 py-1 rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition" title="Lihat Foto Bukti"><i class="fas fa-image text-xs"></i><span class="text-[10px] hidden sm:inline">Ada</span></button>`
+                    : `<span class="text-slate-300 text-xs">-</span>`;
+
+                const pjLabel = item.penanggungJawab ? `<span class="text-slate-500 font-medium"> • PIC: ${item.penanggungJawab}</span>` : '';
+                const metodeLabel = item.metode ? `<span class="bg-slate-100 text-slate-600 border border-slate-200 text-[10px] font-semibold px-2 py-0.5 rounded ml-1">${item.metode}</span>` : '';
+
+                return `
+                    <tr class="hover:bg-slate-50/80 transition">
+                        <td class="py-3.5 px-4 sm:px-5 text-slate-700 font-medium whitespace-nowrap text-xs sm:text-sm">
+                            <span class="block font-bold text-slate-800">${formatDateID(item.tanggal)}</span>
+                            <span class="text-[10px] text-slate-400 font-mono">${item.tanggal || '-'}</span>
+                        </td>
+                        <td class="py-3.5 px-3.5 sm:px-4 whitespace-nowrap">
+                            ${badgeArus}
+                        </td>
+                        <td class="py-3.5 px-3.5 sm:px-4 whitespace-nowrap">
+                            ${kategoriBadge}
+                        </td>
+                        <td class="py-3.5 px-4 sm:px-5 text-xs text-slate-700 max-w-[240px] xl:max-w-[320px]">
+                            <div class="font-bold text-slate-800 text-xs sm:text-sm line-clamp-2 leading-snug">${item.keterangan || '-'}</div>
+                            <div class="text-[11px] text-slate-400 mt-0.5 truncate">${pjLabel} ${metodeLabel}</div>
+                        </td>
+                        <td class="py-3.5 px-3.5 sm:px-4 text-right whitespace-nowrap">
+                            ${nominalFormatted}
+                        </td>
+                        <td class="py-3.5 px-3.5 sm:px-4 text-right whitespace-nowrap font-mono font-bold text-xs sm:text-sm ${saldoItemClass}">
+                            ${formatRupiah(saldoItem)}
+                        </td>
+                        <td class="py-3.5 px-3 sm:px-3 text-center whitespace-nowrap">
+                            ${buktiButton}
+                        </td>
+                        <td class="py-3.5 px-4 sm:px-5 text-center whitespace-nowrap">
+                            <div class="inline-flex items-center justify-center gap-1.5">
+                                <button onclick="window.bukaModalDetailKas('${item.id}')" class="text-blue-600 bg-blue-50 hover:bg-blue-600 hover:text-white p-2 rounded-xl transition shadow-2xs" title="Lihat Rincian Transaksi">
+                                    <i class="fas fa-eye text-xs"></i>
+                                </button>
+                                <button onclick="window.bukaModalTransaksiKas('${item.id}')" class="text-indigo-600 bg-indigo-50 hover:bg-indigo-600 hover:text-white p-2 rounded-xl transition shadow-2xs" title="Edit Transaksi">
+                                    <i class="fas fa-edit text-xs"></i>
+                                </button>
+                                <button onclick="window.confirmDelete('bukuKas', '${item.id}')" class="text-rose-600 bg-rose-50 hover:bg-rose-600 hover:text-white p-2 rounded-xl transition shadow-2xs" title="Hapus Transaksi">
+                                    <i class="fas fa-trash text-xs"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            // Pagination Controls
+            if (pageContainer) {
+                let paginationButtonsHTML = '';
+                paginationButtonsHTML += `
+                    <button onclick="window.gantiHalamanBukuKas(${currentPage - 1})" ${currentPage <= 1 ? 'disabled class="px-2.5 py-1.5 text-xs text-slate-300 bg-white border border-slate-200 rounded-xl cursor-not-allowed"' : 'class="px-2.5 py-1.5 text-xs text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-100 transition shadow-2xs"'}>
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                `;
+
+                const maxBtns = 5;
+                let startBtn = Math.max(1, currentPage - 2);
+                let endBtn = Math.min(totalPages, startBtn + maxBtns - 1);
+                if (endBtn - startBtn < maxBtns - 1) {
+                    startBtn = Math.max(1, endBtn - maxBtns + 1);
+                }
+
+                if (startBtn > 1) {
+                    paginationButtonsHTML += `<button onclick="window.gantiHalamanBukuKas(1)" class="px-2.5 py-1 text-xs text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-100 transition shadow-2xs">1</button>`;
+                    if (startBtn > 2) paginationButtonsHTML += `<span class="px-1 text-slate-400 text-xs">...</span>`;
+                }
+
+                for (let i = startBtn; i <= endBtn; i++) {
+                    const active = (i === currentPage);
+                    paginationButtonsHTML += `
+                        <button onclick="window.gantiHalamanBukuKas(${i})" class="px-3 py-1 text-xs font-bold rounded-xl transition ${active ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 bg-white border border-slate-200 hover:bg-slate-100 shadow-2xs'}">
+                            ${i}
+                        </button>
+                    `;
+                }
+
+                if (endBtn < totalPages) {
+                    if (endBtn < totalPages - 1) paginationButtonsHTML += `<span class="px-1 text-slate-400 text-xs">...</span>`;
+                    paginationButtonsHTML += `<button onclick="window.gantiHalamanBukuKas(${totalPages})" class="px-2.5 py-1 text-xs text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-100 transition shadow-2xs">${totalPages}</button>`;
+                }
+
+                paginationButtonsHTML += `
+                    <button onclick="window.gantiHalamanBukuKas(${currentPage + 1})" ${currentPage >= totalPages ? 'disabled class="px-2.5 py-1.5 text-xs text-slate-300 bg-white border border-slate-200 rounded-xl cursor-not-allowed"' : 'class="px-2.5 py-1.5 text-xs text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-100 transition shadow-2xs"'}>
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                `;
+
+                pageContainer.innerHTML = `
+                    <div class="text-xs text-slate-600 font-medium">
+                        Menampilkan <b>${startIndex + 1} - ${endIndex}</b> dari <b>${totalRecords}</b> transaksi kas
+                        <span class="text-slate-400 ml-1.5">(Hal. ${currentPage} dari ${totalPages})</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        ${paginationButtonsHTML}
+                    </div>
+                `;
+            }
+        }
+
+        // ==========================================
+        // HANDLER FILTER & PAGINATION BUKU KAS
+        // ==========================================
+        window.gantiHalamanBukuKas = function(hal) {
+            window.bukuKasPagination.page = hal;
+            renderBukuKasTable();
+        };
+
+        window.gantiPerPageBukuKas = function(per) {
+            window.bukuKasPagination.perPage = parseInt(per, 10) || 25;
+            window.bukuKasPagination.page = 1;
+            renderBukuKasTable();
+        };
+
+        window.filterBukuKasSearch = function(val) {
+            window.bukuKasPagination.search = (val || '').trim();
+            window.bukuKasPagination.page = 1;
+            renderBukuKasTable();
+        };
+
+        window.filterBukuKasTipe = function(val) {
+            window.bukuKasPagination.tipe = val || '';
+            window.bukuKasPagination.page = 1;
+            renderBukuKasTable();
+        };
+
+        window.filterBukuKasKategori = function(val) {
+            window.bukuKasPagination.kategoriId = val || '';
+            window.bukuKasPagination.page = 1;
+            renderBukuKasTable();
+        };
+
+        window.filterBukuKasTanggal = function(val) {
+            window.bukuKasPagination.tanggalMulai = val || '';
+            window.bukuKasPagination.quickPreset = 'custom';
+            window.bukuKasPagination.page = 1;
+            renderBukuKasTable();
+        };
+
+        window.filterBukuKasTanggalSampai = function(val) {
+            window.bukuKasPagination.tanggalSampai = val || '';
+            window.bukuKasPagination.quickPreset = 'custom';
+            window.bukuKasPagination.page = 1;
+            renderBukuKasTable();
+        };
+
+        window.setBukuKasQuickDate = function(preset) {
+            window.bukuKasPagination.quickPreset = preset;
+            const now = new Date();
+            const y = now.getFullYear();
+            const m = now.getMonth();
+            const d = now.getDate();
+
+            const fmt = (yy, mm, dd) => `${yy}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`;
+
+            if (preset === 'hari_ini') {
+                const todayStr = fmt(y, m + 1, d);
+                window.bukuKasPagination.tanggalMulai = todayStr;
+                window.bukuKasPagination.tanggalSampai = todayStr;
+            } else if (preset === 'bulan_ini') {
+                const firstDay = fmt(y, m + 1, 1);
+                const lastDayNum = new Date(y, m + 1, 0).getDate();
+                const lastDay = fmt(y, m + 1, lastDayNum);
+                window.bukuKasPagination.tanggalMulai = firstDay;
+                window.bukuKasPagination.tanggalSampai = lastDay;
+            } else if (preset === 'bulan_lalu') {
+                const prevM = m === 0 ? 12 : m;
+                const prevY = m === 0 ? y - 1 : y;
+                const firstDay = fmt(prevY, prevM, 1);
+                const lastDayNum = new Date(prevY, prevM, 0).getDate();
+                const lastDay = fmt(prevY, prevM, lastDayNum);
+                window.bukuKasPagination.tanggalMulai = firstDay;
+                window.bukuKasPagination.tanggalSampai = lastDay;
+            } else {
+                // Semua
+                window.bukuKasPagination.tanggalMulai = '';
+                window.bukuKasPagination.tanggalSampai = '';
+            }
+
+            window.bukuKasPagination.page = 1;
+            const elMulai = document.getElementById('filterKasTanggalMulai');
+            const elSampai = document.getElementById('filterKasTanggalSampai');
+            if (elMulai) elMulai.value = window.bukuKasPagination.tanggalMulai;
+            if (elSampai) elSampai.value = window.bukuKasPagination.tanggalSampai;
+
+            // Update tab UI buttons
+            const area = document.getElementById('mainContentArea');
+            if (area) {
+                area.innerHTML = getBukuKasHTML();
+                renderBukuKasTable();
+            }
+        };
+
+        window.resetFilterBukuKas = function() {
+            window.bukuKasPagination.search = '';
+            window.bukuKasPagination.tipe = '';
+            window.bukuKasPagination.kategoriId = '';
+            window.bukuKasPagination.tanggalMulai = '';
+            window.bukuKasPagination.tanggalSampai = '';
+            window.bukuKasPagination.quickPreset = 'semua';
+            window.bukuKasPagination.page = 1;
+
+            const area = document.getElementById('mainContentArea');
+            if (area) {
+                area.innerHTML = getBukuKasHTML();
+                renderBukuKasTable();
+            }
+        };
+
+        // ==========================================
+        // CONTROLLER MODAL TRANSAKSI KAS
+        // ==========================================
+        window.populateKategoriSelect = function(tipe, selectedKategoriId = null) {
+            const selectEl = document.getElementById('kas_kategori');
+            if (!selectEl) return;
+
+            const list = (state.kategoriKas || []).filter(k => k.tipe === tipe);
+            if (list.length === 0) {
+                selectEl.innerHTML = `<option value="">-- Belum ada kategori ${tipe} --</option>`;
+                return;
+            }
+
+            selectEl.innerHTML = '<option value="">-- Pilih Kategori --</option>' + 
+                list.map(k => `<option value="${k.id}" ${selectedKategoriId && String(k.id) === String(selectedKategoriId) ? 'selected' : ''}>${k.nama}</option>`).join('');
+        };
+
+        window.toggleTipeTransaksiKas = function(tipe) {
+            const inpTipe = document.getElementById('kas_tipe');
+            if (inpTipe) inpTipe.value = tipe;
+
+            const btnMasuk = document.getElementById('btnKasTipeMasuk');
+            const btnKeluar = document.getElementById('btnKasTipeKeluar');
+            const iconWrap = document.getElementById('modalTransaksiKasIconWrap');
+            const icon = document.getElementById('modalTransaksiKasIcon');
+            const badgeNominal = document.getElementById('kas_nominal_badge');
+            const submitBtn = document.getElementById('btnSubmitKas');
+
+            if (tipe === 'masuk') {
+                if (btnMasuk) btnMasuk.className = 'py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm transition flex items-center justify-center gap-2 bg-emerald-600 text-white shadow-sm border border-emerald-700';
+                if (btnKeluar) btnKeluar.className = 'py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm transition flex items-center justify-center gap-2 text-slate-600 bg-slate-50 hover:bg-slate-100 border border-slate-200';
+                if (iconWrap) iconWrap.className = 'w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-base sm:text-lg border border-emerald-200 shrink-0';
+                if (icon) icon.className = 'fas fa-arrow-down-left';
+                if (badgeNominal) badgeNominal.className = 'text-xs font-mono font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200';
+                if (submitBtn) submitBtn.className = 'bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow-md shadow-emerald-600/30 transition flex items-center';
+            } else {
+                if (btnMasuk) btnMasuk.className = 'py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm transition flex items-center justify-center gap-2 text-slate-600 bg-slate-50 hover:bg-slate-100 border border-slate-200';
+                if (btnKeluar) btnKeluar.className = 'py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm transition flex items-center justify-center gap-2 bg-rose-600 text-white shadow-sm border border-rose-700';
+                if (iconWrap) iconWrap.className = 'w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center font-bold text-base sm:text-lg border border-rose-200 shrink-0';
+                if (icon) icon.className = 'fas fa-arrow-up-right';
+                if (badgeNominal) badgeNominal.className = 'text-xs font-mono font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-200';
+                if (submitBtn) submitBtn.className = 'bg-rose-600 hover:bg-rose-700 text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow-md shadow-rose-600/30 transition flex items-center';
+            }
+
+            // Populate kategori select untuk tipe ini
+            window.populateKategoriSelect(tipe);
+        };
+
+        window.handleNominalKasInput = function(val) {
+            const badge = document.getElementById('kas_nominal_badge');
+            if (!badge) return;
+            const num = parseFloat(val) || 0;
+            badge.innerText = formatRupiah(num);
+        };
+
+        window.handleBuktiKasUpload = function(e) {
+            const file = e.target.files?.[0];
+            if (!file) return;
+
+            if (file.size > 2.5 * 1024 * 1024) {
+                return showToast('File Terlalu Besar', 'Maksimal ukuran foto nota/bukti adalah 2.5 MB.', 'warning');
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                window.tempBuktiKasBase64 = evt.target.result;
+                const prev = document.getElementById('kas_bukti_preview');
+                const img = document.getElementById('kas_bukti_img');
+                const ph = document.getElementById('kas_upload_placeholder');
+                if (img) img.src = window.tempBuktiKasBase64;
+                if (prev) prev.classList.remove('hidden');
+                if (ph) ph.classList.add('hidden');
+            };
+            reader.readAsDataURL(file);
+        };
+
+        window.hapusBuktiKas = function() {
+            window.tempBuktiKasBase64 = null;
+            const fileInp = document.getElementById('kas_bukti_file');
+            if (fileInp) fileInp.value = '';
+            const prev = document.getElementById('kas_bukti_preview');
+            const img = document.getElementById('kas_bukti_img');
+            const ph = document.getElementById('kas_upload_placeholder');
+            if (img) img.src = '';
+            if (prev) prev.classList.add('hidden');
+            if (ph) ph.classList.remove('hidden');
+        };
+
+        window.bukaModalTransaksiKas = function(id = null, tipeDefault = 'masuk') {
+            const modal = document.getElementById('modalTransaksiKas');
+            const content = document.getElementById('modalTransaksiKasContent');
+            const titleEl = document.getElementById('modalTransaksiKasTitle');
+            if (!modal) return;
+
+            const form = document.getElementById('formTransaksiKas');
+            if (form) form.reset();
+            window.tempBuktiKasBase64 = null;
+            window.hapusBuktiKas();
+
+            const today = new Date();
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+            if (id) {
+                const item = (state.bukuKas || []).find(k => String(k.id) === String(id));
+                if (item) {
+                    if (titleEl) titleEl.innerText = 'Edit Transaksi Kas';
+                    document.getElementById('kas_id').value = item.id;
+                    window.toggleTipeTransaksiKas(item.tipe || 'masuk');
+                    document.getElementById('kas_tanggal').value = item.tanggal || todayStr;
+                    window.populateKategoriSelect(item.tipe || 'masuk', item.kategoriId);
+                    document.getElementById('kas_nominal').value = item.nominal || '';
+                    window.handleNominalKasInput(item.nominal || 0);
+                    document.getElementById('kas_keterangan').value = item.keterangan || '';
+                    document.getElementById('kas_pj').value = item.penanggungJawab || '';
+                    document.getElementById('kas_metode').value = item.metode || 'Tunai / Kas Fisik';
+
+                    if (item.bukti) {
+                        window.tempBuktiKasBase64 = item.bukti;
+                        const prev = document.getElementById('kas_bukti_preview');
+                        const img = document.getElementById('kas_bukti_img');
+                        const ph = document.getElementById('kas_upload_placeholder');
+                        if (img) img.src = item.bukti;
+                        if (prev) prev.classList.remove('hidden');
+                        if (ph) ph.classList.add('hidden');
+                    }
+                }
+            } else {
+                if (titleEl) titleEl.innerText = 'Catat Transaksi Kas';
+                document.getElementById('kas_id').value = '';
+                document.getElementById('kas_tanggal').value = todayStr;
+                window.toggleTipeTransaksiKas(tipeDefault);
+                window.handleNominalKasInput(0);
+                document.getElementById('kas_pj').value = 'Admin Keuangan';
+            }
+
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.add('opacity-100');
+                if (content) {
+                    content.classList.remove('scale-95');
+                    content.classList.add('scale-100');
+                }
+            }, 10);
+        };
+
+        window.tutupModalTransaksiKas = function() {
+            const modal = document.getElementById('modalTransaksiKas');
+            const content = document.getElementById('modalTransaksiKasContent');
+            if (!modal) return;
+            modal.classList.remove('opacity-100');
+            if (content) {
+                content.classList.remove('scale-100');
+                content.classList.add('scale-95');
+            }
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 250);
+        };
+
+        window.simpanTransaksiKas = function(e) {
+            if (e) e.preventDefault();
+
+            const id = document.getElementById('kas_id')?.value;
+            const tipe = document.getElementById('kas_tipe')?.value || 'masuk';
+            const tanggal = document.getElementById('kas_tanggal')?.value;
+            const kategoriId = document.getElementById('kas_kategori')?.value;
+            const nominal = parseFloat(document.getElementById('kas_nominal')?.value) || 0;
+            const keterangan = document.getElementById('kas_keterangan')?.value.trim();
+            const pj = document.getElementById('kas_pj')?.value.trim() || 'Admin';
+            const metode = document.getElementById('kas_metode')?.value || 'Tunai / Kas Fisik';
+
+            if (!tanggal || !kategoriId || nominal <= 0 || !keterangan) {
+                return showToast('Form Belum Lengkap', 'Tanggal, Kategori, Nominal (> 0), dan Keterangan wajib diisi!', 'warning');
+            }
+
+            const katObj = (state.kategoriKas || []).find(k => String(k.id) === String(kategoriId));
+            const kategoriNama = katObj ? katObj.nama : 'Lainnya';
+
+            if (!state.bukuKas) state.bukuKas = [];
+
+            if (id) {
+                const idx = state.bukuKas.findIndex(k => String(k.id) === String(id));
+                if (idx !== -1) {
+                    state.bukuKas[idx].tipe = tipe;
+                    state.bukuKas[idx].tanggal = tanggal;
+                    state.bukuKas[idx].kategoriId = kategoriId;
+                    state.bukuKas[idx].kategoriNama = kategoriNama;
+                    state.bukuKas[idx].nominal = nominal;
+                    state.bukuKas[idx].keterangan = keterangan;
+                    state.bukuKas[idx].penanggungJawab = pj;
+                    state.bukuKas[idx].metode = metode;
+                    if (window.tempBuktiKasBase64) {
+                        state.bukuKas[idx].bukti = window.tempBuktiKasBase64;
+                    }
+                    state.bukuKas[idx].updatedAt = new Date().toISOString();
+                }
+            } else {
+                const newRecord = {
+                    id: Date.now(),
+                    tipe,
+                    tanggal,
+                    kategoriId,
+                    kategoriNama,
+                    nominal,
+                    keterangan,
+                    penanggungJawab: pj,
+                    metode,
+                    bukti: window.tempBuktiKasBase64 || null,
+                    createdAt: new Date().toISOString()
+                };
+                state.bukuKas.push(newRecord);
+            }
+
+            saveData();
+            window.tutupModalTransaksiKas();
+            renderBukuKasTable();
+            showToast('Tersimpan', `Transaksi kas (${tipe === 'masuk' ? 'Pemasukan' : 'Pengeluaran'} ${formatRupiah(nominal)}) berhasil disimpan.`);
+        };
+
+        // ==========================================
+        // CONTROLLER KELOLA KATEGORI BUKU KAS
+        // ==========================================
+        let activeTabKategoriKas = 'masuk'; // 'masuk' atau 'keluar'
+
+        window.bukaModalKategoriKas = function(tipeAwal = 'masuk') {
+            const modal = document.getElementById('modalKategoriKas');
+            const content = document.getElementById('modalKategoriKasContent');
+            if (!modal) return;
+
+            window.resetFormKategoriKas();
+            window.gantiTabKategoriKas(tipeAwal);
+
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.add('opacity-100');
+                if (content) {
+                    content.classList.remove('scale-95');
+                    content.classList.add('scale-100');
+                }
+            }, 10);
+        };
+
+        window.tutupModalKategoriKas = function() {
+            const modal = document.getElementById('modalKategoriKas');
+            const content = document.getElementById('modalKategoriKasContent');
+            if (!modal) return;
+            modal.classList.remove('opacity-100');
+            if (content) {
+                content.classList.remove('scale-100');
+                content.classList.add('scale-95');
+            }
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                // Sinkronkan select kategori pada modal transaksi kas jika sedang terbuka
+                const currTipe = document.getElementById('kas_tipe')?.value || 'masuk';
+                window.populateKategoriSelect(currTipe);
+            }, 250);
+        };
+
+        window.gantiTabKategoriKas = function(tipe) {
+            activeTabKategoriKas = tipe;
+            const tabMasuk = document.getElementById('tabKatMasuk');
+            const tabKeluar = document.getElementById('tabKatKeluar');
+            const katTipeSelect = document.getElementById('kat_tipe');
+
+            if (tipe === 'masuk') {
+                if (tabMasuk) tabMasuk.className = 'py-1.5 px-3 rounded-xl font-bold text-xs transition flex items-center gap-1.5 bg-emerald-600 text-white shadow-2xs';
+                if (tabKeluar) tabKeluar.className = 'py-1.5 px-3 rounded-xl font-semibold text-xs transition flex items-center gap-1.5 text-slate-600 bg-slate-100 hover:bg-slate-200';
+                if (katTipeSelect) katTipeSelect.value = 'masuk';
+            } else {
+                if (tabMasuk) tabMasuk.className = 'py-1.5 px-3 rounded-xl font-semibold text-xs transition flex items-center gap-1.5 text-slate-600 bg-slate-100 hover:bg-slate-200';
+                if (tabKeluar) tabKeluar.className = 'py-1.5 px-3 rounded-xl font-bold text-xs transition flex items-center gap-1.5 bg-rose-600 text-white shadow-2xs';
+                if (katTipeSelect) katTipeSelect.value = 'keluar';
+            }
+
+            window.renderDaftarKategoriKas();
+        };
+
+        window.renderDaftarKategoriKas = function() {
+            const container = document.getElementById('daftarKategoriKasContainer');
+            const countMasukEl = document.getElementById('countKatMasuk');
+            const countKeluarEl = document.getElementById('countKatKeluar');
+            if (!container) return;
+
+            const allKat = state.kategoriKas || [];
+            const listMasuk = allKat.filter(k => k.tipe === 'masuk');
+            const listKeluar = allKat.filter(k => k.tipe === 'keluar');
+
+            if (countMasukEl) countMasukEl.innerText = listMasuk.length;
+            if (countKeluarEl) countKeluarEl.innerText = listKeluar.length;
+
+            const activeList = activeTabKategoriKas === 'masuk' ? listMasuk : listKeluar;
+
+            if (activeList.length === 0) {
+                container.innerHTML = `
+                    <div class="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200/80">
+                        <i class="fas fa-tags text-slate-300 text-2xl mb-2"></i>
+                        <p class="font-bold text-xs text-slate-600">Belum ada kategori ${activeTabKategoriKas === 'masuk' ? 'pemasukan' : 'pengeluaran'}</p>
+                        <p class="text-[11px] text-slate-400 mt-0.5">Gunakan formulir di atas untuk menambahkan kategori baru.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = activeList.map(k => {
+                const badge = getKategoriKasBadge(k.id, k.nama, k.tipe);
+                // Hitung berapa kali kategori ini digunakan pada transaksi bukuKas
+                const pemakaianCount = (state.bukuKas || []).filter(t => String(t.kategoriId) === String(k.id)).length;
+
+                return `
+                    <div class="bg-white p-3 sm:p-3.5 rounded-2xl border border-slate-200/90 shadow-2xs flex items-center justify-between gap-3 hover:border-slate-300 transition">
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                ${badge}
+                                <span class="text-[11px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full font-mono">${pemakaianCount} Transaksi</span>
+                            </div>
+                            ${k.deskripsi ? `<p class="text-[11px] text-slate-500 mt-1 truncate">${k.deskripsi}</p>` : ''}
+                        </div>
+                        <div class="flex items-center gap-1.5 shrink-0">
+                            <button type="button" onclick="window.editKategoriKas('${k.id}')" class="text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 p-2 rounded-xl transition shadow-2xs" title="Edit Kategori">
+                                <i class="fas fa-edit text-xs"></i>
+                            </button>
+                            <button type="button" onclick="window.confirmDelete('kategoriKas', '${k.id}')" class="text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 p-2 rounded-xl transition shadow-2xs" title="Hapus Kategori">
+                                <i class="fas fa-trash text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        };
+
+        window.simpanKategoriKas = function(e) {
+            if (e) e.preventDefault();
+
+            const id = document.getElementById('kat_id')?.value;
+            const nama = document.getElementById('kat_nama')?.value.trim();
+            const tipe = document.getElementById('kat_tipe')?.value || 'masuk';
+            const warna = document.getElementById('kat_warna')?.value || 'emerald';
+            const deskripsi = document.getElementById('kat_deskripsi')?.value.trim() || '';
+
+            if (!nama) return showToast('Error', 'Nama kategori wajib diisi!', 'warning');
+
+            if (!state.kategoriKas) state.kategoriKas = [];
+
+            if (id) {
+                const idx = state.kategoriKas.findIndex(k => String(k.id) === String(id));
+                if (idx !== -1) {
+                    state.kategoriKas[idx].nama = nama;
+                    state.kategoriKas[idx].tipe = tipe;
+                    state.kategoriKas[idx].warna = warna;
+                    state.kategoriKas[idx].deskripsi = deskripsi;
+
+                    // Sinkronkan nama kategori di transaksi bukuKas yang sudah ada
+                    (state.bukuKas || []).forEach(t => {
+                        if (String(t.kategoriId) === String(id)) {
+                            t.kategoriNama = nama;
+                        }
+                    });
+                }
+                showToast('Tersimpan', `Kategori "${nama}" berhasil diperbarui.`);
+            } else {
+                const newId = 'kat_' + Date.now();
+                state.kategoriKas.push({
+                    id: newId,
+                    nama,
+                    tipe,
+                    warna,
+                    deskripsi
+                });
+                showToast('Ditambahkan', `Kategori "${nama}" berhasil ditambahkan.`);
+            }
+
+            saveData();
+            window.resetFormKategoriKas();
+            window.gantiTabKategoriKas(tipe);
+            renderBukuKasTable();
+        };
+
+        window.editKategoriKas = function(id) {
+            const kat = (state.kategoriKas || []).find(k => String(k.id) === String(id));
+            if (!kat) return;
+
+            document.getElementById('kat_id').value = kat.id;
+            document.getElementById('kat_nama').value = kat.nama || '';
+            document.getElementById('kat_tipe').value = kat.tipe || 'masuk';
+            document.getElementById('kat_warna').value = kat.warna || 'emerald';
+            document.getElementById('kat_deskripsi').value = kat.deskripsi || '';
+
+            const judul = document.getElementById('judulFormKategori');
+            if (judul) judul.innerText = 'Edit Kategori: ' + kat.nama;
+            const btnReset = document.getElementById('btnResetEditKategori');
+            if (btnReset) btnReset.classList.remove('hidden');
+            const submitBtn = document.getElementById('btnSimpanKatSubmit');
+            if (submitBtn) submitBtn.innerHTML = '<i class="fas fa-check mr-1"></i> Update';
+        };
+
+        window.resetFormKategoriKas = function() {
+            document.getElementById('kat_id').value = '';
+            document.getElementById('kat_nama').value = '';
+            document.getElementById('kat_deskripsi').value = '';
+            document.getElementById('kat_tipe').value = activeTabKategoriKas;
+            document.getElementById('kat_warna').value = activeTabKategoriKas === 'masuk' ? 'emerald' : 'rose';
+
+            const judul = document.getElementById('judulFormKategori');
+            if (judul) judul.innerText = 'Tambah Kategori Baru';
+            const btnReset = document.getElementById('btnResetEditKategori');
+            if (btnReset) btnReset.classList.add('hidden');
+            const submitBtn = document.getElementById('btnSimpanKatSubmit');
+            if (submitBtn) submitBtn.innerHTML = '<i class="fas fa-plus mr-1"></i> Simpan';
+        };
+
+        // ==========================================
+        // CONTROLLER MODAL DETAIL BUKU KAS
+        // ==========================================
+        window.bukaModalDetailKas = function(id) {
+            const modal = document.getElementById('modalDetailKas');
+            const content = document.getElementById('modalDetailKasContent');
+            const body = document.getElementById('modalDetailKasBody');
+            const footer = document.getElementById('modalDetailKasFooter');
+            if (!modal || !body) return;
+
+            const item = (state.bukuKas || []).find(k => String(k.id) === String(id));
+            if (!item) return;
+
+            const isMasuk = (item.tipe === 'masuk');
+            const badgeArus = isMasuk 
+                ? `<span class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1 rounded-xl text-xs font-bold uppercase tracking-wider inline-flex items-center"><i class="fas fa-arrow-down-left mr-1.5"></i>Pemasukan Kas</span>`
+                : `<span class="bg-rose-50 text-rose-700 border border-rose-200 px-3 py-1 rounded-xl text-xs font-bold uppercase tracking-wider inline-flex items-center"><i class="fas fa-arrow-up-right mr-1.5"></i>Pengeluaran Kas</span>`;
+
+            const kategoriBadge = getKategoriKasBadge(item.kategoriId, item.kategoriNama, item.tipe);
+            const nominalFormatted = (isMasuk ? '+' : '-') + formatRupiah(item.nominal);
+            const nominalColor = isMasuk ? 'text-emerald-700' : 'text-rose-600';
+
+            body.innerHTML = `
+                <!-- NOMINAL CARD -->
+                <div class="bg-slate-50 p-4 sm:p-5 rounded-2xl border border-slate-200/90 text-center shadow-2xs">
+                    <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Nominal Transaksi</span>
+                    <div class="text-2xl sm:text-3xl font-black font-mono tracking-tight ${nominalColor}">
+                        ${nominalFormatted}
+                    </div>
+                    <div class="flex items-center justify-center gap-2 mt-2">
+                        ${badgeArus}
+                        ${kategoriBadge}
+                    </div>
+                </div>
+
+                <!-- INFO GRID -->
+                <div class="grid grid-cols-2 gap-3 text-xs">
+                    <div class="bg-white p-3 rounded-xl border border-slate-200">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Tanggal</span>
+                        <span class="font-bold text-slate-800">${formatDateID(item.tanggal)}</span>
+                    </div>
+                    <div class="bg-white p-3 rounded-xl border border-slate-200">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Metode</span>
+                        <span class="font-bold text-slate-800">${item.metode || 'Tunai / Kas Fisik'}</span>
+                    </div>
+                    <div class="bg-white p-3 rounded-xl border border-slate-200 col-span-2">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Penanggung Jawab / Pencatat</span>
+                        <span class="font-bold text-slate-800">${item.penanggungJawab || 'Admin'}</span>
+                    </div>
+                </div>
+
+                <!-- KETERANGAN / URAIAN -->
+                <div class="bg-white p-3.5 rounded-xl border border-slate-200 text-xs">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Uraian / Keperluan</span>
+                    <p class="text-slate-700 leading-relaxed font-medium whitespace-pre-wrap">${item.keterangan || '-'}</p>
+                </div>
+
+                <!-- BUKTI NOTA / KWITANSI -->
+                ${item.bukti ? `
+                    <div>
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Foto Nota / Kwitansi</span>
+                        <div class="rounded-2xl overflow-hidden border border-slate-200 bg-slate-900 flex items-center justify-center max-h-72">
+                            <img src="${item.bukti}" alt="Bukti Transaksi" class="max-h-72 w-auto object-contain cursor-pointer hover:opacity-90 transition" onclick="window.open('${item.bukti}', '_blank')">
+                        </div>
+                        <span class="text-[10px] text-slate-400 text-center block mt-1">Klik gambar untuk memperbesar</span>
+                    </div>
+                ` : `
+                    <div class="p-3 text-center text-xs text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                        <i class="fas fa-image mr-1"></i> Tidak ada lampiran foto nota/kwitansi
+                    </div>
+                `}
+            `;
+
+            if (footer) {
+                footer.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <button onclick="window.confirmDelete('bukuKas', '${item.id}'); window.tutupModalDetailKas();" class="text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5">
+                            <i class="fas fa-trash text-xs"></i> Hapus
+                        </button>
+                        <button onclick="window.tutupModalDetailKas(); window.bukaModalTransaksiKas('${item.id}');" class="text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5">
+                            <i class="fas fa-edit text-xs"></i> Edit
+                        </button>
+                    </div>
+                    <button onclick="window.tutupModalDetailKas()" class="bg-slate-800 hover:bg-slate-900 text-white font-bold px-4 py-2 rounded-xl text-xs transition">
+                        Tutup
+                    </button>
+                `;
+            }
+
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.add('opacity-100');
+                if (content) {
+                    content.classList.remove('scale-95');
+                    content.classList.add('scale-100');
+                }
+            }, 10);
+        };
+
+        window.tutupModalDetailKas = function() {
+            const modal = document.getElementById('modalDetailKas');
+            const content = document.getElementById('modalDetailKasContent');
+            if (!modal) return;
+            modal.classList.remove('opacity-100');
+            if (content) {
+                content.classList.remove('scale-100');
+                content.classList.add('scale-95');
+            }
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 250);
+        };
+
+        // ==========================================
+        // EKSPOR CSV & CETAK LAPORAN BUKU KAS
+        // ==========================================
+        window.eksporBukuKasCSV = function() {
+            const allKas = state.bukuKas || [];
+            if (allKas.length === 0) {
+                return showToast('Peringatan', 'Belum ada data transaksi buku kas untuk diekspor.', 'warning');
+            }
+
+            // Hitung saldo kumulatif chronologically
+            const sortedAsc = [...allKas].sort((a, b) => {
+                const tA = a.tanggal || '';
+                const tB = b.tanggal || '';
+                if (tA !== tB) return tA.localeCompare(tB);
+                return (a.id || 0) - (b.id || 0);
+            });
+
+            let running = 0;
+            const rows = [
+                ['No', 'Tanggal', 'Jenis Arus', 'Kategori', 'Keterangan', 'Penanggung Jawab', 'Metode Pembayaran', 'Pemasukan (Rp)', 'Pengeluaran (Rp)', 'Saldo Kumulatif (Rp)']
+            ];
+
+            sortedAsc.forEach((item, idx) => {
+                const isMasuk = (item.tipe === 'masuk');
+                const nom = Number(item.nominal) || 0;
+                if (isMasuk) running += nom;
+                else running -= nom;
+
+                const kat = (state.kategoriKas || []).find(k => String(k.id) === String(item.kategoriId));
+                const katNama = kat ? kat.nama : (item.kategoriNama || '-');
+
+                rows.push([
+                    idx + 1,
+                    item.tanggal,
+                    isMasuk ? 'Pemasukan' : 'Pengeluaran',
+                    `"${(katNama || '').replace(/"/g, '""')}"`,
+                    `"${(item.keterangan || '').replace(/"/g, '""')}"`,
+                    `"${(item.penanggungJawab || '').replace(/"/g, '""')}"`,
+                    `"${(item.metode || '').replace(/"/g, '""')}"`,
+                    isMasuk ? nom : 0,
+                    !isMasuk ? nom : 0,
+                    running
+                ]);
+            });
+
+            const csvContent = '\uFEFF' + rows.map(r => r.join(',')).join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Laporan_Buku_Kas_${Date.now()}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('Berhasil', 'File CSV Buku Kas berhasil diunduh.');
+        };
+
+        window.cetakLaporanBukuKas = function() {
+            const allKas = state.bukuKas || [];
+            if (allKas.length === 0) {
+                return showToast('Peringatan', 'Belum ada transaksi kas untuk dicetak.', 'warning');
+            }
+
+            // Hitung data kronologis
+            const sortedAsc = [...allKas].sort((a, b) => {
+                const tA = a.tanggal || '';
+                const tB = b.tanggal || '';
+                if (tA !== tB) return tA.localeCompare(tB);
+                return (a.id || 0) - (b.id || 0);
+            });
+
+            let running = 0;
+            let totMasuk = 0;
+            let totKeluar = 0;
+
+            const trHTML = sortedAsc.map((item, idx) => {
+                const isMasuk = (item.tipe === 'masuk');
+                const nom = Number(item.nominal) || 0;
+                if (isMasuk) { running += nom; totMasuk += nom; }
+                else { running -= nom; totKeluar += nom; }
+
+                const kat = (state.kategoriKas || []).find(k => String(k.id) === String(item.kategoriId));
+                const katNama = kat ? kat.nama : (item.kategoriNama || '-');
+
+                return `
+                    <tr style="border-bottom: 1px solid #e2e8f0;">
+                        <td style="padding: 8px; text-align: center;">${idx + 1}</td>
+                        <td style="padding: 8px;">${item.tanggal}</td>
+                        <td style="padding: 8px;"><b>${isMasuk ? 'Pemasukan' : 'Pengeluaran'}</b></td>
+                        <td style="padding: 8px;">${katNama}</td>
+                        <td style="padding: 8px;">${item.keterangan || '-'}</td>
+                        <td style="padding: 8px; text-align: right; color: ${isMasuk ? '#059669' : '#334155'}; font-weight: ${isMasuk ? 'bold' : 'normal'};">
+                            ${isMasuk ? formatRupiah(nom) : '-'}
+                        </td>
+                        <td style="padding: 8px; text-align: right; color: ${!isMasuk ? '#e11d48' : '#334155'}; font-weight: ${!isMasuk ? 'bold' : 'normal'};">
+                            ${!isMasuk ? formatRupiah(nom) : '-'}
+                        </td>
+                        <td style="padding: 8px; text-align: right; font-weight: bold; color: ${running >= 0 ? '#0f172a' : '#e11d48'};">
+                            ${formatRupiah(running)}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            const printWindow = window.open('', '_blank');
+            if (!printWindow) {
+                return showToast('Popup Terblokir', 'Izinkan popup browser untuk mencetak laporan.', 'warning');
+            }
+
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Laporan Buku Kas & Keuangan</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; margin: 20px; color: #1e293b; font-size: 12px; }
+                        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+                        th { background: #f1f5f9; padding: 10px 8px; text-align: left; border-bottom: 2px solid #cbd5e1; font-size: 11px; text-transform: uppercase; }
+                        .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #334155; padding-bottom: 12px; }
+                        .summary-box { display: flex; gap: 15px; margin-top: 15px; margin-bottom: 15px; }
+                        .box { flex: 1; border: 1px solid #cbd5e1; padding: 10px; border-radius: 8px; }
+                        @media print {
+                            body { margin: 0; }
+                            button { display: none; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <div>
+                            <h2 style="margin: 0; color: #0f172a;">DESTINY INSTITUTE</h2>
+                            <p style="margin: 4px 0 0 0; color: #64748b; font-size: 11px;">LAPORAN BUKU KAS & ARUS KEUANGAN PERUSAHAAN</p>
+                        </div>
+                        <div style="text-align: right; font-size: 11px; color: #64748b;">
+                            <p style="margin: 0;">Dicetak pada: ${new Date().toLocaleString('id-ID')}</p>
+                            <p style="margin: 2px 0 0 0;">Total Record: ${allKas.length} Transaksi</p>
+                        </div>
+                    </div>
+
+                    <div class="summary-box">
+                        <div class="box">
+                            <span style="font-size: 10px; text-transform: uppercase; color: #64748b; display: block;">Total Pemasukan</span>
+                            <span style="font-size: 16px; font-weight: bold; color: #059669;">${formatRupiah(totMasuk)}</span>
+                        </div>
+                        <div class="box">
+                            <span style="font-size: 10px; text-transform: uppercase; color: #64748b; display: block;">Total Pengeluaran</span>
+                            <span style="font-size: 16px; font-weight: bold; color: #e11d48;">${formatRupiah(totKeluar)}</span>
+                        </div>
+                        <div class="box">
+                            <span style="font-size: 10px; text-transform: uppercase; color: #64748b; display: block;">Saldo Kas Akhir</span>
+                            <span style="font-size: 16px; font-weight: bold; color: ${running >= 0 ? '#0f172a' : '#e11d48'};">${formatRupiah(running)}</span>
+                        </div>
+                    </div>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="text-align: center; width: 40px;">No</th>
+                                <th style="width: 90px;">Tanggal</th>
+                                <th style="width: 85px;">Jenis</th>
+                                <th style="width: 130px;">Kategori</th>
+                                <th>Keterangan</th>
+                                <th style="text-align: right; width: 110px;">Pemasukan</th>
+                                <th style="text-align: right; width: 110px;">Pengeluaran</th>
+                                <th style="text-align: right; width: 110px;">Saldo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${trHTML}
+                        </tbody>
+                    </table>
+
+                    <div style="margin-top: 40px; display: flex; justify-content: space-between;">
+                        <div style="text-align: center; width: 200px;">
+                            <p style="margin-bottom: 60px;">Mengetahui,<br>Pimpinan / Kepala</p>
+                            <p style="border-top: 1px solid #334155; font-weight: bold; margin: 0; padding-top: 4px;">(..................................)</p>
+                        </div>
+                        <div style="text-align: center; width: 200px;">
+                            <p style="margin-bottom: 60px;">Dibuat Oleh,<br>Admin Keuangan</p>
+                            <p style="border-top: 1px solid #334155; font-weight: bold; margin: 0; padding-top: 4px;">(..................................)</p>
+                        </div>
+                    </div>
+
+                    <script>
+                        window.onload = function() { window.print(); }
+                    <\/script>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
         };
 
         // ==========================================
