@@ -9968,7 +9968,7 @@
                                 <i class="fas fa-exclamation-triangle"></i>
                             </div>
                             <div>
-                                <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Denda Keterlambatan</span>
+                                <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Denda Telat & Pulang Awal</span>
                                 <span id="kpiTotalDenda" class="text-lg font-black text-rose-600 tracking-tight">Rp 0</span>
                             </div>
                         </div>
@@ -10004,7 +10004,7 @@
                                         <th class="py-3.5 px-3.5 sm:px-4 text-center bg-amber-50/40 text-amber-900 border-x border-amber-100/80 whitespace-nowrap">Cuti, Izin & Tidak Hadir</th>
                                         <th class="py-3.5 px-3.5 sm:px-4 text-right whitespace-nowrap">Gaji Pokok</th>
                                         <th class="py-3.5 px-3.5 sm:px-4 text-right whitespace-nowrap">+ Tunj. Hadir</th>
-                                        <th class="py-3.5 px-3.5 sm:px-4 text-right whitespace-nowrap">- Denda Telat</th>
+                                        <th class="py-3.5 px-3.5 sm:px-4 text-right whitespace-nowrap">- Denda Pelanggaran</th>
                                         <th class="py-3.5 px-3.5 sm:px-4 text-right font-black text-slate-700 whitespace-nowrap">Total Bersih (THP)</th>
                                         <th class="py-3.5 px-4 sm:px-5 text-center border-l bg-slate-50/80 whitespace-nowrap">Slip Gaji</th>
                                     </tr>
@@ -10038,6 +10038,7 @@
             let t = 0;
             let pAwal = 0;
             let tepatWaktuCount = 0;
+            let dendaHariCount = 0;
 
             ab.forEach(a => {
                 const isAlpha = (a.statusMasuk === 'Alpha' || a.status === 'Alpha' || a.statusMasuk === 'Mangkir');
@@ -10070,12 +10071,18 @@
                 }
 
                 if (isPulangAwal) pAwal++;
+
+                // Ketentuan Denda:
+                // Denda berlaku jika salah satu ketentuan terpenuhi: absen telat ATAU pulang awal.
+                // Jika karyawan telat dan pulang awal pada hari yang sama, tetap dihitung terpotong 1 kali denda.
+                if (isTelat || isPulangAwal) {
+                    dendaHariCount++;
+                }
             });
 
-            // ATURAN BARU PENGGAJIAN:
+            // ATURAN PENGGAJIAN:
             // 1. Setiap karyawan absen hadir otomatis memperoleh tunjangan hadir (hTunjangan = hadirSebenarnya).
-            // 2. Sangsi pemotongan denda HANYA berlaku jika karyawan telat (denda = t * tarifDenda).
-            // 3. Karyawan pulang awal tidak kehilangan tunjangan hadir dan tidak dikenakan denda keterlambatan.
+            // 2. Sangsi denda berlaku jika telat atau pulang awal (maksimal 1 kali denda per hari jika keduanya terjadi).
             const hTunjangan = hadirSebenarnya;
 
             // Rekapitulasi Cuti & Izin Pegawai
@@ -10087,7 +10094,7 @@
             const gajiPokok = Number(k.gajiPokok) || 0;
 
             const tunj = hTunjangan * tarifTunjangan;
-            const den = t * tarifDenda;
+            const den = dendaHariCount * tarifDenda;
             const bruto = gajiPokok + tunj;
             let tot = bruto - den;
             if (tot < 0) tot = 0;
@@ -10109,6 +10116,7 @@
                 tepatWaktu: tepatWaktuCount,
                 telat: t,
                 pulangAwal: pAwal,
+                hariKenaDenda: dendaHariCount,
                 hariValid: hTunjangan,
                 tarifTunjangan,
                 tunjangan: tunj,
@@ -10266,7 +10274,7 @@
                         </td>
                         <td class="py-3.5 px-3.5 sm:px-4 text-right whitespace-nowrap">
                             <div class="text-rose-600 text-xs font-bold">- ${formatRupiah(item.denda)}</div>
-                            <span class="text-[10px] text-rose-500 font-medium">(${item.telat}x telat)</span>
+                            <span class="text-[10px] text-rose-500 font-medium" title="${item.telat} Telat, ${item.pulangAwal} Pulang Awal (${item.hariKenaDenda} hari kena denda)">(${item.hariKenaDenda}x denda)</span>
                         </td>
                         <td class="py-3.5 px-3.5 sm:px-4 text-right font-black text-slate-800 whitespace-nowrap text-xs sm:text-sm">
                             ${formatRupiah(item.totalBersih)}
@@ -10365,8 +10373,11 @@
             setElText('slip_tunjangan_ket', `(${data.hadir} Hari Hadir)`);
             setElText('slip_total_penerimaan', formatRupiah(data.gajiPokok + data.tunjangan));
 
+            const ketDenda = (data.hariKenaDenda !== undefined)
+                ? `(${data.hariKenaDenda}x Denda: ${data.telat} Telat, ${data.pulangAwal} Pulang Awal)`
+                : `(${data.telat}x Telat, ${data.pulangAwal} Pulang Awal)`;
             setElText('slip_denda', formatRupiah(data.denda));
-            setElText('slip_denda_ket', `(${data.telat}x Keterlambatan)`);
+            setElText('slip_denda_ket', ketDenda);
             setElText('slip_total_potongan', formatRupiah(data.denda));
 
             setElText('slip_thp', formatRupiah(data.totalBersih));
@@ -10406,6 +10417,7 @@
             const namaBulan = dateObj.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
             
             let cutiKet = data.totalCutiHari > 0 ? `\n- Cuti / Ketidakhadiran: ${data.totalCutiHari} Hari (${data.cutiRincian})` : '\n- Cuti / Ketidakhadiran: 0 Hari';
+            const totalDendaHari = data.hariKenaDenda !== undefined ? data.hariKenaDenda : (data.telat + data.pulangAwal);
 
             const pesan = `*SLIP GAJI KARYAWAN - DESTINY INSTITUTE*%0A` +
                 `Periode: ${namaBulan}%0A` +
@@ -10417,14 +10429,15 @@
                 `==============================%0A` +
                 `*RINGKASAN KEHADIRAN:*%0A` +
                 `- Total Hadir: ${data.hadir} Hari%0A` +
-                `- Tepat Waktu: ${(data.tepatWaktu !== undefined ? data.tepatWaktu : (data.hadir - data.telat))} Hari%0A` +
+                `- Tepat Waktu: ${(data.tepatWaktu !== undefined ? data.tepatWaktu : (data.hadir - totalDendaHari))} Hari%0A` +
                 `- Terlambat: ${data.telat} Kali%0A` +
-                `- Pulang Awal: ${data.pulangAwal} Kali` + cutiKet + `%0A` +
+                `- Pulang Awal: ${data.pulangAwal} Kali%0A` +
+                `- Hari Terkena Denda: ${totalDendaHari} Kali (Telat / Pulang Awal)` + cutiKet + `%0A` +
                 `==============================%0A` +
                 `*RINCIAN GAJI:*%0A` +
                 `- Gaji Pokok: ${formatRupiah(data.gajiPokok)}%0A` +
                 `- Tunjangan Hadir (${data.hadir} Hari Hadir): +${formatRupiah(data.tunjangan)}%0A` +
-                `- Potongan Denda Telat (${data.telat} Kali): -${formatRupiah(data.denda)}%0A` +
+                `- Potongan Denda (${totalDendaHari} Kali): -${formatRupiah(data.denda)}%0A` +
                 `==============================%0A` +
                 `*TOTAL BERSIH (TAKE HOME PAY):*%0A` +
                 `*${formatRupiah(data.totalBersih)}*%0A` +
@@ -10542,7 +10555,7 @@
                                 "Shift Kerja": res.shiftNama,
                                 "Gaji Pokok (Rp)": res.gajiPokok,
                                 "Total Hadir (Hari)": res.hadir,
-                                "Valid Tepat Waktu (Hari)": res.hariValid,
+                                "Hari Kena Denda (Hari)": res.hariKenaDenda,
                                 "Terlambat (Kali)": res.telat,
                                 "Pulang Awal (Kali)": res.pulangAwal,
                                 "Total Cuti & Izin (Hari)": res.totalCutiHari,
@@ -10550,8 +10563,8 @@
                                 "Tidak Hadir (Hari)": res.tidakHadirHari || 0,
                                 "Tarif Tunjangan / Hari (Rp)": res.tarifTunjangan,
                                 "Tunjangan Hadir (Rp)": res.tunjangan,
-                                "Tarif Denda / Telat (Rp)": res.tarifDenda,
-                                "Denda Keterlambatan (Rp)": res.denda,
+                                "Tarif Denda / Pelanggaran (Rp)": res.tarifDenda,
+                                "Total Denda Pelanggaran (Rp)": res.denda,
                                 "Total Penerimaan Kotor (Rp)": res.bruto,
                                 "Total Potongan (Rp)": res.denda,
                                 "Gaji Bersih / THP (Rp)": res.totalBersih,
@@ -10655,7 +10668,7 @@
                             "Periode Gaji": namaBulan,
                             "Gaji Pokok (Rp)": d.gajiPokok,
                             "Total Hadir (Hari)": d.hadir,
-                            "Tepat Waktu / Valid (Hari)": d.hariValid,
+                            "Hari Kena Denda (Hari)": d.hariKenaDenda,
                             "Terlambat (Kali)": d.telat,
                             "Pulang Awal (Kali)": d.pulangAwal,
                             "Total Cuti & Izin (Hari)": d.totalCutiHari,
@@ -10667,8 +10680,8 @@
                             "Pending Cuti (Hari)": d.pendingCutiHari,
                             "Tarif Tunjangan / Hari (Rp)": d.tarifTunjangan,
                             "Total Tunjangan Hadir (Rp)": d.tunjangan,
-                            "Tarif Denda / Telat (Rp)": d.tarifDenda,
-                            "Total Denda Telat (Rp)": d.denda,
+                            "Tarif Denda / Pelanggaran (Rp)": d.tarifDenda,
+                            "Total Denda Pelanggaran (Rp)": d.denda,
                             "Total Penerimaan Kotor (Rp)": d.bruto,
                             "Total Potongan (Rp)": d.denda,
                             "Gaji Bersih / THP (Rp)": d.totalBersih,
@@ -10678,6 +10691,7 @@
                     });
 
                     // Baris TOTAL KESELURUHAN di bawah tabel data
+                    const totalHariKenaDendaSemua = rowsGaji.reduce((acc, r) => acc + (r["Hari Kena Denda (Hari)"] || 0), 0);
                     rowsGaji.push({
                         "No": "TOTAL KESELURUHAN",
                         "NIK Pegawai": "",
@@ -10688,7 +10702,7 @@
                         "Periode Gaji": namaBulan,
                         "Gaji Pokok (Rp)": sumGapok,
                         "Total Hadir (Hari)": sumHadir,
-                        "Tepat Waktu / Valid (Hari)": sumValid,
+                        "Hari Kena Denda (Hari)": totalHariKenaDendaSemua,
                         "Keterlambatan (Kali)": sumTelat,
                         "Pulang Awal (Kali)": sumPAwal,
                         "Total Cuti & Izin (Hari)": sumCuti,
@@ -10700,8 +10714,8 @@
                         "Pending Cuti (Hari)": sumPending,
                         "Tarif Tunjangan / Hari (Rp)": "",
                         "Total Tunjangan Hadir (Rp)": sumTunjangan,
-                        "Tarif Denda / Telat (Rp)": "",
-                        "Total Denda Telat (Rp)": sumDenda,
+                        "Tarif Denda / Pelanggaran (Rp)": "",
+                        "Total Denda Pelanggaran (Rp)": sumDenda,
                         "Total Penerimaan Kotor (Rp)": sumBruto,
                         "Total Potongan (Rp)": sumDenda,
                         "Gaji Bersih / THP (Rp)": sumTHP,
@@ -11117,13 +11131,13 @@
                     <div class="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 p-4 sm:p-6 shadow-xs">
                         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
                             <h2 class="font-bold text-base text-slate-800 flex items-center">
-                                <i class="fas fa-money-bill-wave text-emerald-600 mr-2"></i>Aturan Tunjangan Hadir & Denda Keterlambatan
+                                <i class="fas fa-money-bill-wave text-emerald-600 mr-2"></i>Aturan Tunjangan Hadir & Denda Pelanggaran
                             </h2>
                             <span class="text-xs bg-emerald-50 text-emerald-700 font-bold px-2.5 py-1 rounded-xl border border-emerald-200 self-start sm:self-auto">
-                                <i class="fas fa-check-circle mr-1 text-emerald-600"></i>Hadir Otomatis Dapat Tunjangan • Denda Hanya Jika Telat
+                                <i class="fas fa-check-circle mr-1 text-emerald-600"></i>Hadir Dapat Tunjangan • Denda: Telat / Pulang Awal (Maks 1x / Hari)
                             </span>
                         </div>
-                        <p class="text-xs text-slate-500 mb-5">Setiap karyawan yang absen hadir otomatis memperoleh tunjangan kehadiran. Sangsi pemotongan denda hanya diberlakukan apabila karyawan tercatat datang terlambat.</p>
+                        <p class="text-xs text-slate-500 mb-5">Setiap karyawan yang absen hadir otomatis memperoleh tunjangan kehadiran. Denda berlaku jika karyawan telat atau pulang awal (jika telat dan pulang awal dalam 1 hari yang sama, tetap dihitung terpotong 1 kali denda).</p>
                         
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
                             <div>
@@ -11132,9 +11146,9 @@
                                 <span class="text-[10px] text-emerald-600 font-medium mt-1 block">Otomatis didapatkan per hari karyawan absen hadir</span>
                             </div>
                             <div>
-                                <label class="block text-xs font-bold mb-1.5 text-slate-600">Denda Telat / Kali (Rp)</label>
+                                <label class="block text-xs font-bold mb-1.5 text-slate-600">Denda Pelanggaran / Hari (Rp)</label>
                                 <input type="number" id="s_dt" value="${p.dendaTelat||0}" class="w-full bg-slate-50 border border-slate-200 p-2.5 sm:p-3 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-xs sm:text-sm font-semibold">
-                                <span class="text-[10px] text-rose-500 font-medium mt-1 block">Sangsi pemotongan hanya berlaku jika karyawan telat</span>
+                                <span class="text-[10px] text-rose-500 font-medium mt-1 block">Berlaku jika telat atau pulang awal (maks 1x denda / hari)</span>
                             </div>
                             <div>
                                 <label class="block text-xs font-bold mb-1.5 text-slate-600">No. WA Kepsek (Untuk Cuti)</label>
