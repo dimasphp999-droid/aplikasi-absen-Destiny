@@ -9948,7 +9948,7 @@
                                 <i class="fas fa-user-check"></i>
                             </div>
                             <div>
-                                <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Kehadiran Valid</span>
+                                <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Total Kehadiran</span>
                                 <span id="kpiTotalHadir" class="text-lg font-black text-emerald-600 tracking-tight">0 Hari</span>
                             </div>
                         </div>
@@ -10036,8 +10036,8 @@
             let alphaCount = 0;
             let hadirSebenarnya = 0;
             let t = 0;
-            let hTunjangan = 0;
             let pAwal = 0;
+            let tepatWaktuCount = 0;
 
             ab.forEach(a => {
                 const isAlpha = (a.statusMasuk === 'Alpha' || a.status === 'Alpha' || a.statusMasuk === 'Mangkir');
@@ -10056,23 +10056,27 @@
                     const evMasuk = evaluasiStatusPresensi(shfRecord, a.jamMasuk, a.tanggal, isLibur);
                     isTelat = (evMasuk.status === 'Terlambat');
                 }
-                if (isTelat) t++;
+                if (isTelat) {
+                    t++;
+                } else {
+                    tepatWaktuCount++;
+                }
 
                 // Evaluasi Pulang Awal sesuai jam pulang Shift Kerja (Tanpa Lembur)
                 let isPulangAwal = false;
-                let sudahPulang = false;
-
                 if (a.jamPulang && a.jamPulang !== '-') {
-                    sudahPulang = true;
                     const evPulang = evaluasiStatusPulang(shfRecord, a.jamPulang, a.tanggal, a.jamMasuk);
                     isPulangAwal = (evPulang.status === 'Pulang Awal');
                 }
 
                 if (isPulangAwal) pAwal++;
-                if (sudahPulang && !isTelat && !isPulangAwal) {
-                    hTunjangan++;
-                }
             });
+
+            // ATURAN BARU PENGGAJIAN:
+            // 1. Setiap karyawan absen hadir otomatis memperoleh tunjangan hadir (hTunjangan = hadirSebenarnya).
+            // 2. Sangsi pemotongan denda HANYA berlaku jika karyawan telat (denda = t * tarifDenda).
+            // 3. Karyawan pulang awal tidak kehilangan tunjangan hadir dan tidak dikenakan denda keterlambatan.
+            const hTunjangan = hadirSebenarnya;
 
             // Rekapitulasi Cuti & Izin Pegawai
             const dataCuti = hitungHariCutiKaryawanBulan(k.id, bln);
@@ -10102,6 +10106,7 @@
                 bulan: bln,
                 gajiPokok,
                 hadir: hadirSebenarnya,
+                tepatWaktu: tepatWaktuCount,
                 telat: t,
                 pulangAwal: pAwal,
                 hariValid: hTunjangan,
@@ -10257,11 +10262,11 @@
                         </td>
                         <td class="py-3.5 px-3.5 sm:px-4 text-right whitespace-nowrap">
                             <div class="text-emerald-600 text-xs font-bold">+ ${formatRupiah(item.tunjangan)}</div>
-                            <span class="text-[10px] text-slate-400 font-normal">(${item.hariValid}x valid)</span>
+                            <span class="text-[10px] text-emerald-600/80 font-medium">(${item.hadir}x hadir)</span>
                         </td>
                         <td class="py-3.5 px-3.5 sm:px-4 text-right whitespace-nowrap">
                             <div class="text-rose-600 text-xs font-bold">- ${formatRupiah(item.denda)}</div>
-                            <span class="text-[10px] text-slate-400 font-normal">(${item.telat}x denda)</span>
+                            <span class="text-[10px] text-rose-500 font-medium">(${item.telat}x telat)</span>
                         </td>
                         <td class="py-3.5 px-3.5 sm:px-4 text-right font-black text-slate-800 whitespace-nowrap text-xs sm:text-sm">
                             ${formatRupiah(item.totalBersih)}
@@ -10357,11 +10362,11 @@
 
             setElText('slip_gapok', formatRupiah(data.gajiPokok));
             setElText('slip_tunjangan', formatRupiah(data.tunjangan));
-            setElText('slip_tunjangan_ket', `(x${data.hariValid} Valid)`);
+            setElText('slip_tunjangan_ket', `(${data.hadir} Hari Hadir)`);
             setElText('slip_total_penerimaan', formatRupiah(data.gajiPokok + data.tunjangan));
 
             setElText('slip_denda', formatRupiah(data.denda));
-            setElText('slip_denda_ket', `(x${data.telat} Keterlambatan)`);
+            setElText('slip_denda_ket', `(${data.telat}x Keterlambatan)`);
             setElText('slip_total_potongan', formatRupiah(data.denda));
 
             setElText('slip_thp', formatRupiah(data.totalBersih));
@@ -10412,14 +10417,14 @@
                 `==============================%0A` +
                 `*RINGKASAN KEHADIRAN:*%0A` +
                 `- Total Hadir: ${data.hadir} Hari%0A` +
-                `- Tepat Waktu (Valid): ${data.hariValid} Hari%0A` +
+                `- Tepat Waktu: ${(data.tepatWaktu !== undefined ? data.tepatWaktu : (data.hadir - data.telat))} Hari%0A` +
                 `- Terlambat: ${data.telat} Kali%0A` +
                 `- Pulang Awal: ${data.pulangAwal} Kali` + cutiKet + `%0A` +
                 `==============================%0A` +
                 `*RINCIAN GAJI:*%0A` +
                 `- Gaji Pokok: ${formatRupiah(data.gajiPokok)}%0A` +
-                `- Tunjangan Hadir: +${formatRupiah(data.tunjangan)}%0A` +
-                `- Potongan / Denda: -${formatRupiah(data.denda)}%0A` +
+                `- Tunjangan Hadir (${data.hadir} Hari Hadir): +${formatRupiah(data.tunjangan)}%0A` +
+                `- Potongan Denda Telat (${data.telat} Kali): -${formatRupiah(data.denda)}%0A` +
                 `==============================%0A` +
                 `*TOTAL BERSIH (TAKE HOME PAY):*%0A` +
                 `*${formatRupiah(data.totalBersih)}*%0A` +
@@ -11110,21 +11115,31 @@
 
                     <!-- GAJI, DENDA & KONTAK -->
                     <div class="bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 p-4 sm:p-6 shadow-xs">
-                        <h2 class="font-bold text-base text-slate-800 mb-4 flex items-center">
-                            <i class="fas fa-money-bill-wave text-emerald-600 mr-2"></i>Gaji, Denda, & Kontak
-                        </h2>
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                            <h2 class="font-bold text-base text-slate-800 flex items-center">
+                                <i class="fas fa-money-bill-wave text-emerald-600 mr-2"></i>Aturan Tunjangan Hadir & Denda Keterlambatan
+                            </h2>
+                            <span class="text-xs bg-emerald-50 text-emerald-700 font-bold px-2.5 py-1 rounded-xl border border-emerald-200 self-start sm:self-auto">
+                                <i class="fas fa-check-circle mr-1 text-emerald-600"></i>Hadir Otomatis Dapat Tunjangan • Denda Hanya Jika Telat
+                            </span>
+                        </div>
+                        <p class="text-xs text-slate-500 mb-5">Setiap karyawan yang absen hadir otomatis memperoleh tunjangan kehadiran. Sangsi pemotongan denda hanya diberlakukan apabila karyawan tercatat datang terlambat.</p>
+                        
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
                             <div>
                                 <label class="block text-xs font-bold mb-1.5 text-slate-600">Tunjangan Hadir / Hari (Rp)</label>
                                 <input type="number" id="s_th" value="${p.tunjanganHadir||0}" class="w-full bg-slate-50 border border-slate-200 p-2.5 sm:p-3 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-xs sm:text-sm font-semibold">
+                                <span class="text-[10px] text-emerald-600 font-medium mt-1 block">Otomatis didapatkan per hari karyawan absen hadir</span>
                             </div>
                             <div>
                                 <label class="block text-xs font-bold mb-1.5 text-slate-600">Denda Telat / Kali (Rp)</label>
                                 <input type="number" id="s_dt" value="${p.dendaTelat||0}" class="w-full bg-slate-50 border border-slate-200 p-2.5 sm:p-3 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-xs sm:text-sm font-semibold">
+                                <span class="text-[10px] text-rose-500 font-medium mt-1 block">Sangsi pemotongan hanya berlaku jika karyawan telat</span>
                             </div>
                             <div>
                                 <label class="block text-xs font-bold mb-1.5 text-slate-600">No. WA Kepsek (Untuk Cuti)</label>
                                 <input type="tel" id="s_wa" value="${p.waKepalaSekolah||''}" placeholder="0812..." class="w-full bg-slate-50 border border-slate-200 p-2.5 sm:p-3 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 text-xs sm:text-sm font-semibold">
+                                <span class="text-[10px] text-slate-400 mt-1 block">Tujuan pengiriman rincian permohonan cuti</span>
                             </div>
                         </div>
                         <div class="mt-4 pt-4 border-t border-slate-100 flex justify-end">
